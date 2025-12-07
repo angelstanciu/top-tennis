@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #0f766e;
+}
+
+body {
+  @apply bg-white text-slate-800;
+}
+
+.btn {
+  @apply px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50;
+}
+
+/* Hide native calendar icon; we provide our own button */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
+input[type="date"]::-webkit-clear-button { display: none; }
+input[type="date"]::-webkit-inner-spin-button { display: none; }
+input[type="date"] { -webkit-appearance: none; appearance: none; }

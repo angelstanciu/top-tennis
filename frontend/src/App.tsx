@@ -1,0 +1,283 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import SportPicker from './components/SportPicker'
+import TimelineGrid from './components/TimelineGrid'
+import { AvailabilityDto, SportType } from './types'
+import { fetchAvailability } from './api'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+
+function todayISO(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return d.toISOString().slice(0,10)
+}
+
+export default function App() {
+  const [searchParams] = useSearchParams()
+  const lsSport = (typeof window !== 'undefined' ? (localStorage.getItem('lastSport') as SportType | null) : null)
+  const lsDate = (typeof window !== 'undefined' ? localStorage.getItem('lastDate') : null)
+  const initialSport = lsSport || (searchParams.get('sport') as SportType) || 'TENNIS'
+  const initialDate = lsDate || searchParams.get('date') || todayISO()
+  const [sport, setSport] = useState<SportType>(initialSport)
+  const [date, setDate] = useState<string>(initialDate)
+  const [data, setData] = useState<AvailabilityDto[]>([])
+  const [loading, setLoading] = useState(false)
+  const [hover, setHover] = useState<string>('')
+  const nav = useNavigate()
+  const gridScrollRef = React.useRef<HTMLDivElement | null>(null)
+  const [selCourtId, setSelCourtId] = useState<number | null>(null)
+  const [selStart, setSelStart] = useState<string | null>(null)
+  const [selEnd, setSelEnd] = useState<string | null>(null)
+  const [selValid, setSelValid] = useState<boolean>(false)
+  const [selGapInvalid, setSelGapInvalid] = useState<boolean>(false)
+  const [gapToastVisible, setGapToastVisible] = useState<boolean>(false)
+  const [gapToastFading, setGapToastFading] = useState<boolean>(false)
+  const gapToastShowTimer = React.useRef<any>(null)
+  const gapToastHideTimer = React.useRef<any>(null)
+  const dateInputRef = React.useRef<HTMLInputElement | null>(null)
+  const [clearTick, setClearTick] = useState<number>(0)
+  const selectedCourtName = useMemo(() => {
+    if (!selCourtId) return null
+    const row = data.find(d => d.court.id === selCourtId)
+    return row?.court.name ?? null
+  }, [selCourtId, data])
+
+  const title = useMemo(() => 'Rezervări STAR ARENA Bascov', [])
+
+  // State is initialized from query params; no further sync needed
+
+  // On very first mount, ensure we restore last selections from localStorage
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('lastSport') as SportType | null
+      const d = localStorage.getItem('lastDate')
+      if (s) setSport(s)
+      if (d) setDate(d)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchAvailability(date, sport)
+      .then(setData)
+      .finally(() => setLoading(false))
+  }, [date, sport])
+
+  // Cleanup toast timers on unmount
+  useEffect(() => {
+    return () => {
+      try { if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current) } catch {}
+      try { if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current) } catch {}
+    }
+  }, [])
+
+  // Persist last selected sport/date for returning from booking page
+  useEffect(() => {
+    try {
+      localStorage.setItem('lastSport', sport)
+      localStorage.setItem('lastDate', date)
+    } catch {}
+  }, [sport, date])
+
+  
+
+  function shiftDate(days: number) {
+    const d = new Date(date)
+    d.setDate(d.getDate() + days)
+    setDate(d.toISOString().slice(0,10))
+  }
+
+  function handleSelectionChange(courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean) {
+    setSelCourtId(courtId)
+    setSelStart(start)
+    setSelEnd(end)
+    setSelValid(valid)
+    const gi = !!gapInvalid
+    setSelGapInvalid(gi)
+    // Manage detached toast for 30-min gap
+    if (gi) {
+      setGapToastVisible(true)
+      setGapToastFading(false)
+      if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
+      if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current)
+      gapToastShowTimer.current = setTimeout(() => setGapToastFading(true), 5000)
+      gapToastHideTimer.current = setTimeout(() => setGapToastVisible(false), 7000)
+    } else {
+      // Hide immediately on any other selection
+      if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
+      if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current)
+      setGapToastFading(false)
+      setGapToastVisible(false)
+    }
+  }
+
+  function openBooking() {
+    if (!selCourtId || !selStart || !selEnd || !selValid) return
+    nav(`/book/${selCourtId}/${date}/${selStart}/${selEnd}?sport=${encodeURIComponent(sport)}`)
+  }
+
+  function clearSelection() {
+    setSelCourtId(null)
+    setSelStart(null)
+    setSelEnd(null)
+    setSelValid(false)
+    setSelGapInvalid(false)
+    setClearTick(t => t + 1)
+  }
+
+  // Listen for booking updates from the admin page and refetch availability
+  useEffect(() => {
+    function refetch() {
+      setLoading(true)
+      fetchAvailability(date, sport).then(setData).finally(() => setLoading(false))
+    }
+    let ch: BroadcastChannel | null = null
+    try {
+      // @ts-ignore
+      ch = new BroadcastChannel('bookingUpdates')
+      ch.onmessage = (ev) => {
+        if (!ev?.data) return
+        // If payload has date, refresh only when matching or always
+        refetch()
+      }
+    } catch {}
+    function onStorage(e: StorageEvent) {
+      if (e.key === 'bookingUpdate') refetch()
+    }
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      try { ch?.close() } catch {}
+    }
+  }, [date, sport])
+
+  return (
+    <div className="max-w-7xl mx-auto p-4 space-y-3 h-screen overflow-hidden flex flex-col">
+      <header className="flex items-center justify-between">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold border-l-4 border-sky-500 pl-3 whitespace-nowrap truncate">{title}</h1>
+      </header>
+      <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 pb-1 shadow-md flex-1 min-h-0 flex flex-col">
+        <div className="flex items-end gap-4 w-full">
+          <div className="flex flex-col flex-1 min-w-0">
+            <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
+            <SportPicker value={sport} onChange={setSport} />
+          </div>
+          <div className="flex flex-col shrink-0 ml-2">
+            <div className="text-xs text-slate-500 mb-1">Data</div>
+            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50"
+                aria-label="Ziua anterioară"
+                onClick={() => shiftDate(-1)}
+                title="Ziua anterioară"
+              >
+                ‹
+              </button>
+              <input
+                ref={dateInputRef}
+                className="px-2 py-1.5 text-sm border-0 focus:outline-none bg-white text-slate-800 w-[13ch]"
+                type="date"
+                lang="en-GB"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-1 leading-none text-slate-600 hover:bg-sky-50 focus:outline-none"
+                aria-label="Deschide calendarul"
+                title="Deschide calendarul"
+                onClick={() => {
+                  const el = (dateInputRef.current as any)
+                  try { el?.showPicker?.() } catch {}
+                  dateInputRef.current?.focus()
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50"
+                aria-label="Ziua următoare"
+                onClick={() => shiftDate(1)}
+                title="Ziua următoare"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 flex-1 min-h-0 flex flex-col">
+          {loading ? <div>Se încarcă…</div> : (
+            <>
+              <div className="-mx-3 flex-1 min-h-0">
+                <div className="border-y border-slate-300 h-full overflow-y-auto" ref={gridScrollRef}>
+                  <TimelineGrid flat data={data} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
+                </div>
+              </div>
+              {/* Inline gap error removed; moved to detached toast */}
+              <div className="mt-1.5 mb-0.5 flex justify-center">
+                <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-rose-200"></span><span>indisponibil</span></div>
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea ta</span></div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+  </section>
+      <footer>
+        <div className="rounded border border-sky-200 bg-sky-50 p-3 text-xs text-slate-700 shadow-md">
+          <div className="flex items-start gap-2">
+            <span aria-hidden className="mt-0.5">ℹ️</span>
+            <div className="space-y-1">
+              <div>
+                {selCourtId && selStart && selEnd ? (
+                  <>Selecție: {selectedCourtName ?? `Court #${selCourtId}`} • {date} • {selStart} - {selEnd}</>
+                ) : (
+                  <>Selectați cel puțin 1 oră (două intervale continue de 30 min).</>
+                )}
+              </div>
+              <div>Selectati intervalul liber cu care dotiti sa inceapa pozitia dumneavoastra pentru a rezerva.</div>
+            </div>
+          </div>
+        </div>
+      </footer>
+      {/* Detached gap error toast */}
+      {gapToastVisible && (
+        <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none">
+          <div className="max-w-7xl mx-auto px-4">
+            <div
+              className={`relative rounded border border-rose-300 bg-rose-50 text-rose-800 shadow pointer-events-auto ${gapToastFading ? 'opacity-0' : 'opacity-100'} transition-opacity w-full mb-4`}
+              style={{ transitionDuration: '2000ms', height: '33vh' }}
+              role="alert"
+            >
+              <button
+                aria-label="Închide"
+                className="absolute top-2 right-2 text-rose-800/70 hover:text-rose-900"
+                onClick={() => {
+                  if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
+                  if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current)
+                  setGapToastFading(false)
+                  setGapToastVisible(false)
+                }}
+              >✕</button>
+              <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-4">
+                <span className="text-3xl" aria-hidden>⚠️</span>
+                <div className="text-lg sm:text-xl text-rose-900">
+                  Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extinde sau mută selecția pentru a elimina golul.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

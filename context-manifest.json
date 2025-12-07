@@ -1,0 +1,43 @@
+{
+  "common": [
+    "AGENTS.md",
+    "README.md",
+    "scripts/reset-dev-db.ps1",
+    "context-manifest.json"
+  ],
+  "backend": [
+    "pom.xml",
+    "src/main/resources/application.yml",
+    "src/main/java/com/toptennis/config/SecurityConfig.java",
+    "src/main/java/com/toptennis/config/WebConfig.java",
+    "src/main/java/com/toptennis/controller/AdminController.java",
+    "src/main/java/com/toptennis/controller/AvailabilityController.java",
+    "src/main/java/com/toptennis/controller/BookingController.java",
+    "src/main/java/com/toptennis/controller/CourtController.java",
+    "src/main/java/com/toptennis/service/BookingService.java",
+    "src/main/java/com/toptennis/service/AvailabilityService.java",
+    "src/main/java/com/toptennis/service/CourtService.java",
+    "src/main/java/com/toptennis/repository/BookingRepository.java",
+    "src/main/java/com/toptennis/repository/CourtRepository.java",
+    "src/main/java/com/toptennis/model/Booking.java",
+    "src/main/java/com/toptennis/model/Court.java",
+    "src/main/java/com/toptennis/model/BookingStatus.java",
+    "src/main/java/com/toptennis/model/SportType.java",
+    "src/main/resources/db/migration/V1__init.sql",
+    "src/main/resources/db/migration/V2__seed_courts.sql"
+  ],
+  "frontend": [
+    "frontend/package.json",
+    "frontend/tsconfig.json",
+    "frontend/vite.config.ts",
+    "frontend/src/main.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/components/TimelineGrid.tsx",
+    "frontend/src/components/SportPicker.tsx",
+    "frontend/src/pages/BookingPage.tsx",
+    "frontend/src/pages/AdminPage.tsx",
+    "frontend/src/api.ts",
+    "frontend/src/types.ts"
+  ]
+}
+
