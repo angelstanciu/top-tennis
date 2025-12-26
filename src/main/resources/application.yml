@@ -20,6 +20,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+sms:
+  port: /dev/ttyUSB0
+  baud: 115200
+  commandTimeoutMs: 4000
+  sendTimeoutMs: 20000
+  interCommandDelayMs: 100
+  clubNumber: "+0746917027"
+
 server:
   port: 8080
 

@@ -1,6 +1,7 @@
 package com.toptennis.service;
 
 import com.toptennis.model.*;
+import com.toptennis.sms.SmsService;
  
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
@@ -17,11 +18,13 @@ import java.util.List;
 public class BookingService {
     private final BookingRepository bookingRepository;
     private final CourtRepository courtRepository;
+    private final SmsService smsService;
  
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository) {
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
+        this.smsService = smsService;
     }
 
     @Transactional
@@ -49,7 +52,9 @@ public class BookingService {
         b.setCreatedAt(LocalDateTime.now());
         b.setUpdatedAt(LocalDateTime.now());
         b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
-        return bookingRepository.save(b);
+        Booking saved = bookingRepository.save(b);
+        smsService.sendReservationNotifications(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
