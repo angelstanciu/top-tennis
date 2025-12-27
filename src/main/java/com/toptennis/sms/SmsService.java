@@ -64,12 +64,16 @@ public class SmsService {
             byte[] messageBytes = (text + (char) 0x1A).getBytes(StandardCharsets.UTF_8);
             client.writeRaw(messageBytes);
 
-            String finalResp = client.readResponse(doneOkAndCmgsOrError(), sendTimeout);
+            String finalResp = client.readResponse(doneOkOrError(), sendTimeout);
             transcript.append(finalResp);
 
             SmsSendResult result = new SmsSendResult();
             result.transcript = transcript.toString();
             if (hasErrorLine(result.transcript)) {
+                result.success = false;
+                return result;
+            }
+            if (!(finalResp.contains("OK") || finalResp.contains("+CMGS:"))) {
                 result.success = false;
                 return result;
             }
@@ -199,7 +203,4 @@ public class SmsService {
         return s -> s.contains(">") || hasErrorLine(s);
     }
 
-    private java.util.function.Predicate<String> doneOkAndCmgsOrError() {
-        return s -> (s.contains("OK") && s.contains("+CMGS:")) || hasErrorLine(s);
-    }
 }
