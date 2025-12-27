@@ -51,8 +51,7 @@ public class SmsService {
                 return result;
             }
 
-            String normalizedTo = normalizeNumber(toE164);
-            String cmgsResp = client.execute("AT+CMGS=\"" + normalizedTo + "\"", donePromptOrError(), cmdTimeout);
+            String cmgsResp = client.execute("AT+CMGS=\"" + toE164 + "\"", donePromptOrError(), cmdTimeout);
             transcript.append(cmgsResp);
             if (hasErrorLine(cmgsResp)) {
                 SmsSendResult result = new SmsSendResult();
@@ -154,20 +153,6 @@ public class SmsService {
 
     private boolean hasErrorLine(String s) {
         return s.contains("+CMS ERROR") || s.contains("+CME ERROR") || s.contains("ERROR");
-    }
-
-    private String normalizeNumber(String number) {
-        if (number == null) {
-            return null;
-        }
-        String trimmed = number.trim();
-        if (trimmed.startsWith("+0")) {
-            return "+4" + trimmed.substring(2);
-        }
-        if (trimmed.startsWith("0")) {
-            return "+40" + trimmed.substring(1);
-        }
-        return trimmed;
     }
 
     private void sleepBetweenMessages() {
