@@ -10,6 +10,13 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+function isAppInstalled() {
+  if (typeof window === 'undefined') return false
+  const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+  const iOSStandalone = (window.navigator as any).standalone === true
+  return !!(standalone || iOSStandalone)
+}
+
 function todayISO(offsetDays = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
@@ -90,23 +97,13 @@ export default function App() {
       e.preventDefault()
       const deferred = e as BeforeInstallPromptEvent
       setInstallPrompt(deferred)
-      let count = 0
-      try {
-        const raw = localStorage.getItem('pwaInstallPromptCount')
-        count = raw ? Number(raw) : 0
-        count = Number.isFinite(count) ? count + 1 : 1
-        localStorage.setItem('pwaInstallPromptCount', String(count))
-      } catch {
-        count = 1
-      }
-      if (count % 10 === 0) {
+      if (!isAppInstalled()) {
         setShowInstall(true)
       }
     }
     function onAppInstalled() {
       setShowInstall(false)
       setInstallPrompt(null)
-      try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
     }
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onAppInstalled)
@@ -169,12 +166,10 @@ export default function App() {
     } catch {}
     setShowInstall(false)
     setInstallPrompt(null)
-    try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
   }
 
   function handleDismissInstall() {
     setShowInstall(false)
-    try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
   }
 
   // Listen for booking updates from the admin page and refetch availability
@@ -209,9 +204,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
             <div className="text-lg font-semibold">Instaleaza aplicatia Star Arena</div>
-            <div className="mt-1 text-sm text-emerald-800">
-              Acces rapid din ecranul principal. Functioneaza si offline pentru consultare.
-            </div>
+            <div className="mt-1 text-sm text-emerald-800">Acces rapid din ecranul principal.</div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
                 Renunta
