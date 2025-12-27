@@ -25,10 +25,10 @@ function isAppInstalled() {
 function shouldShowInstallPrompt() {
   if (typeof window === 'undefined') return false
   if (isAppInstalled()) return false
-  const today = new Date().toISOString().slice(0, 10)
   try {
-    const last = localStorage.getItem('pwaInstallLastShown')
-    return last !== today
+    const last = Number(localStorage.getItem('pwaInstallLastShownAt') || 0)
+    const tenMinutesMs = 10 * 60 * 1000
+    return !last || (Date.now() - last) >= tenMinutesMs
   } catch {
     return true
   }
@@ -36,8 +36,7 @@ function shouldShowInstallPrompt() {
 
 function markInstallPromptShown() {
   if (typeof window === 'undefined') return
-  const today = new Date().toISOString().slice(0, 10)
-  try { localStorage.setItem('pwaInstallLastShown', today) } catch {}
+  try { localStorage.setItem('pwaInstallLastShownAt', String(Date.now())) } catch {}
 }
 
 function todayISO(offsetDays = 0) {

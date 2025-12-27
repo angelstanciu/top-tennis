@@ -246,7 +246,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       const targetM = targetMin % 60
       const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
       const idx = ticks.findIndex(t => t >= target)
-      return Math.max(0, idx)
+      return idx < 0 ? (ticks.length - 2) : Math.min(Math.max(idx, 0), ticks.length - 2)
     }
     const idx = findScrollIndex()
     if (idx !== null) {
@@ -279,7 +279,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       const targetM = targetMin % 60
       const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
       const idx = ticks.findIndex(t => t >= target)
-      return Math.max(0, idx)
+      return idx < 0 ? (ticks.length - 2) : Math.min(Math.max(idx, 0), ticks.length - 2)
     }
     const idx = findScrollIndex()
     const timer = setTimeout(() => {
