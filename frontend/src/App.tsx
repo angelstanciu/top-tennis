@@ -46,6 +46,13 @@ function todayISO(offsetDays = 0) {
   return d.toISOString().slice(0,10)
 }
 
+function formatDateDisplay(iso?: string) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}.${m}.${y}`
+}
+
 export default function App() {
   const [searchParams] = useSearchParams()
   const lsSport = (typeof window !== 'undefined' ? (localStorage.getItem('lastSport') as SportType | null) : null)
@@ -79,6 +86,7 @@ export default function App() {
   }, [selCourtId, data])
 
   const title = useMemo(() => 'Rezervări STAR ARENA Bascov', [])
+  const displayDate = useMemo(() => formatDateDisplay(date), [date])
 
   // State is initialized from query params; no further sync needed
 
@@ -289,13 +297,19 @@ export default function App() {
               >
                 ‹
               </button>
-              <input
-                className="px-2 py-1.5 text-sm border-0 focus:outline-none bg-white text-slate-800 w-full min-w-[10.5rem]"
-                type="date"
-                lang="ro-RO"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-              />
+              <div className="relative flex-1 min-w-[10.5rem]">
+                <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none">
+                  {displayDate}
+                </div>
+                <input
+                  className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                  type="date"
+                  lang="ro-RO"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  aria-label="Data"
+                />
+              </div>
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50"

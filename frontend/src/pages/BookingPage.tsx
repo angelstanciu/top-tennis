@@ -3,6 +3,13 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
 import type { CourtDto } from '../types'
 
+function formatDateDisplay(iso?: string) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}.${m}.${y}`
+}
+
 export default function BookingPage() {
   const { courtId, date, startTime, endTime } = useParams()
   const [searchParams] = useSearchParams()
@@ -16,7 +23,8 @@ export default function BookingPage() {
   const phoneInputRef = useRef<HTMLInputElement | null>(null)
   const [court, setCourt] = useState<CourtDto | null>(null)
 
-  const subtitle = useMemo(() => `${date} • ${startTime} - ${endTime}`, [date, startTime, endTime])
+  const displayDate = useMemo(() => formatDateDisplay(date), [date])
+  const subtitle = useMemo(() => `${displayDate} • ${startTime} - ${endTime}`, [displayDate, startTime, endTime])
 
   function minutesBetween(a?: string, b?: string) {
     if (!a || !b) return 0
@@ -176,7 +184,7 @@ export default function BookingPage() {
 
       <div className="mt-3 rounded border border-sky-200 bg-sky-50 p-3 text-xs text-slate-700 shadow-md">
         <div className="flex items-start gap-2">
-          <span aria-hidden className="mt-0.5">ℹ️</span>
+          <span aria-hidden className="mt-0.5">i</span>
           <div>
             <div className="font-semibold text-slate-800 mb-1">Instrucțiuni de completare</div>
             <ul className="list-disc pl-4 space-y-1">
