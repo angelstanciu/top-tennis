@@ -23,7 +23,7 @@ public class CourtService {
     }
 
     public Court get(Long id) {
-        return courtRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Court not found: " + id));
+        return courtRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + id));
     }
 }
 

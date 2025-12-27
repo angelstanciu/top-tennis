@@ -12,14 +12,14 @@ async function adminFetchBookings(date: string, sportType: SportType | '' , auth
   url.searchParams.set('date', date)
   if (sportType) url.searchParams.set('sportType', sportType)
   const res = await fetch(url.toString(), { headers: { Authorization: `Basic ${auth}` } })
-  if (!res.ok) throw new Error('Failed to load bookings')
+  if (!res.ok) throw new Error('Nu am putut încărca rezervările')
   return res.json()
 }
 
 async function adminPatch(path: string, auth: string) {
   const base = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080/api'
   const res = await fetch(`${base}${path}`, { method: 'PATCH', headers: { Authorization: `Basic ${auth}` } })
-  if (!res.ok) throw new Error('Action failed')
+  if (!res.ok) throw new Error('Acțiunea a eșuat')
 }
 
 export default function AdminPage() {
@@ -33,7 +33,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
 
   const logged = !!auth
-  const title = useMemo(() => 'Admin Rezervări', [])
+  const title = useMemo(() => 'Administrare rezervări', [])
 
   function sportLabel(s?: SportType) {
     switch (s) {
@@ -41,7 +41,8 @@ export default function AdminPage() {
       case 'PADEL': return 'Padel'
       case 'BEACH_VOLLEY': return 'Volei pe plajă'
       case 'BASKETBALL': return 'Baschet'
-      case 'FOOTVOLLEY': return 'Footvolley'
+      case 'FOOTVOLLEY': return 'Tenis de picior'
+      case 'TABLE_TENNIS': return 'Tenis de masă'
       default: return s || ''
     }
   }
@@ -174,7 +175,8 @@ export default function AdminPage() {
                   <option value='PADEL'>Padel</option>
                   <option value='BEACH_VOLLEY'>Volei pe plajă</option>
                   <option value='BASKETBALL'>Baschet</option>
-                  <option value='FOOTVOLLEY'>Footvolley</option>
+                  <option value='FOOTVOLLEY'>Tenis de picior</option>
+                  <option value='TABLE_TENNIS'>Tenis de masă</option>
                 </select>
               </div>
               <button className="btn" onClick={reload} disabled={loading}>Încarcă</button>
@@ -219,7 +221,7 @@ export default function AdminPage() {
                   <th className="text-left px-3 py-2 border-b">Interval Rezervat</th>
                   <th className="text-left px-3 py-2 border-b">Total (RON)</th>
                   <th className="text-left px-3 py-2 border-b">Client</th>
-                  <th className="text-left px-3 py-2 border-b">Status</th>
+                  <th className="text-left px-3 py-2 border-b">Stare</th>
                   <th className="text-left px-3 py-2 border-b">Acțiuni</th>
                 </tr>
               </thead>

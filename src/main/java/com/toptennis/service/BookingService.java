@@ -34,12 +34,12 @@ public class BookingService {
 
     @Transactional
     public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email) {
-        Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Court not found: " + courtId));
+        Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);
 
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
         if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
-            throw new IllegalArgumentException("Selected time overlaps with existing booking.");
+            throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
         }
 
         // Disallow leaving a 30-minute gap adjacent to existing bookings
@@ -64,7 +64,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public Booking get(Long id) {
-        return bookingRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Booking not found: " + id));
+        return bookingRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Rezervarea nu a fost găsită: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -90,11 +90,11 @@ public class BookingService {
 
     @Transactional
     public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
-        Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Court not found: " + courtId));
+        Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
         if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
-            throw new IllegalArgumentException("Selected time overlaps with existing booking.");
+            throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
         }
         Booking b = new Booking();
         b.setCourt(court);
@@ -113,21 +113,21 @@ public class BookingService {
 
     private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end) {
         if (date == null || start == null || end == null) {
-            throw new IllegalArgumentException("Date and time are required.");
+            throw new IllegalArgumentException("Data și intervalul sunt obligatorii.");
         }
         // Alignment check with end-of-day allowance (23:59 as 24:00)
         if (!isAlignedTo30Min(start) || !isAlignedTo30MinOrEndOfDay(end)) {
-            throw new IllegalArgumentException("Start/end must align to 30-minute slots.");
+            throw new IllegalArgumentException("Ora de început și de sfârșit trebuie să fie la multiplu de 30 de minute.");
         }
 
         int startMin = minutesSinceMidnight(start);
         int endMin = minutesSinceMidnight(end);
         if (endMin <= startMin) {
-            throw new IllegalArgumentException("End time must be after start time.");
+            throw new IllegalArgumentException("Ora de sfârșit trebuie să fie după ora de început.");
         }
         int durMin = endMin - startMin;
         if (durMin < 60) {
-            throw new IllegalArgumentException("Minimum booking duration is 1 hour.");
+            throw new IllegalArgumentException("Durata minimă a rezervării este de 1 oră.");
         }
         // No opening hours constraint: base is open non-stop
     }

@@ -241,14 +241,14 @@ export default function App() {
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
-            <div className="text-lg font-semibold">Instaleaza aplicatia Star Arena</div>
+            <div className="text-lg font-semibold">Instalează aplicația Star Arena</div>
             <div className="mt-1 text-sm text-emerald-800">Acces rapid din ecranul principal.</div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
-                Renunta
+                Renunță
               </button>
               <button className="px-4 py-2 rounded bg-emerald-600 text-white" onClick={handleInstall}>
-                Instaleaza
+                Instalează
               </button>
             </div>
           </div>
@@ -259,11 +259,11 @@ export default function App() {
           <div className="w-[90vw] max-w-md rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-xl">
             <div className="text-lg font-semibold">Instalare pe iPhone</div>
             <div className="mt-1 text-sm text-amber-800">
-              Apasa Share si apoi Add to Home Screen pentru a instala aplicatia.
+              Apasă Partajează și apoi Adaugă pe ecranul principal pentru a instala aplicația.
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-amber-300 text-amber-800" onClick={handleDismissIOSInstall}>
-                Am inteles
+                Am înțeles
               </button>
             </div>
           </div>
@@ -336,12 +336,12 @@ export default function App() {
             <div className="space-y-1">
               <div>
                 {selCourtId && selStart && selEnd ? (
-                  <>Selecție: {selectedCourtName ?? `Court #${selCourtId}`} • {date} • {selStart} - {selEnd}</>
+                  <>Selecție: {selectedCourtName ?? `Teren #${selCourtId}`} • {date} • {selStart} - {selEnd}</>
                 ) : (
                   <>Selectați cel puțin 1 oră (două intervale continue de 30 min).</>
                 )}
               </div>
-              <div>Selectati intervalul liber cu care dotiti sa inceapa pozitia dumneavoastra pentru a rezerva.</div>
+              <div>Selectați intervalul liber de la care doriți să înceapă rezervarea.</div>
             </div>
           </div>
         </div>

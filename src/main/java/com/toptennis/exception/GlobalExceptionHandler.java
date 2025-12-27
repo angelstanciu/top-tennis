@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
         ApiError err = new ApiError();
         err.status = HttpStatus.BAD_REQUEST.value();
         err.error = HttpStatus.BAD_REQUEST.getReasonPhrase();
-        err.message = "Validation failed";
+        err.message = "Validare eșuată";
         err.path = req.getRequestURI();
         err.details = ex.getBindingResult().getFieldErrors().stream()
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
         ApiError err = new ApiError();
         err.status = HttpStatus.BAD_REQUEST.value();
         err.error = HttpStatus.BAD_REQUEST.getReasonPhrase();
-        err.message = "Constraint violation";
+        err.message = "Eroare de validare";
         err.path = req.getRequestURI();
         err.details = ex.getConstraintViolations().stream().map(v -> v.getPropertyPath()+": "+v.getMessage()).toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);

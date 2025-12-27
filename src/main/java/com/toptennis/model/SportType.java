@@ -5,6 +5,7 @@ public enum SportType {
     PADEL,
     BEACH_VOLLEY,
     BASKETBALL,
-    FOOTVOLLEY
+    FOOTVOLLEY,
+    TABLE_TENNIS
 }
 

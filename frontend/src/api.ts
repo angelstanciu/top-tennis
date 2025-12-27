@@ -7,7 +7,7 @@ export async function fetchAvailability(date: string, sportType?: string): Promi
   url.searchParams.set('date', date)
   if (sportType) url.searchParams.set('sportType', sportType)
   const res = await fetch(url)
-  if (!res.ok) throw new Error('Failed to fetch availability')
+  if (!res.ok) throw new Error('Nu am putut încărca disponibilitatea')
   return res.json()
 }
 

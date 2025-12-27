@@ -70,7 +70,7 @@ export default function BookingPage() {
     if (!court) return ''
     const parts: string[] = []
     // always include indoor/outdoor first
-    parts.push(court.indoor ? 'indoor' : 'outdoor')
+    parts.push(court.indoor ? 'interior' : 'exterior')
     if (court.heated) parts.push('încălzit')
     if (court.lighting) parts.push('iluminat')
     if (!parts.length) return ''
@@ -100,13 +100,13 @@ export default function BookingPage() {
         customerPhone: phone,
         customerEmail: email || undefined,
       })
-      alert('Mulțumim, rezervarea ta a fost înregistrată.')
+      alert('Mulțumim, rezervarea a fost înregistrată.')
       const lastSport = localStorage.getItem('lastSport') || sport
       const lastDate = localStorage.getItem('lastDate') || date
       const backUrl = `/?sport=${encodeURIComponent(lastSport)}&date=${encodeURIComponent(lastDate)}`
       nav(backUrl)
     } catch (e: any) {
-      setError(e.message || 'Failed to create booking')
+      setError(e.message || 'Nu am putut crea rezervarea')
     } finally {
       setSubmitting(false)
     }
@@ -115,7 +115,7 @@ export default function BookingPage() {
   return (
     <div className="max-w-lg mx-auto min-h-screen bg-white p-4 space-y-4">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold border-l-4 border-sky-500 pl-3">Finalizează Rezervarea</h1>
+        <h1 className="text-2xl font-bold border-l-4 border-sky-500 pl-3">Finalizează rezervarea</h1>
       </div>
 
       <div className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
