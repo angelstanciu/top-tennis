@@ -36,16 +36,16 @@ function sportLabel(s: string) {
   switch (s) {
     case 'TENNIS': return 'Tenis'
     case 'PADEL': return 'Padel'
-    case 'BEACH_VOLLEY': return 'Volei pe plajÄƒ'
+    case 'BEACH_VOLLEY': return 'Volei pe plajă'
     case 'BASKETBALL': return 'Baschet'
     case 'FOOTVOLLEY': return 'Tenis de picior'
-    case 'TABLE_TENNIS': return 'Tenis de masÄƒ'
+    case 'TABLE_TENNIS': return 'Tenis de masă'
     default: return s
   }
 }
 
 export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef }: Props) {
-  if (data.length === 0) return <div>Nu au fost gÄƒsite terenuri</div>
+  if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
   const maxClose = '24:00'
@@ -201,8 +201,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     }
     requestAnimationFrame(step)
   }
-  // Close popup on date/data changes or on global interactions
-  useEffect(() => { setPopup(null) }, [date, data.length])
+  // Close popup and reset horizontal scroll on date/data changes
+  useEffect(() => {
+    setPopup(null)
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0
+    if (headerRef.current) headerRef.current.scrollLeft = 0
+  }, [date, data.length])
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setPopup(null) }
     function onResize() { setPopup(null) }
@@ -250,10 +254,10 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     }
     const idx = findFirstClickableIndex()
     if (idx !== null) {
-      if (!isMobile && scrollRef.current) {
-        // Desktop: horizontal scroll to first clickable column
-        const left = idx * colWidth
-        animateScrollX(scrollRef.current, left, 600, (val) => { if (headerRef.current) headerRef.current.scrollLeft = val })
+      if (!isMobile) {
+        // Desktop: keep the time header anchored at the start
+        if (scrollRef.current) scrollRef.current.scrollLeft = 0
+        if (headerRef.current) headerRef.current.scrollLeft = 0
       } else if (isMobile) {
         // Mobile: vertical scroll to the first clickable row
         const container = (scrollContainerRef?.current || mobileBodyRef.current)
@@ -288,9 +292,9 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const idx = findFirstClickableIndex()
     if (idx === null) return
     const timer = setTimeout(() => {
-      if (!isMobile && scrollRef.current) {
-        const left = idx * colWidth
-        animateScrollX(scrollRef.current, left, 600, (val) => { if (headerRef.current) headerRef.current.scrollLeft = val })
+      if (!isMobile) {
+        if (scrollRef.current) scrollRef.current.scrollLeft = 0
+        if (headerRef.current) headerRef.current.scrollLeft = 0
       } else if (isMobile) {
         const container = (scrollContainerRef?.current || mobileBodyRef.current)
         const rowEl = container?.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
