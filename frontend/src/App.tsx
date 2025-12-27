@@ -10,11 +10,34 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+function isIOS() {
+  if (typeof window === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+}
+
 function isAppInstalled() {
   if (typeof window === 'undefined') return false
   const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
   const iOSStandalone = (window.navigator as any).standalone === true
   return !!(standalone || iOSStandalone)
+}
+
+function shouldShowInstallPrompt() {
+  if (typeof window === 'undefined') return false
+  if (isAppInstalled()) return false
+  const today = new Date().toISOString().slice(0, 10)
+  try {
+    const last = localStorage.getItem('pwaInstallLastShown')
+    return last !== today
+  } catch {
+    return true
+  }
+}
+
+function markInstallPromptShown() {
+  if (typeof window === 'undefined') return
+  const today = new Date().toISOString().slice(0, 10)
+  try { localStorage.setItem('pwaInstallLastShown', today) } catch {}
 }
 
 function todayISO(offsetDays = 0) {
@@ -48,6 +71,7 @@ export default function App() {
   const [clearTick, setClearTick] = useState<number>(0)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstall, setShowInstall] = useState(false)
+  const [showIOSInstall, setShowIOSInstall] = useState(false)
   const selectedCourtName = useMemo(() => {
     if (!selCourtId) return null
     const row = data.find(d => d.court.id === selCourtId)
@@ -97,13 +121,15 @@ export default function App() {
       e.preventDefault()
       const deferred = e as BeforeInstallPromptEvent
       setInstallPrompt(deferred)
-      if (!isAppInstalled()) {
+      if (shouldShowInstallPrompt()) {
+        markInstallPromptShown()
         setShowInstall(true)
       }
     }
     function onAppInstalled() {
       setShowInstall(false)
       setInstallPrompt(null)
+      markInstallPromptShown()
     }
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onAppInstalled)
@@ -112,6 +138,14 @@ export default function App() {
       window.removeEventListener('appinstalled', onAppInstalled)
     }
   }, [])
+
+  useEffect(() => {
+    if (installPrompt) return
+    if (isIOS() && shouldShowInstallPrompt()) {
+      markInstallPromptShown()
+      setShowIOSInstall(true)
+    }
+  }, [installPrompt])
   
 
   function shiftDate(days: number) {
@@ -172,6 +206,10 @@ export default function App() {
     setShowInstall(false)
   }
 
+  function handleDismissIOSInstall() {
+    setShowIOSInstall(false)
+  }
+
   // Listen for booking updates from the admin page and refetch availability
   useEffect(() => {
     function refetch() {
@@ -211,6 +249,21 @@ export default function App() {
               </button>
               <button className="px-4 py-2 rounded bg-emerald-600 text-white" onClick={handleInstall}>
                 Instaleaza
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showIOSInstall && !showInstall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[90vw] max-w-md rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-xl">
+            <div className="text-lg font-semibold">Instalare pe iPhone</div>
+            <div className="mt-1 text-sm text-amber-800">
+              Apasa Share si apoi Add to Home Screen pentru a instala aplicatia.
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button className="px-4 py-2 rounded border border-amber-300 text-amber-800" onClick={handleDismissIOSInstall}>
+                Am inteles
               </button>
             </div>
           </div>
