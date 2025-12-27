@@ -2,6 +2,7 @@ package com.toptennis.service;
 
 import com.toptennis.model.*;
 import com.toptennis.sms.SmsService;
+import org.springframework.core.task.TaskExecutor;
  
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
@@ -19,12 +20,14 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final CourtRepository courtRepository;
     private final SmsService smsService;
+    private final TaskExecutor taskExecutor;
  
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService) {
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, TaskExecutor taskExecutor) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
         this.smsService = smsService;
+        this.taskExecutor = taskExecutor;
     }
 
     @Transactional
@@ -46,14 +49,14 @@ public class BookingService {
         b.setStartTime(start);
         b.setEndTime(end);
         b.setCustomerName(name);
-        b.setCustomerPhone(phone);
+        b.setCustomerPhone(normalizePhone(phone));
         b.setCustomerEmail(email);
         b.setStatus(BookingStatus.CONFIRMED);
         b.setCreatedAt(LocalDateTime.now());
         b.setUpdatedAt(LocalDateTime.now());
         b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
         Booking saved = bookingRepository.save(b);
-        smsService.sendReservationNotifications(saved);
+        taskExecutor.execute(() -> smsService.sendReservationNotifications(saved));
         return saved;
     }
 
@@ -125,6 +128,17 @@ public class BookingService {
             throw new IllegalArgumentException("Minimum booking duration is 1 hour.");
         }
         // No opening hours constraint: base is open non-stop
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        String stripped = phone.replaceAll("\\s+", "");
+        if (stripped.matches("^0\\d{9}$")) {
+            return "+4" + stripped;
+        }
+        return stripped;
     }
 
     private boolean isAlignedTo30Min(LocalTime t) {

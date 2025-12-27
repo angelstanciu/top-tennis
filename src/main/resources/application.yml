@@ -28,6 +28,10 @@ sms:
   interCommandDelayMs: 100
   clubNumber: "+40746917027"
 
+logging:
+  level:
+    com.toptennis: INFO
+
 server:
   port: 8080
 

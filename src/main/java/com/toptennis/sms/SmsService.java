@@ -82,6 +82,7 @@ public class SmsService {
                 result.messageId = m.group(1);
             }
             result.success = true;
+            log.info("SMS sent to {} messageId={} text=\"{}\"", toE164, result.messageId, text);
             return result;
         } catch (SmsException ex) {
             log.warn("SMS send failed.", ex);
@@ -110,6 +111,16 @@ public class SmsService {
             SmsSendResult customerResult = sendSms(customerNumber, customerText);
             if (!customerResult.success) {
                 log.warn("Failed to send customer SMS. Transcript: {}", customerResult.transcript);
+            } else {
+                log.info("Customer SMS delivered for {} ({}) court={} interval={} - {} date={} price={} text=\"{}\"",
+                        safe(booking.getCustomerName()),
+                        customerNumber,
+                        booking.getCourt() != null ? booking.getCourt().getName() : "teren",
+                        formatTime(booking.getStartTime()),
+                        formatTime(booking.getEndTime()),
+                        formatDate(booking.getBookingDate()),
+                        formatPrice(booking.getPrice()),
+                        customerText);
             }
         } else {
             log.warn("Customer phone is missing; SMS not sent.");
@@ -122,6 +133,16 @@ public class SmsService {
             SmsSendResult ownerResult = sendSms(clubNumber, ownerText);
             if (!ownerResult.success) {
                 log.warn("Failed to send owner SMS. Transcript: {}", ownerResult.transcript);
+            } else {
+                log.info("Club SMS delivered for {} ({}) court={} interval={} - {} date={} price={} text=\"{}\"",
+                        safe(booking.getCustomerName()),
+                        customerNumber,
+                        booking.getCourt() != null ? booking.getCourt().getName() : "teren",
+                        formatTime(booking.getStartTime()),
+                        formatTime(booking.getEndTime()),
+                        formatDate(booking.getBookingDate()),
+                        formatPrice(booking.getPrice()),
+                        ownerText);
             }
         } else {
             log.warn("Club SMS number is not configured; SMS not sent.");
@@ -203,6 +224,10 @@ public class SmsService {
             return "0";
         }
         return price.stripTrailingZeros().toPlainString();
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "Client" : value;
     }
 
     private java.util.function.Predicate<String> doneOkOrError() {
