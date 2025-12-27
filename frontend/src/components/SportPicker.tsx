@@ -42,8 +42,8 @@ export default function SportPicker({ value, onChange }: { value: SportType, onC
     <div className="inline-block">
       <select
         ref={selectRef}
-        className="border rounded px-2 py-1.5 text-sm whitespace-nowrap w-full bg-white text-slate-900"
-        style={{ maxWidth: width ? `${width}px` : undefined }}
+        className="border rounded px-2 py-1.5 text-sm whitespace-nowrap bg-white text-slate-900"
+        style={{ width: width ? `${width}px` : undefined }}
         value={value}
         onChange={(e) => onChange(e.target.value as SportType)}
         aria-label="Selectează sportul"

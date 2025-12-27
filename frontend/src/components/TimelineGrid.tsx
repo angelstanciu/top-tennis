@@ -259,8 +259,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
         if (headerRef.current) headerRef.current.scrollLeft = 0
       } else if (isMobile) {
-        // Mobile: vertical scroll to the first clickable row
-        const container = (scrollContainerRef?.current || mobileBodyRef.current)
+        // Mobile: vertical scroll within the mobile grid container
+        const container = mobileBodyRef.current
         if (!container) return
         const rowEl = container.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
         if (rowEl) {
@@ -296,7 +296,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
         if (headerRef.current) headerRef.current.scrollLeft = 0
       } else if (isMobile) {
-        const container = (scrollContainerRef?.current || mobileBodyRef.current)
+        const container = mobileBodyRef.current
         const rowEl = container?.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
         if (container && rowEl) {
           const top = Math.max(0, rowEl.offsetTop - Math.max(0, container.clientHeight / 3))
