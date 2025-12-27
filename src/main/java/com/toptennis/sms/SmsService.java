@@ -51,7 +51,8 @@ public class SmsService {
                 return result;
             }
 
-            String cmgsResp = client.execute("AT+CMGS=\"" + toE164 + "\"", donePromptOrError(), cmdTimeout);
+            String normalizedTo = normalizeNumber(toE164);
+            String cmgsResp = client.execute("AT+CMGS=\"" + normalizedTo + "\"", donePromptOrError(), cmdTimeout);
             transcript.append(cmgsResp);
             if (hasErrorLine(cmgsResp)) {
                 SmsSendResult result = new SmsSendResult();
@@ -64,12 +65,16 @@ public class SmsService {
             byte[] messageBytes = (text + (char) 0x1A).getBytes(StandardCharsets.UTF_8);
             client.writeRaw(messageBytes);
 
-            String finalResp = client.readResponse(doneOkAndCmgsOrError(), sendTimeout);
+            String finalResp = client.readResponse(doneOkOrError(), sendTimeout);
             transcript.append(finalResp);
 
             SmsSendResult result = new SmsSendResult();
             result.transcript = transcript.toString();
             if (hasErrorLine(result.transcript)) {
+                result.success = false;
+                return result;
+            }
+            if (!(finalResp.contains("OK") || finalResp.contains("+CMGS:"))) {
                 result.success = false;
                 return result;
             }
@@ -113,6 +118,7 @@ public class SmsService {
 
         String clubNumber = props.getClubNumber();
         if (clubNumber != null && !clubNumber.isBlank()) {
+            sleepBetweenMessages();
             String ownerText = buildOwnerMessage(booking);
             SmsSendResult ownerResult = sendSms(clubNumber, ownerText);
             if (!ownerResult.success) {
@@ -148,6 +154,28 @@ public class SmsService {
 
     private boolean hasErrorLine(String s) {
         return s.contains("+CMS ERROR") || s.contains("+CME ERROR") || s.contains("ERROR");
+    }
+
+    private String normalizeNumber(String number) {
+        if (number == null) {
+            return null;
+        }
+        String trimmed = number.trim();
+        if (trimmed.startsWith("+0")) {
+            return "+4" + trimmed.substring(2);
+        }
+        if (trimmed.startsWith("0")) {
+            return "+40" + trimmed.substring(1);
+        }
+        return trimmed;
+    }
+
+    private void sleepBetweenMessages() {
+        try {
+            Thread.sleep(1500L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private String buildCustomerMessage(Booking booking) {
@@ -198,10 +226,6 @@ public class SmsService {
 
     private java.util.function.Predicate<String> donePromptOrError() {
         return s -> s.contains(">") || hasErrorLine(s);
-    }
-
-    private java.util.function.Predicate<String> doneOkAndCmgsOrError() {
-        return s -> (s.contains("OK") && s.contains("+CMGS:")) || hasErrorLine(s);
     }
 
 }
