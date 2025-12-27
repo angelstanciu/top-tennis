@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AvailabilityDto } from '../types'
 
@@ -550,12 +550,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               className={'rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}
               style={{ transitionDuration: '1000ms' }}
             >
-              Te rug\u0103m selecteaz\u0103 una din selec\u021biile disponibile.
+              Te rugăm selectează una din selecțiile disponibile.
             </div>
           )}
           <div className="flex flex-col">
             <div className="font-bold">Teren: {row.court.name}</div>
-            <div className="text-xs text-slate-600">Ora de \u00eencepere: {startTime}</div>
+            <div className="text-xs text-slate-600">Ora de începere: {startTime}</div>
             <div className="text-xs text-slate-600">Interval selectat: {selectedIntervalText}</div>
           </div>
           <div className="flex flex-col gap-2">
@@ -570,7 +570,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               )
             })}
             <div className="flex gap-2">
-              <button className="btn flex-1" onClick={handleReserveClick}>Rezerv\u0103 selec\u021bia</button>
+              <button className="btn flex-1" onClick={handleReserveClick}>Rezervă selecția</button>
               <button
                 className="px-3 py-2 rounded border"
                 onClick={() => {
@@ -581,7 +581,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   onSelectionChange?.(null, null, null, false, false)
                 }}
               >
-                \u00cenchide
+                Închide
               </button>
             </div>
           </div>
