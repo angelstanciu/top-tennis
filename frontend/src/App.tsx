@@ -33,7 +33,6 @@ export default function App() {
   const [gapToastFading, setGapToastFading] = useState<boolean>(false)
   const gapToastShowTimer = React.useRef<any>(null)
   const gapToastHideTimer = React.useRef<any>(null)
-  const dateInputRef = React.useRef<HTMLInputElement | null>(null)
   const [clearTick, setClearTick] = useState<number>(0)
   const selectedCourtName = useMemo(() => {
     if (!selCourtId) return null
@@ -175,31 +174,12 @@ export default function App() {
                 ‹
               </button>
               <input
-                ref={dateInputRef}
                 className="px-2 py-1.5 text-sm border-0 focus:outline-none bg-white text-slate-800 w-[13ch]"
                 type="date"
                 lang="en-GB"
                 value={date}
                 onChange={e => setDate(e.target.value)}
               />
-              <button
-                type="button"
-                className="inline-flex items-center justify-center px-1 leading-none text-slate-600 hover:bg-sky-50 focus:outline-none"
-                aria-label="Deschide calendarul"
-                title="Deschide calendarul"
-                onClick={() => {
-                  const el = (dateInputRef.current as any)
-                  try { el?.showPicker?.() } catch {}
-                  dateInputRef.current?.focus()
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50"
