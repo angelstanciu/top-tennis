@@ -239,9 +239,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     if (!data.length) return
     const findScrollIndex = () => {
       if (date !== todayStr) return 0
-      const [hStr, mStr] = nowTime.split(':')
-      const h = Math.max(0, Number(hStr) - 1)
-      const target = `${String(h).padStart(2, '0')}:${mStr}`
+      const [hStr, mStr] = nowTime.split(':').map(Number)
+      const total = hStr * 60 + mStr
+      const targetMin = Math.max(0, total - 30)
+      const targetH = Math.floor(targetMin / 60)
+      const targetM = targetMin % 60
+      const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
       const idx = ticks.findIndex(t => t >= target)
       return Math.max(0, idx)
     }
@@ -269,9 +272,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     if (!data.length) return
     const findScrollIndex = () => {
       if (date !== todayStr) return 0
-      const [hStr, mStr] = nowTime.split(':')
-      const h = Math.max(0, Number(hStr) - 1)
-      const target = `${String(h).padStart(2, '0')}:${mStr}`
+      const [hStr, mStr] = nowTime.split(':').map(Number)
+      const total = hStr * 60 + mStr
+      const targetMin = Math.max(0, total - 30)
+      const targetH = Math.floor(targetMin / 60)
+      const targetM = targetMin % 60
+      const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
       const idx = ticks.findIndex(t => t >= target)
       return Math.max(0, idx)
     }
@@ -400,7 +406,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         <div className="max-h-[70vh] overflow-y-auto" ref={mobileBodyRef}>
           {/* Header: corner cell with diagonal split + court names */}
           <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
-            <div className="px-2 py-2 text-xs font-semibold bg-white">Timp</div>
+            <div className="px-2 py-2 text-xs font-semibold bg-white">Ora</div>
             {data.map(row => (
               <div key={`head-${row.court.id}`} className="px-2 py-2 text-xs font-semibold bg-white border-l border-slate-300 text-center">
                 {row.court.name}
