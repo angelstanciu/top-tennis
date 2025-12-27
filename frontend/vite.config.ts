@@ -7,7 +7,7 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.svg'],
+            includeAssets: ['favicon.png'],
             devOptions: {
                 enabled: true
             },
@@ -21,9 +21,9 @@ export default defineConfig({
                 theme_color: '#0ea5e9',
                 icons: [
                     {
-                        src: '/favicon.svg',
-                        sizes: 'any',
-                        type: 'image/svg+xml',
+                        src: '/favicon.png',
+                        sizes: '1024x1024',
+                        type: 'image/png',
                         purpose: 'any'
                     }
                 ]
