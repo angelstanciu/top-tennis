@@ -325,7 +325,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           <div className="flex">
             <div className="shrink-0" style={{ width: leftColWidth }}>
               {data.map((row) => (
-                <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-3 py-2 text-sm h-10 flex flex-col justify-center bg-white">
+                <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-3 py-2 text-sm h-10 flex flex-col items-center justify-center text-center bg-white">
                   <div className="font-medium">{row.court.name}</div>
                   <div className="text-xs text-slate-500">{sportLabel(row.court.sportType)} {row.court.indoor ? '• Interior' : '• Exterior'} {row.court.heated ? '• Încălzit' : ''}</div>
                 </div>
@@ -407,18 +407,18 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const courtCount = data.length
     const timeColWidth = 64
     return (
-      <div className={flat ? 'overflow-hidden' : 'rounded border border-sky-200 bg-sky-50 overflow-hidden shadow-md'}>
-        {/* Header: corner cell with diagonal split + court names */}
-        <div className="grid" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
-          <div className="px-2 py-2 text-xs font-semibold bg-white sticky top-0 z-10">Timp</div>
-          {data.map(row => (
-            <div key={`head-${row.court.id}`} className="px-2 py-2 text-xs font-semibold bg-white sticky top-0 z-10 border-l border-slate-300">
-              {row.court.name}
-            </div>
-          ))}
-        </div>
-        {/* Body: each row is a time slot */}
-        <div className="max-h-full overflow-y-auto" ref={mobileBodyRef}>
+      <div className={flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'}>
+        <div className="max-h-[70vh] overflow-y-auto" ref={mobileBodyRef}>
+          {/* Header: corner cell with diagonal split + court names */}
+          <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
+            <div className="px-2 py-2 text-xs font-semibold bg-white">Timp</div>
+            {data.map(row => (
+              <div key={`head-${row.court.id}`} className="px-2 py-2 text-xs font-semibold bg-white border-l border-slate-300 text-center">
+                {row.court.name}
+              </div>
+            ))}
+          </div>
+          {/* Body: each row is a time slot */}
           {ticks.slice(0,-1).map((t, i) => {
             const next = ticks[i+1]
             const isPastRow = (date < todayStr) || (date === todayStr && t < nowTime)
@@ -550,12 +550,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               className={'rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}
               style={{ transitionDuration: '1000ms' }}
             >
-              Te rugÄƒm selecteazÄƒ una din selecÈ›iile disponibile.
+              Te rug\u0103m selecteaz\u0103 una din selec\u021biile disponibile.
             </div>
           )}
           <div className="flex flex-col">
-            <div className="font-bold">{row.court.name}</div>
-            <div className="text-xs text-slate-600">Ora de începere: {startTime}</div>
+            <div className="font-bold">Teren: {row.court.name}</div>
+            <div className="text-xs text-slate-600">Ora de \u00eencepere: {startTime}</div>
             <div className="text-xs text-slate-600">Interval selectat: {selectedIntervalText}</div>
           </div>
           <div className="flex flex-col gap-2">
@@ -570,7 +570,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               )
             })}
             <div className="flex gap-2">
-              <button className="btn flex-1" onClick={handleReserveClick}>RezervÄƒ selecÈ›ia</button>
+              <button className="btn flex-1" onClick={handleReserveClick}>Rezerv\u0103 selec\u021bia</button>
               <button
                 className="px-3 py-2 rounded border"
                 onClick={() => {
@@ -581,7 +581,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   onSelectionChange?.(null, null, null, false, false)
                 }}
               >
-                Închide
+                \u00cenchide
               </button>
             </div>
           </div>
@@ -597,5 +597,11 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     </div>
   )
 }
+
+
+
+
+
+
 
 
