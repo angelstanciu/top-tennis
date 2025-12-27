@@ -280,14 +280,14 @@ export default function App() {
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold border-l-4 border-sky-500 pl-3 whitespace-nowrap truncate">{title}</h1>
       </header>
       <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 pb-1 shadow-md flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-end">
+        <div className="flex items-end gap-4 w-full">
           <div className="flex flex-col flex-1 min-w-0">
             <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
             <SportPicker value={sport} onChange={setSport} />
           </div>
-          <div className="flex flex-col w-full sm:w-auto sm:ml-2">
+          <div className="flex flex-col shrink-0 ml-2">
             <div className="text-xs text-slate-500 mb-1">Data</div>
-            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden w-full sm:w-auto">
+            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden">
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50"
