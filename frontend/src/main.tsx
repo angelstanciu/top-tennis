@@ -5,6 +5,9 @@ import './index.css'
 import App from './App'
 import BookingPage from './pages/BookingPage'
 import AdminPage from './pages/AdminPage'
+import { registerSW } from 'virtual:pwa-register'
+
+registerSW()
 
 const router = createBrowserRouter([
   { path: '/', element: <App /> },

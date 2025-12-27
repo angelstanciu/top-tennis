@@ -5,6 +5,11 @@ import { AvailabilityDto, SportType } from './types'
 import { fetchAvailability } from './api'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 function todayISO(offsetDays = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
@@ -34,6 +39,8 @@ export default function App() {
   const gapToastShowTimer = React.useRef<any>(null)
   const gapToastHideTimer = React.useRef<any>(null)
   const [clearTick, setClearTick] = useState<number>(0)
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [showInstall, setShowInstall] = useState(false)
   const selectedCourtName = useMemo(() => {
     if (!selCourtId) return null
     const row = data.find(d => d.court.id === selCourtId)
@@ -78,6 +85,28 @@ export default function App() {
     } catch {}
   }, [sport, date])
 
+  useEffect(() => {
+    function onBeforeInstallPrompt(e: Event) {
+      e.preventDefault()
+      const deferred = e as BeforeInstallPromptEvent
+      setInstallPrompt(deferred)
+      const dismissed = localStorage.getItem('pwaInstallDismissed') === '1'
+      if (!dismissed) {
+        setShowInstall(true)
+      }
+    }
+    function onAppInstalled() {
+      setShowInstall(false)
+      setInstallPrompt(null)
+      try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
+    }
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+    window.addEventListener('appinstalled', onAppInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', onAppInstalled)
+    }
+  }, [])
   
 
   function shiftDate(days: number) {
@@ -124,6 +153,22 @@ export default function App() {
     setClearTick(t => t + 1)
   }
 
+  async function handleInstall() {
+    if (!installPrompt) return
+    try {
+      await installPrompt.prompt()
+      await installPrompt.userChoice
+    } catch {}
+    setShowInstall(false)
+    setInstallPrompt(null)
+    try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
+  }
+
+  function handleDismissInstall() {
+    setShowInstall(false)
+    try { localStorage.setItem('pwaInstallDismissed', '1') } catch {}
+  }
+
   // Listen for booking updates from the admin page and refetch availability
   useEffect(() => {
     function refetch() {
@@ -152,6 +197,22 @@ export default function App() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-3 h-screen overflow-hidden flex flex-col">
+      {showInstall && (
+        <div className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 shadow-md flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold">Instaleaza aplicatia Star Arena</div>
+            <div className="text-xs text-emerald-800">Acces rapid din ecranul principal.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-1.5 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
+              Renunta
+            </button>
+            <button className="px-3 py-1.5 rounded bg-emerald-600 text-white" onClick={handleInstall}>
+              Instaleaza
+            </button>
+          </div>
+        </div>
+      )}
       <header className="flex items-center justify-between">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold border-l-4 border-sky-500 pl-3 whitespace-nowrap truncate">{title}</h1>
       </header>
