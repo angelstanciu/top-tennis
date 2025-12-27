@@ -65,12 +65,22 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   const [selStart, setSelStart] = useState<string | null>(null)
   const [selEnd, setSelEnd] = useState<string | null>(null)
   const [popup, setPopup] = useState<null | { courtId: number, rowIndex: number, startIndex: number, left: number, top: number }>(null)
+  const [reserveWarnVisible, setReserveWarnVisible] = useState(false)
+  const [reserveWarnFading, setReserveWarnFading] = useState(false)
+  const reserveWarnHideTimer = useRef<any>(null)
+  const reserveWarnFadeTimer = useRef<any>(null)
 
   // Reset selection on date changes or data refresh
   useEffect(() => {
     setSelCourtId(null); setSelStart(null); setSelEnd(null)
     onSelectionChange?.(null, null, null, false)
   }, [date, data.length])
+  useEffect(() => {
+    if (selStart && selEnd) {
+      setReserveWarnVisible(false)
+      setReserveWarnFading(false)
+    }
+  }, [selStart, selEnd])
 
   function add30(t: string) {
     const [h,m] = t.split(':').map(Number)
@@ -200,6 +210,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('resize', onResize)
+    }
+  }, [])
+  useEffect(() => {
+    return () => {
+      if (reserveWarnFadeTimer.current) clearTimeout(reserveWarnFadeTimer.current)
+      if (reserveWarnHideTimer.current) clearTimeout(reserveWarnHideTimer.current)
     }
   }, [])
 
@@ -472,6 +488,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const selectedIntervalText = (selCourtId === courtId && selStart === startTime && selEnd)
       ? `${selStart} - ${selEnd}`
       : '—'
+    const selectionValid = !!(selCourtId === courtId && selStart && selEnd && minutesBetween(selStart, selEnd) >= 60 && !leavesThirtyMinuteGap(booked, selStart, selEnd))
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
@@ -499,6 +516,22 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       setSelEnd(endTime)
       const gapInvalid = leavesThirtyMinuteGap(booked, startTime, endTime)
       onSelectionChange?.(courtId, startTime, endTime, mins >= 60 && !gapInvalid, gapInvalid)
+      if (reserveWarnVisible) {
+        setReserveWarnVisible(false)
+        setReserveWarnFading(false)
+      }
+    }
+    function handleReserveClick() {
+      if (!selectionValid) {
+        setReserveWarnVisible(true)
+        setReserveWarnFading(false)
+        if (reserveWarnFadeTimer.current) clearTimeout(reserveWarnFadeTimer.current)
+        if (reserveWarnHideTimer.current) clearTimeout(reserveWarnHideTimer.current)
+        reserveWarnFadeTimer.current = setTimeout(() => setReserveWarnFading(true), 3000)
+        reserveWarnHideTimer.current = setTimeout(() => setReserveWarnVisible(false), 4000)
+        return
+      }
+      onReserve?.()
     }
     return createPortal((
       <>
@@ -510,6 +543,14 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           className="fixed z-[10000] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-1 flex min-w-[220px] max-w-xs flex-col gap-2 rounded-md border bg-white px-3 py-2 text-sm shadow"
           onClick={(e) => e.stopPropagation()}
         >
+          {reserveWarnVisible && (
+            <div
+              className={'rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}
+              style={{ transitionDuration: '1000ms' }}
+            >
+              Selecteaza mai intai un interval orar disponibil.
+            </div>
+          )}
           <div className="flex flex-col">
             <div className="font-bold">{row.court.name}</div>
             <div className="text-xs text-slate-600">Ora de începere: {startTime}</div>
@@ -527,7 +568,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               )
             })}
             <div className="flex gap-2">
-              <button className="btn flex-1" onClick={() => onReserve?.()}>Rezervă selecția</button>
+              <button className="btn flex-1" onClick={handleReserveClick}>Rezervă selecția</button>
               <button
                 className="px-3 py-2 rounded border"
                 onClick={() => {
