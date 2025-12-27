@@ -187,7 +187,12 @@ public class AtSerialClient {
         StringBuilder raw = new StringBuilder();
 
         while (System.currentTimeMillis() < deadline) {
-            int read = is.read(buffer);
+            int read;
+            try {
+                read = is.read(buffer);
+            } catch (com.fazecast.jSerialComm.SerialPortTimeoutException ex) {
+                continue;
+            }
             if (read <= 0) {
                 continue;
             }

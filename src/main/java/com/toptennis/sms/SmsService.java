@@ -157,7 +157,7 @@ public class SmsService {
 
     private void sleepBetweenMessages() {
         try {
-            Thread.sleep(1500L);
+            Thread.sleep(3000L);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
