@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType } from './types'
@@ -146,7 +146,6 @@ export default function App() {
       setShowIOSInstall(true)
     }
   }, [installPrompt])
-  
 
   function shiftDate(days: number) {
     const d = new Date(date)
@@ -273,14 +272,14 @@ export default function App() {
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold border-l-4 border-sky-500 pl-3 whitespace-nowrap truncate">{title}</h1>
       </header>
       <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 pb-1 shadow-md flex-1 min-h-0 flex flex-col">
-        <div className="flex items-end gap-4 w-full">
+        <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-end">
           <div className="flex flex-col flex-1 min-w-0">
             <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
             <SportPicker value={sport} onChange={setSport} />
           </div>
-          <div className="flex flex-col shrink-0 ml-2">
+          <div className="flex flex-col w-full sm:w-auto sm:ml-2">
             <div className="text-xs text-slate-500 mb-1">Data</div>
-            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden">
+            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden w-full sm:w-auto">
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50"
@@ -291,9 +290,9 @@ export default function App() {
                 ‹
               </button>
               <input
-                className="px-2 py-1.5 text-sm border-0 focus:outline-none bg-white text-slate-800 w-[13ch]"
+                className="px-2 py-1.5 text-sm border-0 focus:outline-none bg-white text-slate-800 w-full min-w-[10.5rem]"
                 type="date"
-                lang="en-GB"
+                lang="ro-RO"
                 value={date}
                 onChange={e => setDate(e.target.value)}
               />
@@ -322,17 +321,17 @@ export default function App() {
                 <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-rose-200"></span><span>indisponibil</span></div>
-                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea ta</span></div>
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea dumneavoastră</span></div>
                 </div>
               </div>
             </>
           )}
         </div>
-  </section>
+      </section>
       <footer>
         <div className="rounded border border-sky-200 bg-sky-50 p-3 text-xs text-slate-700 shadow-md">
           <div className="flex items-start gap-2">
-            <span aria-hidden className="mt-0.5">ℹ️</span>
+            <span aria-hidden className="mt-0.5">i</span>
             <div className="space-y-1">
               <div>
                 {selCourtId && selStart && selEnd ? (
@@ -364,11 +363,11 @@ export default function App() {
                   setGapToastFading(false)
                   setGapToastVisible(false)
                 }}
-              >✕</button>
+              >×</button>
               <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-4">
-                <span className="text-3xl" aria-hidden>⚠️</span>
+                <span className="text-3xl" aria-hidden>⚠</span>
                 <div className="text-lg sm:text-xl text-rose-900">
-                  Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extinde sau mută selecția pentru a elimina golul.
+                  Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extindeți sau mutați selecția pentru a elimina golul.
                 </div>
               </div>
             </div>

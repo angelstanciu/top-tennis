@@ -315,7 +315,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
             <div className="overflow-hidden" ref={headerRef}>
               <div className="grid" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
                 {ticks.slice(0, -1).map((t,i) => (
-                  <div key={t} className="text-xs text-slate-500 px-1 py-2 border-l border-slate-300 bg-white">
+                  <div key={t} className="text-xs text-slate-500 px-1 py-2 border-l border-slate-300 bg-white text-left">
                     {i % 2 === 0 ? timeLabel(t) : ''}
                   </div>
                 ))}
@@ -425,7 +425,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
             return (
               <div key={`time-${t}`} className="grid items-stretch" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }} data-row-index={i}>
                 {/* Time label */}
-                <div className="px-2 py-2 text-xs border-t border-slate-300 bg-white">{timeLabel(t)}</div>
+                <div className="px-2 pt-1 pb-0 text-xs border-t border-slate-300 bg-white text-left flex items-start">{timeLabel(t)}</div>
                 {/* Cells per court */}
                 {data.map((row, rowIndex) => {
                   const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end }))
