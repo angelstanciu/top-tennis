@@ -80,6 +80,7 @@ public class SmsService {
             result.success = true;
             return result;
         } catch (SmsException ex) {
+            log.warn("SMS send failed.", ex);
             SmsSendResult result = new SmsSendResult();
             String extra = ex.getTranscript();
             if (extra != null && !extra.isEmpty()) {

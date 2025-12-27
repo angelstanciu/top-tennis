@@ -57,7 +57,7 @@ public class AtSerialClient {
         try {
             writeRawOnce(bytes, true);
         } catch (IOException e) {
-            throw new SmsException("I/O error while writing to modem.", null, e);
+            throw new SmsException("I/O error while writing to modem: " + e.getMessage(), null, e);
         } finally {
             ioLock.unlock();
         }
@@ -88,6 +88,9 @@ public class AtSerialClient {
         if (!sp.openPort()) {
             throw new SmsPortException("Cannot open " + props.getPort() + ". If permission is denied, add your user to the dialout group.");
         }
+        sp.setDTR();
+        sp.setRTS();
+        sp.flushIOBuffers();
         port = sp;
     }
 
@@ -116,7 +119,7 @@ public class AtSerialClient {
                 reconnect();
                 return executeOnce(command, doneCondition, timeout, false);
             }
-            throw new SmsException("I/O error while executing AT command.", transcript.toString(), e);
+            throw new SmsException("I/O error while executing AT command: " + e.getMessage(), transcript.toString(), e);
         }
     }
 
@@ -135,7 +138,7 @@ public class AtSerialClient {
                 reconnect();
                 return waitForPromptOnce(promptChar, timeout, false);
             }
-            throw new SmsException("I/O error while waiting for prompt.", transcript.toString(), e);
+            throw new SmsException("I/O error while waiting for prompt: " + e.getMessage(), transcript.toString(), e);
         }
     }
 
@@ -151,7 +154,7 @@ public class AtSerialClient {
                 reconnect();
                 return readResponseOnce(doneCondition, timeout, false);
             }
-            throw new SmsException("I/O error while reading modem response.", transcript.toString(), e);
+            throw new SmsException("I/O error while reading modem response: " + e.getMessage(), transcript.toString(), e);
         }
     }
 
