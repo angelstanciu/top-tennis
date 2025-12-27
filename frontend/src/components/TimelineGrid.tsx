@@ -234,21 +234,25 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     onSelectionChange?.(null, null, null, false, false)
   }, [clearSignal])
 
-  // Auto-scroll to current time minus one hour
+  // Auto-scroll to first clickable interval
   useEffect(() => {
     if (!data.length) return
-    const findScrollIndex = () => {
-      if (date !== todayStr) return 0
-      const [hStr, mStr] = nowTime.split(':').map(Number)
-      const total = hStr * 60 + mStr
-      const targetMin = Math.max(0, total - 30)
-      const targetH = Math.floor(targetMin / 60)
-      const targetM = targetMin % 60
-      const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
-      const idx = ticks.findIndex(t => t >= target)
-      return idx < 0 ? (ticks.length - 2) : Math.min(Math.max(idx, 0), ticks.length - 2)
+    const findFirstClickableIndex = () => {
+      for (let i = 0; i < ticks.length - 1; i++) {
+        const t = ticks[i]
+        const next = ticks[i+1]
+        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
+        if (isPast) continue
+        for (const row of data) {
+          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
+          if (!isWithin) continue
+          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
+          if (!isBooked) return i
+        }
+      }
+      return null
     }
-    const idx = findScrollIndex()
+    const idx = findFirstClickableIndex()
     if (idx !== null) {
       if (!isMobile) {
         // Desktop: keep the time header anchored at the start
@@ -270,18 +274,23 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   // Reinforce auto-scroll shortly after layout settles
   useEffect(() => {
     if (!data.length) return
-    const findScrollIndex = () => {
-      if (date !== todayStr) return 0
-      const [hStr, mStr] = nowTime.split(':').map(Number)
-      const total = hStr * 60 + mStr
-      const targetMin = Math.max(0, total - 30)
-      const targetH = Math.floor(targetMin / 60)
-      const targetM = targetMin % 60
-      const target = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`
-      const idx = ticks.findIndex(t => t >= target)
-      return idx < 0 ? (ticks.length - 2) : Math.min(Math.max(idx, 0), ticks.length - 2)
+    const findFirstClickableIndex = () => {
+      for (let i = 0; i < ticks.length - 1; i++) {
+        const t = ticks[i]
+        const next = ticks[i+1]
+        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
+        if (isPast) continue
+        for (const row of data) {
+          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
+          if (!isWithin) continue
+          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
+          if (!isBooked) return i
+        }
+      }
+      return null
     }
-    const idx = findScrollIndex()
+    const idx = findFirstClickableIndex()
+    if (idx === null) return
     const timer = setTimeout(() => {
       if (!isMobile) {
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
