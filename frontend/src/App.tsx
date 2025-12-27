@@ -290,15 +290,15 @@ export default function App() {
             <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden w-full">
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
                 aria-label="Ziua anterioară"
                 onClick={() => shiftDate(-1)}
                 title="Ziua anterioară"
               >
                 ‹
               </button>
-              <div className="relative flex-1 min-w-[10.5rem]">
-                <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none">
+              <div className="relative flex-1 min-w-0">
+                <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none truncate">
                   {displayDate}
                 </div>
                 <input
@@ -312,7 +312,7 @@ export default function App() {
               </div>
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
                 aria-label="Ziua următoare"
                 onClick={() => shiftDate(1)}
                 title="Ziua următoare"
