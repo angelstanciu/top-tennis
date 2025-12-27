@@ -34,56 +34,7 @@ public class SmsService {
         sendLock.lock();
         StringBuilder transcript = new StringBuilder();
         try {
-            if (text != null && text.length() > 160) {
-                log.warn("SMS length is {} characters; modem/network may truncate.", text.length());
-            }
-
-            Duration cmdTimeout = Duration.ofMillis(props.getCommandTimeoutMs());
-            Duration sendTimeout = Duration.ofMillis(props.getSendTimeoutMs());
-
-            transcript.append(executeAtWithReconnect(cmdTimeout));
-            String cmgfResp = client.execute("AT+CMGF=1", doneOkOrError(), cmdTimeout);
-            transcript.append(cmgfResp);
-            if (hasErrorLine(cmgfResp)) {
-                SmsSendResult result = new SmsSendResult();
-                result.success = false;
-                result.transcript = transcript.toString();
-                return result;
-            }
-
-            String cmgsResp = client.execute("AT+CMGS=\"" + toE164 + "\"", donePromptOrError(), cmdTimeout);
-            transcript.append(cmgsResp);
-            if (hasErrorLine(cmgsResp)) {
-                SmsSendResult result = new SmsSendResult();
-                result.success = false;
-                result.transcript = transcript.toString();
-                return result;
-            }
-            transcript.append(client.waitForPrompt('>', cmdTimeout));
-
-            byte[] messageBytes = (text + (char) 0x1A).getBytes(StandardCharsets.UTF_8);
-            client.writeRaw(messageBytes);
-
-            String finalResp = client.readResponse(doneOkOrError(), sendTimeout);
-            transcript.append(finalResp);
-
-            SmsSendResult result = new SmsSendResult();
-            result.transcript = transcript.toString();
-            if (hasErrorLine(result.transcript)) {
-                result.success = false;
-                return result;
-            }
-            if (!(finalResp.contains("OK") || finalResp.contains("+CMGS:"))) {
-                result.success = false;
-                return result;
-            }
-            Matcher m = CMGS_ID.matcher(result.transcript);
-            if (m.find()) {
-                result.messageId = m.group(1);
-            }
-            result.success = true;
-            log.info("SMS sent to {} messageId={} text=\"{}\"", toE164, result.messageId, text);
-            return result;
+            return sendSmsInternal(toE164, text, transcript, true);
         } catch (SmsException ex) {
             log.warn("SMS send failed.", ex);
             SmsSendResult result = new SmsSendResult();
@@ -174,6 +125,63 @@ public class SmsService {
 
     private boolean hasErrorLine(String s) {
         return s.contains("+CMS ERROR") || s.contains("+CME ERROR") || s.contains("ERROR");
+    }
+
+    private SmsSendResult sendSmsInternal(String toE164, String text, StringBuilder transcript, boolean allowRetry) {
+        if (text != null && text.length() > 160) {
+            log.warn("SMS length is {} characters; modem/network may truncate.", text.length());
+        }
+
+        Duration cmdTimeout = Duration.ofMillis(props.getCommandTimeoutMs());
+        Duration sendTimeout = Duration.ofMillis(props.getSendTimeoutMs());
+
+        transcript.append(executeAtWithReconnect(cmdTimeout));
+        String cmgfResp = client.execute("AT+CMGF=1", doneOkOrError(), cmdTimeout);
+        transcript.append(cmgfResp);
+        if (hasErrorLine(cmgfResp)) {
+            return failResult(transcript.toString());
+        }
+
+        String cmgsResp = client.execute("AT+CMGS=\"" + toE164 + "\"", donePromptOrError(), cmdTimeout);
+        transcript.append(cmgsResp);
+        if (hasErrorLine(cmgsResp)) {
+            return failResult(transcript.toString());
+        }
+        transcript.append(client.waitForPrompt('>', cmdTimeout));
+
+        byte[] messageBytes = (text + (char) 0x1A).getBytes(StandardCharsets.UTF_8);
+        client.writeRaw(messageBytes);
+
+        String finalResp = client.readResponse(doneOkOrError(), sendTimeout);
+        transcript.append(finalResp);
+
+        if (hasErrorLine(transcript.toString())) {
+            return failResult(transcript.toString());
+        }
+        if (!(finalResp.contains("OK") || finalResp.contains("+CMGS:"))) {
+            if (allowRetry && finalResp.contains("Timed out waiting for modem response")) {
+                client.reconnect();
+                transcript.append("\nRETRY\n");
+                return sendSmsInternal(toE164, text, transcript, false);
+            }
+            return failResult(transcript.toString());
+        }
+        SmsSendResult result = new SmsSendResult();
+        result.transcript = transcript.toString();
+        Matcher m = CMGS_ID.matcher(result.transcript);
+        if (m.find()) {
+            result.messageId = m.group(1);
+        }
+        result.success = true;
+        log.info("SMS sent to {} messageId={} text=\"{}\"", toE164, result.messageId, text);
+        return result;
+    }
+
+    private SmsSendResult failResult(String transcript) {
+        SmsSendResult result = new SmsSendResult();
+        result.success = false;
+        result.transcript = transcript;
+        return result;
     }
 
     private void sleepBetweenMessages() {

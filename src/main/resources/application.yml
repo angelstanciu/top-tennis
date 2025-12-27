@@ -23,8 +23,8 @@ spring:
 sms:
   port: /dev/ttyUSB0
   baud: 115200
-  commandTimeoutMs: 4000
-  sendTimeoutMs: 20000
+  commandTimeoutMs: 8000
+  sendTimeoutMs: 30000
   interCommandDelayMs: 100
   clubNumber: "+40746917027"
 
