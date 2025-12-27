@@ -27,16 +27,8 @@ public class AtSerialClient {
 
     public String execute(String command, Predicate<String> doneCondition, Duration timeout) {
         ioLock.lock();
-        StringBuilder transcript = new StringBuilder();
         try {
-            ensureOpen();
-            writeLine(command);
-            sleepInterCommand();
-            readUntil(doneCondition, timeout, transcript);
-            lastTranscript = transcript.toString();
-            return lastTranscript;
-        } catch (IOException e) {
-            throw new SmsException("I/O error while executing AT command.", transcript.toString(), e);
+            return executeOnce(command, doneCondition, timeout, true);
         } finally {
             ioLock.unlock();
         }
@@ -44,17 +36,8 @@ public class AtSerialClient {
 
     public String waitForPrompt(char promptChar, Duration timeout) {
         ioLock.lock();
-        StringBuilder transcript = new StringBuilder();
         try {
-            ensureOpen();
-            if (lastTranscript != null && lastTranscript.indexOf(promptChar) >= 0) {
-                return "";
-            }
-            readUntil(s -> s.indexOf(promptChar) >= 0, timeout, transcript);
-            lastTranscript = transcript.toString();
-            return lastTranscript;
-        } catch (IOException e) {
-            throw new SmsException("I/O error while waiting for prompt.", transcript.toString(), e);
+            return waitForPromptOnce(promptChar, timeout, true);
         } finally {
             ioLock.unlock();
         }
@@ -62,14 +45,8 @@ public class AtSerialClient {
 
     public String readResponse(Predicate<String> doneCondition, Duration timeout) {
         ioLock.lock();
-        StringBuilder transcript = new StringBuilder();
         try {
-            ensureOpen();
-            readUntil(doneCondition, timeout, transcript);
-            lastTranscript = transcript.toString();
-            return lastTranscript;
-        } catch (IOException e) {
-            throw new SmsException("I/O error while reading modem response.", transcript.toString(), e);
+            return readResponseOnce(doneCondition, timeout, true);
         } finally {
             ioLock.unlock();
         }
@@ -78,10 +55,7 @@ public class AtSerialClient {
     public void writeRaw(byte[] bytes) {
         ioLock.lock();
         try {
-            ensureOpen();
-            OutputStream os = port.getOutputStream();
-            os.write(bytes);
-            os.flush();
+            writeRawOnce(bytes, true);
         } catch (IOException e) {
             throw new SmsException("I/O error while writing to modem.", null, e);
         } finally {
@@ -125,6 +99,75 @@ public class AtSerialClient {
             } finally {
                 port = null;
             }
+        }
+    }
+
+    private String executeOnce(String command, Predicate<String> doneCondition, Duration timeout, boolean allowRetry) {
+        StringBuilder transcript = new StringBuilder();
+        try {
+            ensureOpen();
+            writeLine(command);
+            sleepInterCommand();
+            readUntil(doneCondition, timeout, transcript);
+            lastTranscript = transcript.toString();
+            return lastTranscript;
+        } catch (IOException e) {
+            if (allowRetry) {
+                reconnect();
+                return executeOnce(command, doneCondition, timeout, false);
+            }
+            throw new SmsException("I/O error while executing AT command.", transcript.toString(), e);
+        }
+    }
+
+    private String waitForPromptOnce(char promptChar, Duration timeout, boolean allowRetry) {
+        StringBuilder transcript = new StringBuilder();
+        try {
+            ensureOpen();
+            if (lastTranscript != null && lastTranscript.indexOf(promptChar) >= 0) {
+                return "";
+            }
+            readUntil(s -> s.indexOf(promptChar) >= 0, timeout, transcript);
+            lastTranscript = transcript.toString();
+            return lastTranscript;
+        } catch (IOException e) {
+            if (allowRetry) {
+                reconnect();
+                return waitForPromptOnce(promptChar, timeout, false);
+            }
+            throw new SmsException("I/O error while waiting for prompt.", transcript.toString(), e);
+        }
+    }
+
+    private String readResponseOnce(Predicate<String> doneCondition, Duration timeout, boolean allowRetry) {
+        StringBuilder transcript = new StringBuilder();
+        try {
+            ensureOpen();
+            readUntil(doneCondition, timeout, transcript);
+            lastTranscript = transcript.toString();
+            return lastTranscript;
+        } catch (IOException e) {
+            if (allowRetry) {
+                reconnect();
+                return readResponseOnce(doneCondition, timeout, false);
+            }
+            throw new SmsException("I/O error while reading modem response.", transcript.toString(), e);
+        }
+    }
+
+    private void writeRawOnce(byte[] bytes, boolean allowRetry) throws IOException {
+        try {
+            ensureOpen();
+            OutputStream os = port.getOutputStream();
+            os.write(bytes);
+            os.flush();
+        } catch (IOException e) {
+            if (allowRetry) {
+                reconnect();
+                writeRawOnce(bytes, false);
+                return;
+            }
+            throw e;
         }
     }
 
