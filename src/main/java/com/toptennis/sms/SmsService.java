@@ -156,11 +156,16 @@ public class SmsService {
         transcript.append(finalResp);
 
         if (hasErrorLine(transcript.toString())) {
+            if (allowRetry) {
+                attemptSoftReset(transcript, cmdTimeout);
+                transcript.append("\nRETRY\n");
+                return sendSmsInternal(toE164, text, transcript, false);
+            }
             return failResult(transcript.toString());
         }
         if (!(finalResp.contains("OK") || finalResp.contains("+CMGS:"))) {
-            if (allowRetry && finalResp.contains("Timed out waiting for modem response")) {
-                client.reconnect();
+            if (allowRetry) {
+                attemptSoftReset(transcript, cmdTimeout);
                 transcript.append("\nRETRY\n");
                 return sendSmsInternal(toE164, text, transcript, false);
             }
@@ -184,9 +189,18 @@ public class SmsService {
         return result;
     }
 
+    private void attemptSoftReset(StringBuilder transcript, Duration cmdTimeout) {
+        try {
+            transcript.append(client.execute("ATZ", doneOkOrError(), cmdTimeout));
+            transcript.append(client.execute("AT", doneOkOrError(), cmdTimeout));
+        } catch (SmsException ex) {
+            transcript.append(ex.getTranscript() != null ? ex.getTranscript() : ex.getMessage());
+        }
+    }
+
     private void sleepBetweenMessages() {
         try {
-            Thread.sleep(3000L);
+            Thread.sleep(5000L);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

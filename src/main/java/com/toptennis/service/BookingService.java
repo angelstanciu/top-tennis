@@ -3,6 +3,8 @@ package com.toptennis.service;
 import com.toptennis.model.*;
 import com.toptennis.sms.SmsService;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
  
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
@@ -201,4 +203,18 @@ public class BookingService {
     }
 
     
+}
+
+@Configuration
+class SmsTaskConfig {
+    @Bean
+    public TaskExecutor smsTaskExecutor() {
+        var exec = new org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor();
+        exec.setCorePoolSize(1);
+        exec.setMaxPoolSize(1);
+        exec.setQueueCapacity(100);
+        exec.setThreadNamePrefix("sms-queue-");
+        exec.initialize();
+        return exec;
+    }
 }
