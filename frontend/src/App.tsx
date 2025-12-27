@@ -90,8 +90,16 @@ export default function App() {
       e.preventDefault()
       const deferred = e as BeforeInstallPromptEvent
       setInstallPrompt(deferred)
-      const dismissed = localStorage.getItem('pwaInstallDismissed') === '1'
-      if (!dismissed) {
+      let count = 0
+      try {
+        const raw = localStorage.getItem('pwaInstallPromptCount')
+        count = raw ? Number(raw) : 0
+        count = Number.isFinite(count) ? count + 1 : 1
+        localStorage.setItem('pwaInstallPromptCount', String(count))
+      } catch {
+        count = 1
+      }
+      if (count % 10 === 0) {
         setShowInstall(true)
       }
     }
@@ -198,18 +206,20 @@ export default function App() {
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-3 h-screen overflow-hidden flex flex-col">
       {showInstall && (
-        <div className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 shadow-md flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">Instaleaza aplicatia Star Arena</div>
-            <div className="text-xs text-emerald-800">Acces rapid din ecranul principal.</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
-              Renunta
-            </button>
-            <button className="px-3 py-1.5 rounded bg-emerald-600 text-white" onClick={handleInstall}>
-              Instaleaza
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
+            <div className="text-lg font-semibold">Instaleaza aplicatia Star Arena</div>
+            <div className="mt-1 text-sm text-emerald-800">
+              Acces rapid din ecranul principal. Functioneaza si offline pentru consultare.
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button className="px-4 py-2 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
+                Renunta
+              </button>
+              <button className="px-4 py-2 rounded bg-emerald-600 text-white" onClick={handleInstall}>
+                Instaleaza
+              </button>
+            </div>
           </div>
         </div>
       )}
