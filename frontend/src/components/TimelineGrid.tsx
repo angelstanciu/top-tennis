@@ -234,25 +234,18 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     onSelectionChange?.(null, null, null, false, false)
   }, [clearSignal])
 
-  // Auto-scroll to first clickable interval
+  // Auto-scroll to current time minus one hour
   useEffect(() => {
     if (!data.length) return
-    const findFirstClickableIndex = () => {
-      for (let i = 0; i < ticks.length - 1; i++) {
-        const t = ticks[i]
-        const next = ticks[i+1]
-        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-        if (isPast) continue
-        for (const row of data) {
-          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
-          if (!isWithin) continue
-          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
-          if (!isBooked) return i
-        }
-      }
-      return null
+    const findScrollIndex = () => {
+      if (date !== todayStr) return 0
+      const [hStr, mStr] = nowTime.split(':')
+      const h = Math.max(0, Number(hStr) - 1)
+      const target = `${String(h).padStart(2, '0')}:${mStr}`
+      const idx = ticks.findIndex(t => t >= target)
+      return Math.max(0, idx)
     }
-    const idx = findFirstClickableIndex()
+    const idx = findScrollIndex()
     if (idx !== null) {
       if (!isMobile) {
         // Desktop: keep the time header anchored at the start
@@ -274,23 +267,15 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   // Reinforce auto-scroll shortly after layout settles
   useEffect(() => {
     if (!data.length) return
-    const findFirstClickableIndex = () => {
-      for (let i = 0; i < ticks.length - 1; i++) {
-        const t = ticks[i]
-        const next = ticks[i+1]
-        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-        if (isPast) continue
-        for (const row of data) {
-          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
-          if (!isWithin) continue
-          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
-          if (!isBooked) return i
-        }
-      }
-      return null
+    const findScrollIndex = () => {
+      if (date !== todayStr) return 0
+      const [hStr, mStr] = nowTime.split(':')
+      const h = Math.max(0, Number(hStr) - 1)
+      const target = `${String(h).padStart(2, '0')}:${mStr}`
+      const idx = ticks.findIndex(t => t >= target)
+      return Math.max(0, idx)
     }
-    const idx = findFirstClickableIndex()
-    if (idx === null) return
+    const idx = findScrollIndex()
     const timer = setTimeout(() => {
       if (!isMobile) {
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
