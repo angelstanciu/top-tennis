@@ -2,12 +2,12 @@
 import { SportType } from '../types'
 
 const sports: { value: SportType, label: string }[] = [
-  { value: 'TENNIS', label: 'Tenis' },
-  { value: 'PADEL', label: 'Padel' },
-  { value: 'BEACH_VOLLEY', label: 'Volei pe plajă' },
-  { value: 'BASKETBALL', label: 'Baschet' },
-  { value: 'FOOTVOLLEY', label: 'Tenis de picior' },
-  { value: 'TABLE_TENNIS', label: 'Tenis de masă' },
+  { value: 'TENNIS', label: 'Tenis 🎾' },
+  { value: 'PADEL', label: 'Padel 🟢' },
+  { value: 'BEACH_VOLLEY', label: 'Volei pe plajă 🏐' },
+  { value: 'BASKETBALL', label: 'Baschet 🏀' },
+  { value: 'FOOTVOLLEY', label: 'Tenis de picior ⚽' },
+  { value: 'TABLE_TENNIS', label: 'Tenis de masă 🏓' },
 ]
 
 export default function SportPicker({ value, onChange }: { value: SportType, onChange: (v: SportType) => void }) {
