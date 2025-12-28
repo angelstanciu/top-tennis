@@ -243,7 +243,7 @@ export default function App() {
   }, [date, sport])
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-3 h-screen overflow-hidden flex flex-col">
+    <div className="max-w-7xl mx-auto p-4 space-y-3 min-h-dvh overflow-hidden flex flex-col">
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
