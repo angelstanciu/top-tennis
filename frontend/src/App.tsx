@@ -321,7 +321,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="mt-3 flex-1 min-h-0 flex flex-col">
           {loading ? <div>Se încarcă…</div> : (
             <>
               <div className="-mx-3 flex-1 min-h-0">
