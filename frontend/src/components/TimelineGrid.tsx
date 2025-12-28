@@ -543,7 +543,13 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       <>
         <div
           className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm"
-          onClick={() => setPopup(null)}
+          onClick={() => {
+            setPopup(null)
+            setSelCourtId(null)
+            setSelStart(null)
+            setSelEnd(null)
+            onSelectionChange?.(null, null, null, false, false)
+          }}
         />
         <div
           className="fixed z-[10000] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-1 flex min-w-[220px] max-w-xs flex-col gap-2 rounded-md border bg-white px-3 py-2 text-sm shadow"
