@@ -418,7 +418,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
             <div className="px-2 py-2 text-xs font-semibold bg-white text-center">Ora</div>
             {data.map(row => (
               <div key={`head-${row.court.id}`} className="px-2 py-2 text-xs font-semibold bg-white border-l border-slate-300 text-center">
-                {row.court.name}
+                {`Teren ${row.court.name}`}
               </div>
             ))}
           </div>
