@@ -321,7 +321,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="mt-3 flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           {loading ? <div>Se încarcă…</div> : (
             <>
               <div className="-mx-3 flex-1 min-h-0">
@@ -330,7 +330,7 @@ export default function App() {
                 </div>
               </div>
               {/* Inline gap error removed; moved to detached toast */}
-              <div className="mt-1.5 mb-0.5 flex justify-center">
+              <div className="flex justify-center">
                 <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-rose-200"></span><span>indisponibil</span></div>
