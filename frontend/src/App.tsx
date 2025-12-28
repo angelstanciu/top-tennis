@@ -348,7 +348,7 @@ export default function App() {
             <div className="space-y-1">
               <div>
                 {selCourtId && selStart && selEnd ? (
-                  <>Selecție: {selectedCourtName ?? `Teren #${selCourtId}`} • {date} • {selStart} - {selEnd}</>
+                  <>Selecție: Teren {selectedCourtName ?? selCourtId} • {date} • {selStart} - {selEnd}</>
                 ) : (
                   <>Selectați cel puțin 1 oră (două intervale continue de 30 min).</>
                 )}

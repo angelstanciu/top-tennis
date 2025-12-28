@@ -129,7 +129,7 @@ export default function BookingPage() {
       <div className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
         <div className="text-sm font-semibold text-sky-900 mb-1">Detalii rezervare</div>
         <div className="text-slate-700 flex flex-col">
-          <div>{`Teren #${courtId}${courtDetailSuffix}`}</div>
+          <div>{`Teren ${court?.name ?? courtId}${courtDetailSuffix}`}</div>
           <div>{subtitle}</div>
           <div>{totalPrice != null ? `Total: ${totalPrice.toFixed(2)} RON` : ''}</div>
         </div>
