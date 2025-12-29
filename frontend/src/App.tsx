@@ -250,7 +250,7 @@ export default function App() {
     TABLE_TENNIS: '/ping-pong-background.png',
   }
   const pageBgStyle = backgroundBySport[sport]
-    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
     : undefined
 
   return (
