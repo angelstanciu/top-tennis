@@ -255,9 +255,13 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const idx = findFirstClickableIndex()
     if (idx !== null) {
       if (!isMobile) {
-        // Desktop: keep the time header anchored at the start
-        if (scrollRef.current) scrollRef.current.scrollLeft = 0
-        if (headerRef.current) headerRef.current.scrollLeft = 0
+        // Desktop: scroll horizontally to the first available slot
+        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
+        if (scrollRef.current) {
+          animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
+            if (headerRef.current) headerRef.current.scrollLeft = left
+          })
+        }
       } else if (isMobile) {
         // Mobile: vertical scroll within the mobile grid container
         const container = mobileBodyRef.current
@@ -293,8 +297,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     if (idx === null) return
     const timer = setTimeout(() => {
       if (!isMobile) {
-        if (scrollRef.current) scrollRef.current.scrollLeft = 0
-        if (headerRef.current) headerRef.current.scrollLeft = 0
+        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
+        if (scrollRef.current) {
+          animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
+            if (headerRef.current) headerRef.current.scrollLeft = left
+          })
+        }
       } else if (isMobile) {
         const container = mobileBodyRef.current
         const rowEl = container?.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
