@@ -262,10 +262,10 @@ export default function App() {
             <div className="mt-1 text-sm text-emerald-800">Acces rapid din ecranul principal.</div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
-                RenunÈ›Äƒ
+                Renunță
               </button>
               <button className="px-4 py-2 rounded bg-emerald-600 text-white" onClick={handleInstall}>
-                InstaleazÄƒ
+                Instalează
               </button>
             </div>
           </div>
@@ -276,11 +276,11 @@ export default function App() {
           <div className="w-[90vw] max-w-md rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-xl">
             <div className="text-lg font-semibold">Instalare pe iPhone</div>
             <div className="mt-1 text-sm text-amber-800">
-              ApasÄƒ PartajeazÄƒ È™i apoi AdaugÄƒ pe ecranul principal pentru a instala aplicaÈ›ia.
+              Apasă Partajează și apoi Adaugă pe ecranul principal pentru a instala aplicația.
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-amber-300 text-amber-800" onClick={handleDismissIOSInstall}>
-                Am Ã®nÈ›eles
+                Am înțeles
               </button>
             </div>
           </div>
@@ -298,11 +298,11 @@ export default function App() {
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                aria-label="Ziua anterioarÄƒ"
+                aria-label="Ziua anterioară"
                 onClick={() => shiftDate(-1)}
-                title="Ziua anterioarÄƒ"
+                title="Ziua anterioară"
               >
-                â€¹
+                {'\u2039'}
               </button>
               <div className="relative flex-1 min-w-0">
                 <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none truncate">
@@ -320,17 +320,17 @@ export default function App() {
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                aria-label="Ziua urmÄƒtoare"
+                aria-label="Ziua următoare"
                 onClick={() => shiftDate(1)}
-                title="Ziua urmÄƒtoare"
+                title="Ziua următoare"
               >
-                â€º
+                {'\u203A'}
               </button>
             </div>
           </div>
         </div>
         <div className="mt-3 flex-1 min-h-0 flex flex-col">
-          {loading ? <div>Se Ã®ncarcÄƒâ€¦</div> : (
+          {loading ? <div>{'Se încarcă\u2026'}</div> : (
             <>
               <div className="-mx-3 flex-1 min-h-0">
                 <div className="border-y border-slate-300 h-full" ref={gridScrollRef}>
@@ -342,7 +342,7 @@ export default function App() {
                 <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-rose-200"></span><span>indisponibil</span></div>
-                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea dumneavoastrÄƒ</span></div>
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea dumneavoastră</span></div>
                 </div>
               </div>
             </>
@@ -356,12 +356,12 @@ export default function App() {
             <div className="space-y-1">
               <div>
                 {selCourtId && selStart && selEnd ? (
-                  <>SelecÈ›ie: Teren {selectedCourtName ?? selCourtId} â€¢ {date} â€¢ {selStart} - {selEnd}</>
+                  <>Selecție: Teren {selectedCourtName ?? selCourtId}{' \u2022 '}{date}{' \u2022 '}{selStart} - {selEnd}</>
                 ) : (
-                  <>SelectaÈ›i cel puÈ›in 1 orÄƒ (douÄƒ intervale continue de 30 min).</>
+                  <>Selectați cel puțin 1 oră (două intervale continue de 30 min).</>
                 )}
               </div>
-              <div>SelectaÈ›i intervalul liber de la care doriÈ›i sÄƒ Ã®nceapÄƒ rezervarea.</div>
+              <div>Selectați intervalul liber de la care doriți să înceapă rezervarea.</div>
             </div>
           </div>
         </div>
@@ -376,7 +376,7 @@ export default function App() {
               role="alert"
             >
               <button
-                aria-label="ÃŽnchide"
+                aria-label="Închide"
                 className="absolute top-2 right-2 text-rose-800/70 hover:text-rose-900"
                 onClick={() => {
                   if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
@@ -384,11 +384,11 @@ export default function App() {
                   setGapToastFading(false)
                   setGapToastVisible(false)
                 }}
-              >Ã—</button>
+              >{'\u00D7'}</button>
               <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-4">
-                <span className="text-3xl" aria-hidden>âš </span>
+                <span className="text-3xl" aria-hidden>{'\u26A0'}</span>
                 <div className="text-lg sm:text-xl text-rose-900">
-                  Rezervarea curentÄƒ lasÄƒ o pauzÄƒ de 30 de minute lÃ¢ngÄƒ o altÄƒ rezervare pe acelaÈ™i teren. ExtindeÈ›i sau mutaÈ›i selecÈ›ia pentru a elimina golul.
+                  Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extindeți sau mutați selecția pentru a elimina golul.
                 </div>
               </div>
             </div>
