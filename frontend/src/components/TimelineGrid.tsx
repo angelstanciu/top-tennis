@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AvailabilityDto } from '../types'
 
@@ -36,16 +36,16 @@ function sportLabel(s: string) {
   switch (s) {
     case 'TENNIS': return 'Tenis'
     case 'PADEL': return 'Padel'
-    case 'BEACH_VOLLEY': return 'Volei pe plajă'
+    case 'BEACH_VOLLEY': return 'Volei pe plaj─â'
     case 'BASKETBALL': return 'Baschet'
     case 'FOOTVOLLEY': return 'Tenis de picior'
-    case 'TABLE_TENNIS': return 'Tenis de masă'
+    case 'TABLE_TENNIS': return 'Tenis de mas─â'
     default: return s
   }
 }
 
 export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef }: Props) {
-  if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
+  if (data.length === 0) return <div>Nu au fost g─âsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
   const maxClose = '24:00'
@@ -331,7 +331,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               {data.map((row) => (
                 <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-3 py-2 text-sm h-10 flex flex-col items-center justify-center text-center bg-white">
                   <div className="font-medium">{row.court.name}</div>
-                  <div className="text-xs text-slate-500">{sportLabel(row.court.sportType)} {row.court.indoor ? '• Interior' : '• Exterior'} {row.court.heated ? '• Încălzit' : ''}</div>
+                  <div className="text-xs text-slate-500">{sportLabel(row.court.sportType)} {row.court.indoor ? 'ΓÇó Interior' : 'ΓÇó Exterior'} {row.court.heated ? 'ΓÇó ├Änc─âlzit' : ''}</div>
                 </div>
               ))}
             </div>
@@ -361,7 +361,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                               <div
                                 key={`${row.court.id}-${t}`}
                                 className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
-                                onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                                onMouseEnter={() => onHover?.(`${row.court.name} ΓÇó ${t} - ${next} ΓÇó ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
                                 onClick={(e) => {
                                   if (!clickable) return
                                   // If any selection exists, clear it and require a new click to start fresh
@@ -388,7 +388,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                                   const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                                   setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
                                 }}
-                                title={`${row.court.name} • ${t} - ${next}`}
+                                title={`${row.court.name} ΓÇó ${t} - ${next}`}
                               />
                             )
                           })}
@@ -447,7 +447,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                       key={`cell-${row.court.id}-${t}`}
                       className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
                       style={pastStyle}
-                      onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                      onMouseEnter={() => onHover?.(`${row.court.name} ΓÇó ${t} - ${next} ΓÇó ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
                       onClick={(e) => {
                         if (!clickable) return
                         // If any selection exists, clear it and require a new click to start fresh
@@ -472,7 +472,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                         const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                         setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
                       }}
-                      title={`${row.court.name} • ${t} - ${next}`}
+                      title={`${row.court.name} ΓÇó ${t} - ${next}`}
                     />
                   )
                 })}
@@ -493,7 +493,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const startTime = ticks[startIndex]
     const selectedIntervalText = (selCourtId === courtId && selStart === startTime && selEnd)
       ? `${selStart} - ${selEnd}`
-      : 'â€”'
+      : '├óΓé¼ΓÇ¥'
     const selectionValid = !!(selCourtId === courtId && selStart && selEnd && minutesBetween(selStart, selEnd) >= 60 && !leavesThirtyMinuteGap(booked, selStart, selEnd))
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
@@ -560,12 +560,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               className={'rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}
               style={{ transitionDuration: '1000ms' }}
             >
-              Te rugăm selectează una din selecțiile disponibile.
+              Te rug─âm selecteaz─â una din selec╚¢iile disponibile.
             </div>
           )}
           <div className="flex flex-col">
             <div className="font-bold">Teren: {row.court.name}</div>
-            <div className="text-xs text-slate-600">Ora de începere: {startTime}</div>
+            <div className="text-xs text-slate-600">Ora de ├«ncepere: {startTime}</div>
             <div className="text-xs text-slate-600">Interval selectat: {selectedIntervalText}</div>
           </div>
           <div className="flex flex-col gap-2">
@@ -580,7 +580,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               )
             })}
             <div className="flex gap-2">
-              <button className="btn flex-1" onClick={handleReserveClick}>Rezervă selecția</button>
+              <button className="btn flex-1" onClick={handleReserveClick}>Rezerv─â selec╚¢ia</button>
               <button
                 className="px-3 py-2 rounded border"
                 onClick={() => {
@@ -591,7 +591,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   onSelectionChange?.(null, null, null, false, false)
                 }}
               >
-                Închide
+                ├Änchide
               </button>
             </div>
           </div>
