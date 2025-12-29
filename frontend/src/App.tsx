@@ -349,23 +349,6 @@ export default function App() {
           )}
         </div>
       </section>
-      <footer>
-        <div className="rounded border border-sky-200 bg-sky-50 p-3 text-xs text-slate-700 shadow-md">
-          <div className="flex items-start gap-2">
-            <span aria-hidden className="mt-0.5">i</span>
-            <div className="space-y-1">
-              <div>
-                {selCourtId && selStart && selEnd ? (
-                  <>Selecție: Teren {selectedCourtName ?? selCourtId}{' \u2022 '}{date}{' \u2022 '}{selStart} - {selEnd}</>
-                ) : (
-                  <>Selectați cel puțin 1 oră (două intervale continue de 30 min).</>
-                )}
-              </div>
-              <div>Selectați intervalul liber de la care doriți să înceapă rezervarea.</div>
-            </div>
-          </div>
-        </div>
-      </footer>
       {/* Detached gap error toast */}
       {gapToastVisible && (
         <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none">
