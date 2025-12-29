@@ -351,7 +351,7 @@ export default function App() {
       </section>
       {/* Detached gap error toast */}
       {gapToastVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none">
+        <div className="fixed inset-x-0 bottom-0 z-[20000] pointer-events-none">
           <div className="max-w-7xl mx-auto px-4">
             <div
               className={`relative rounded border border-rose-300 bg-rose-50 text-rose-800 shadow pointer-events-auto ${gapToastFading ? 'opacity-0' : 'opacity-100'} transition-opacity w-full mb-4`}
