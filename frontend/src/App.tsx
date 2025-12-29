@@ -241,8 +241,16 @@ export default function App() {
     }
   }, [date, sport])
 
-  const pageBgStyle = sport === 'TENNIS'
-    ? { backgroundImage: "url('/tennis-background.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+  const backgroundBySport: Record<SportType, string> = {
+    TENNIS: '/tennis-background.png',
+    PADEL: '/padel-background.png',
+    BEACH_VOLLEY: '/volley-ball-background.png',
+    BASKETBALL: '/basketball-background.png',
+    FOOTVOLLEY: '/soccer-background.png',
+    TABLE_TENNIS: '/ping-pong-background.png',
+  }
+  const pageBgStyle = backgroundBySport[sport]
+    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
     : undefined
 
   return (
