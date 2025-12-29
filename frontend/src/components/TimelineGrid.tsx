@@ -410,6 +410,10 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   function renderMobile() {
     const courtCount = data.length
     const timeColWidth = 64
+    const rowHeight = 40
+    const pastRows = (date < todayStr)
+      ? (ticks.length - 1)
+      : (date === todayStr ? ticks.slice(0, -1).filter(t => t < nowTime).length : 0)
     return (
       <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col`}>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
@@ -423,62 +427,74 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
             ))}
           </div>
           {/* Body: each row is a time slot */}
-          {ticks.slice(0,-1).map((t, i) => {
-            const next = ticks[i+1]
-            const isPastRow = (date < todayStr) || (date === todayStr && t < nowTime)
-            return (
-              <div key={`time-${t}`} className="grid items-stretch" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }} data-row-index={i}>
-                {/* Time label */}
-                <div className="px-2 pt-1 pb-0 text-xs border-t border-slate-300 bg-white text-left flex items-start">{timeLabel(t)}</div>
-                {/* Cells per court */}
-                {data.map((row, rowIndex) => {
-                  const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end }))
-                  const isBooked = bookedRanges.some(b => !(b.end <= t || b.start >= next))
-                  const selected = selCourtId === row.court.id && selStart && selEnd && t >= selStart && next <= selEnd
-                  const clickable = !isBooked && !isPastRow
-                  let stateClass = ''
-                  if (isBooked) stateClass = 'bg-rose-200'
-                  else if (selected) stateClass = 'bg-emerald-300'
-                  else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-                  const disabledClass = isPastRow ? 'cursor-not-allowed' : (clickable ? 'cursor-pointer' : '')
-                  const pastStyle = isPastRow ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)' } : undefined
-                  return (
-                    <div
-                      key={`cell-${row.court.id}-${t}`}
-                      className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
-                      style={pastStyle}
-                      onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
-                      onClick={(e) => {
-                        if (!clickable) return
-                        // If any selection exists, clear it and require a new click to start fresh
-                        if (selCourtId && selStart && selEnd) {
-                          setSelCourtId(null); setSelStart(null); setSelEnd(null)
-                          onSelectionChange?.(null, null, null, false, false)
-                          // continue to handle this click as a fresh selection
-                        }
-                        const end60 = ticks[i+2]
-                        if (end60) {
-                          const within = t >= row.court.openTime && end60 <= row.court.closeTime
-                          const slot2Booked = bookedRanges.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
-                          const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                          const free60 = within && !isBooked && !isPastRow && !slot2Past && !slot2Booked
-                          if (free60) {
-                            const gapInvalid = leavesThirtyMinuteGap(bookedRanges, t, end60)
-                            if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+          <div className="relative">
+            {pastRows > 0 && (
+              <div
+                className="absolute top-0 z-10"
+                style={{
+                  left: timeColWidth,
+                  right: 0,
+                  height: pastRows * rowHeight,
+                  backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+            {ticks.slice(0,-1).map((t, i) => {
+              const next = ticks[i+1]
+              const isPastRow = (date < todayStr) || (date === todayStr && t < nowTime)
+              return (
+                <div key={`time-${t}`} className="relative z-0 grid items-stretch" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }} data-row-index={i}>
+                  {/* Time label */}
+                  <div className="px-2 pt-1 pb-0 text-xs border-t border-slate-300 bg-white text-left flex items-start">{timeLabel(t)}</div>
+                  {/* Cells per court */}
+                  {data.map((row, rowIndex) => {
+                    const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end }))
+                    const isBooked = bookedRanges.some(b => !(b.end <= t || b.start >= next))
+                    const selected = selCourtId === row.court.id && selStart && selEnd && t >= selStart && next <= selEnd
+                    const clickable = !isBooked && !isPastRow
+                    let stateClass = ''
+                    if (isBooked) stateClass = 'bg-rose-200'
+                    else if (selected) stateClass = 'bg-emerald-300'
+                    else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
+                    const disabledClass = isPastRow ? 'cursor-not-allowed' : (clickable ? 'cursor-pointer' : '')
+                    return (
+                      <div
+                        key={`cell-${row.court.id}-${t}`}
+                        className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
+                        onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                        onClick={(e) => {
+                          if (!clickable) return
+                          // If any selection exists, clear it and require a new click to start fresh
+                          if (selCourtId && selStart && selEnd) {
+                            setSelCourtId(null); setSelStart(null); setSelEnd(null)
+                            onSelectionChange?.(null, null, null, false, false)
+                            // continue to handle this click as a fresh selection
                           }
-                        }
-                        popupRowIndexRef.current = rowIndex
-                        handleCellClick(row.court.id, t, next, isBooked, true, bookedRanges)
-                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                        setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
-                      }}
-                      title={`${row.court.name} • ${t} - ${next}`}
-                    />
-                  )
-                })}
-              </div>
-            )
-          })}
+                          const end60 = ticks[i+2]
+                          if (end60) {
+                            const within = t >= row.court.openTime && end60 <= row.court.closeTime
+                            const slot2Booked = bookedRanges.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
+                            const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
+                            const free60 = within && !isBooked && !isPastRow && !slot2Past && !slot2Booked
+                            if (free60) {
+                              const gapInvalid = leavesThirtyMinuteGap(bookedRanges, t, end60)
+                              if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+                            }
+                          }
+                          popupRowIndexRef.current = rowIndex
+                          handleCellClick(row.court.id, t, next, isBooked, true, bookedRanges)
+                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                          setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
+                        }}
+                        title={`${row.court.name} • ${t} - ${next}`}
+                      />
+                    )
+                  })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     )
