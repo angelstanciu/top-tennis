@@ -331,7 +331,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               {data.map((row) => (
                 <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-3 py-2 text-sm h-10 flex flex-col items-center justify-center text-center bg-white">
                   <div className="font-medium">{row.court.name}</div>
-                  <div className="text-xs text-slate-500">{sportLabel(row.court.sportType)} {row.court.indoor ? 'ΓÇó Interior' : 'ΓÇó Exterior'} {row.court.heated ? 'ΓÇó ├Änc─âlzit' : ''}</div>
+                  <div className="text-xs text-slate-500">{sportLabel(row.court.sportType)} {row.court.indoor ? '• Interior' : '• Exterior'} {row.court.heated ? '• Încălzit' : ''}</div>
                 </div>
               ))}
             </div>
@@ -361,7 +361,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                               <div
                                 key={`${row.court.id}-${t}`}
                                 className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
-                                onMouseEnter={() => onHover?.(`${row.court.name} ΓÇó ${t} - ${next} ΓÇó ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                                onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
                                 onClick={(e) => {
                                   if (!clickable) return
                                   // If any selection exists, clear it and require a new click to start fresh
@@ -388,7 +388,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                                   const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                                   setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
                                 }}
-                                title={`${row.court.name} ΓÇó ${t} - ${next}`}
+                                title={`${row.court.name} • ${t} - ${next}`}
                               />
                             )
                           })}
@@ -447,7 +447,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                       key={`cell-${row.court.id}-${t}`}
                       className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
                       style={pastStyle}
-                      onMouseEnter={() => onHover?.(`${row.court.name} ΓÇó ${t} - ${next} ΓÇó ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                      onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
                       onClick={(e) => {
                         if (!clickable) return
                         // If any selection exists, clear it and require a new click to start fresh
@@ -472,7 +472,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                         const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                         setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
                       }}
-                      title={`${row.court.name} ΓÇó ${t} - ${next}`}
+                      title={`${row.court.name} • ${t} - ${next}`}
                     />
                   )
                 })}
@@ -493,7 +493,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const startTime = ticks[startIndex]
     const selectedIntervalText = (selCourtId === courtId && selStart === startTime && selEnd)
       ? `${selStart} - ${selEnd}`
-      : '├óΓé¼ΓÇ¥'
+      : '—'
     const selectionValid = !!(selCourtId === courtId && selStart && selEnd && minutesBetween(selStart, selEnd) >= 60 && !leavesThirtyMinuteGap(booked, selStart, selEnd))
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
