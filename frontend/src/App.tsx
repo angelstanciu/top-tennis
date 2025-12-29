@@ -278,7 +278,6 @@ export default function App() {
           </div>
         </div>
       )}
-      <header className="flex items-center justify-between" aria-hidden="true" />
       <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 shadow-md flex-1 min-h-0 flex flex-col">
         <div className="flex items-end gap-4 w-full">
           <div className="flex flex-col shrink-0">
