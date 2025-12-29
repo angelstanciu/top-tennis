@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { SportType } from '../types'
 
 const sports: { value: SportType, label: string }[] = [
