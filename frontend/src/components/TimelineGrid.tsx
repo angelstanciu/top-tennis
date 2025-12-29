@@ -607,11 +607,3 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     </div>
   )
 }
-
-
-
-
-
-
-
-

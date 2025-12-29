@@ -84,7 +84,6 @@ export default function App() {
     return row?.court.name ?? null
   }, [selCourtId, data])
 
-  const title = useMemo(() => 'Rezervări STAR ARENA Bascov', [])
   const displayDate = useMemo(() => formatDateDisplay(date), [date])
 
   // State is initialized from query params; no further sync needed
@@ -279,9 +278,7 @@ export default function App() {
           </div>
         </div>
       )}
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold border-l-4 border-sky-500 pl-3 whitespace-nowrap truncate">{title}</h1>
-      </header>
+      <header className="flex items-center justify-between" aria-hidden="true" />
       <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 shadow-md flex-1 min-h-0 flex flex-col">
         <div className="flex items-end gap-4 w-full">
           <div className="flex flex-col shrink-0">
