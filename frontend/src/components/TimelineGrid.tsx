@@ -565,7 +565,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           )}
           <div className="flex flex-col">
             <div className="font-bold">Teren: {row.court.name}</div>
-            <div className="text-xs text-slate-600">Ora de ├«ncepere: {startTime}</div>
+            <div className="text-xs text-slate-600">Ora de începere: {startTime}</div>
             <div className="text-xs text-slate-600">Interval selectat: {selectedIntervalText}</div>
           </div>
           <div className="flex flex-col gap-2">
@@ -580,7 +580,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               )
             })}
             <div className="flex gap-2">
-              <button className="btn flex-1" onClick={handleReserveClick}>Rezerv─â selec╚¢ia</button>
+              <button className="btn flex-1" onClick={handleReserveClick}>Rezervă selecția</button>
               <button
                 className="px-3 py-2 rounded border"
                 onClick={() => {
@@ -591,7 +591,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   onSelectionChange?.(null, null, null, false, false)
                 }}
               >
-                ├Änchide
+                Închide
               </button>
             </div>
           </div>
