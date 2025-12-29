@@ -286,48 +286,46 @@ export default function App() {
           </div>
         </div>
       )}
-      <section className="rounded border border-sky-200 bg-sky-50 shadow-md flex-1 min-h-0 flex flex-col">
-        <div className="sticky top-0 z-30 bg-sky-50/95 backdrop-blur-sm border-b border-sky-200 px-3 py-2">
-          <div className="flex items-end gap-3 w-full">
-            <div className="flex flex-col shrink-0">
-              <div className="text-[11px] text-slate-500 mb-0.5">Alege sportul</div>
-              <SportPicker value={sport} onChange={setSport} />
-            </div>
-            <div className="flex flex-col flex-1 min-w-0">
-              <div className="text-[11px] text-slate-500 mb-0.5">Data</div>
-              <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden w-full">
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center px-2 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                  aria-label="Ziua anterioară"
-                  onClick={() => shiftDate(-1)}
-                  title="Ziua anterioară"
-                >
-                  {'\u2039'}
-                </button>
-                <div className="relative flex-1 min-w-0">
-                  <div className="px-2 py-1 text-sm text-slate-800 text-center select-none truncate">
-                    {displayDate}
-                  </div>
-                  <input
-                    className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
-                    type="date"
-                    lang="ro-RO"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    aria-label="Data"
-                  />
+      <section className="rounded border border-sky-200 bg-sky-50 px-3 pt-3 shadow-md flex-1 min-h-0 flex flex-col">
+        <div className="flex items-end gap-4 w-full">
+          <div className="flex flex-col shrink-0">
+            <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
+            <SportPicker value={sport} onChange={setSport} />
+          </div>
+          <div className="flex flex-col flex-1 min-w-0 ml-2">
+            <div className="text-xs text-slate-500 mb-1">Data</div>
+            <div className="inline-flex items-stretch bg-white border border-slate-300 rounded overflow-hidden w-full">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
+                aria-label="Ziua anterioară"
+                onClick={() => shiftDate(-1)}
+                title="Ziua anterioară"
+              >
+                {'\u2039'}
+              </button>
+              <div className="relative flex-1 min-w-0">
+                <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none truncate">
+                  {displayDate}
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center px-2 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                  aria-label="Ziua următoare"
-                  onClick={() => shiftDate(1)}
-                  title="Ziua următoare"
-                >
-                  {'\u203A'}
-                </button>
+                <input
+                  className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                  type="date"
+                  lang="ro-RO"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  aria-label="Data"
+                />
               </div>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
+                aria-label="Ziua următoare"
+                onClick={() => shiftDate(1)}
+                title="Ziua următoare"
+              >
+                {'\u203A'}
+              </button>
             </div>
           </div>
         </div>
