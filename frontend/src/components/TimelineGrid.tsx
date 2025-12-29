@@ -411,7 +411,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const courtCount = data.length
     const timeColWidth = 64
     return (
-      <div className={flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'}>
+      <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0`}>
             <div className="h-full min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
           {/* Header: corner cell with diagonal split + court names */}
           <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
