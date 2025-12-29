@@ -255,8 +255,10 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const idx = findFirstClickableIndex()
     if (idx !== null) {
       if (!isMobile) {
-        // Desktop: scroll horizontally to the first available slot
-        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
+        // Desktop: mirror mobile behavior (place target about 1/3 into view)
+        const container = scrollRef.current
+        const offset = container ? container.clientWidth / 3 : 0
+        const targetLeft = Math.max(0, idx * colWidth - offset)
         if (scrollRef.current) {
           animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
             if (headerRef.current) headerRef.current.scrollLeft = left
@@ -297,7 +299,9 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     if (idx === null) return
     const timer = setTimeout(() => {
       if (!isMobile) {
-        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
+        const container = scrollRef.current
+        const offset = container ? container.clientWidth / 3 : 0
+        const targetLeft = Math.max(0, idx * colWidth - offset)
         if (scrollRef.current) {
           animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
             if (headerRef.current) headerRef.current.scrollLeft = left
