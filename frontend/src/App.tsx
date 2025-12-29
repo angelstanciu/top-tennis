@@ -250,11 +250,11 @@ export default function App() {
     TABLE_TENNIS: '/ping-pong-background.png',
   }
   const pageBgStyle = backgroundBySport[sport]
-    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
     : undefined
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-3 min-h-dvh overflow-hidden flex flex-col" style={pageBgStyle}>
+    <div className="max-w-7xl mx-auto p-4 space-y-3 h-dvh overflow-hidden flex flex-col" style={pageBgStyle}>
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
