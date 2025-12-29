@@ -325,7 +325,7 @@ export default function App() {
           {loading ? <div>Se încarcă…</div> : (
             <>
               <div className="-mx-3 flex-1 min-h-0">
-                <div className="border-y border-slate-300 h-full overflow-y-auto" ref={gridScrollRef}>
+                <div className="border-y border-slate-300 h-full" ref={gridScrollRef}>
                   <TimelineGrid flat data={data} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
                 </div>
               </div>
