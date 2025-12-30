@@ -162,15 +162,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return false
   }
 
-  // Past time disabling (use local date to avoid UTC offsets breaking comparisons)
-  function todayLocalISO() {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-  const todayStr = todayLocalISO()
+  // Past time disabling
+  const todayStr = new Date().toISOString().slice(0,10)
   const nowTime = new Date().toTimeString().slice(0,5) // HH:mm
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -371,7 +364,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                             if (isBooked) stateClass = 'bg-rose-200'
                             else if (selected) stateClass = 'bg-emerald-300'
                             else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-                            const disabledClass = isPast ? 'cursor-not-allowed' : (clickable ? 'cursor-pointer' : '')
+                            const disabledClass = isPast ? 'cursor-not-allowed pointer-events-none' : (clickable ? 'cursor-pointer' : '')
                             return (
                               <div
                                 key={`${row.court.id}-${t}`}
@@ -474,7 +467,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                     if (isBooked) stateClass = 'bg-rose-200'
                     else if (selected) stateClass = 'bg-emerald-300'
                     else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-                    const disabledClass = isPastRow ? 'cursor-not-allowed' : (clickable ? 'cursor-pointer' : '')
+                    const disabledClass = isPastRow ? 'cursor-not-allowed pointer-events-none' : (clickable ? 'cursor-pointer' : '')
                     return (
                       <div
                         key={`cell-${row.court.id}-${t}`}

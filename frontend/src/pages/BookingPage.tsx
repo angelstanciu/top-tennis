@@ -110,8 +110,8 @@ export default function BookingPage() {
       })
       alert('Mulțumim, rezervarea a fost înregistrată.')
       const lastSport = localStorage.getItem('lastSport') || sport
-      const lastDate = localStorage.getItem('lastDate') || date
-      const backUrl = `/?sport=${encodeURIComponent(lastSport)}&date=${encodeURIComponent(lastDate)}`
+      const today = new Date().toISOString().slice(0,10)
+      const backUrl = `/?sport=${encodeURIComponent(lastSport)}&date=${encodeURIComponent(today)}`
       nav(backUrl)
     } catch (e: any) {
       setError(e.message || 'Nu am putut crea rezervarea')
@@ -172,8 +172,8 @@ export default function BookingPage() {
               type="button"
               onClick={() => {
                 const lastSport = localStorage.getItem('lastSport') || sport
-                const lastDate = localStorage.getItem('lastDate') || date
-                nav(`/?sport=${encodeURIComponent(lastSport)}&date=${encodeURIComponent(lastDate)}`)
+                const today = new Date().toISOString().slice(0,10)
+                nav(`/?sport=${encodeURIComponent(lastSport)}&date=${encodeURIComponent(today)}`)
               }}
             >
               Anulează

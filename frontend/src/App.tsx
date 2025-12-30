@@ -116,13 +116,12 @@ export default function App() {
     }
   }, [])
 
-  // Persist last selected sport/date for returning from booking page
+  // Persist last selected sport for returning from booking page (do not persist date)
   useEffect(() => {
     try {
       localStorage.setItem('lastSport', sport)
-      localStorage.setItem('lastDate', date)
     } catch {}
-  }, [sport, date])
+  }, [sport])
 
   useEffect(() => {
     function onBeforeInstallPrompt(e: Event) {
