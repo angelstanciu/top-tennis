@@ -162,8 +162,15 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return false
   }
 
-  // Past time disabling
-  const todayStr = new Date().toISOString().slice(0,10)
+  // Past time disabling (use local date to avoid UTC offsets breaking comparisons)
+  function todayLocalISO() {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  const todayStr = todayLocalISO()
   const nowTime = new Date().toTimeString().slice(0,5) // HH:mm
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -263,12 +270,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           })
         }
       } else if (isMobile) {
-        // Mobile: vertical scroll within the mobile grid container
+        // Mobile: vertical scroll to align the first free row at the top
         const container = mobileBodyRef.current
         if (!container) return
         const rowEl = container.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
         if (rowEl) {
-          const top = Math.max(0, rowEl.offsetTop - Math.max(0, container.clientHeight / 3))
+          const top = Math.max(0, rowEl.offsetTop)
           animateScrollY(container, top, 600)
         }
       }
@@ -307,7 +314,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         const container = mobileBodyRef.current
         const rowEl = container?.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
         if (container && rowEl) {
-          const top = Math.max(0, rowEl.offsetTop - Math.max(0, container.clientHeight / 3))
+          const top = Math.max(0, rowEl.offsetTop)
           animateScrollY(container, top, 600)
         }
       }
@@ -426,7 +433,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col`}>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
           {/* Header: corner cell with diagonal split + court names */}
-          <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
+          <div className="grid sticky top-0 z-20" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
             <div className="px-2 py-2 text-xs font-semibold bg-white text-center">Ora</div>
             {data.map(row => (
               <div key={`head-${row.court.id}`} className="px-2 py-2 text-xs font-semibold bg-white border-l border-slate-300 text-center">
@@ -438,11 +445,13 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           <div className="relative">
             {pastRows > 0 && (
               <div
-                className="absolute top-0 z-10"
+                className="absolute z-10"
                 style={{
+                  top: 0,
                   left: timeColWidth,
                   right: 0,
-                  height: pastRows * rowHeight,
+                  // Subtract 1px to avoid bleeding over the next row border
+                  height: Math.max(0, pastRows * rowHeight - 1),
                   backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)',
                   pointerEvents: 'none',
                 }}

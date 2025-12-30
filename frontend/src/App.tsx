@@ -49,15 +49,18 @@ function formatDateDisplay(iso?: string) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-')
   if (!y || !m || !d) return iso
-  return `${d}.${m}.${y}`
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const monthIdx = Math.max(0, Math.min(11, Number(m) - 1))
+  const dd = String(Number(d))
+  return `${dd} ${months[monthIdx]} ${y}`
 }
 
 export default function App() {
   const [searchParams] = useSearchParams()
   const lsSport = (typeof window !== 'undefined' ? (localStorage.getItem('lastSport') as SportType | null) : null)
-  const lsDate = (typeof window !== 'undefined' ? localStorage.getItem('lastDate') : null)
+  const paramDate = searchParams.get('date')
   const initialSport = lsSport || (searchParams.get('sport') as SportType) || 'TENNIS'
-  const initialDate = lsDate || searchParams.get('date') || todayISO()
+  const initialDate = paramDate || todayISO()
   const [sport, setSport] = useState<SportType>(initialSport)
   const [date, setDate] = useState<string>(initialDate)
   const [data, setData] = useState<AvailabilityDto[]>([])
@@ -65,6 +68,7 @@ export default function App() {
   const [hover, setHover] = useState<string>('')
   const nav = useNavigate()
   const gridScrollRef = React.useRef<HTMLDivElement | null>(null)
+  const dateInputRef = React.useRef<HTMLInputElement | null>(null)
   const [selCourtId, setSelCourtId] = useState<number | null>(null)
   const [selStart, setSelStart] = useState<string | null>(null)
   const [selEnd, setSelEnd] = useState<string | null>(null)
@@ -88,13 +92,11 @@ export default function App() {
 
   // State is initialized from query params; no further sync needed
 
-  // On very first mount, ensure we restore last selections from localStorage
+  // On very first mount, restore last sport only (date defaults to today or URL param)
   useEffect(() => {
     try {
       const s = localStorage.getItem('lastSport') as SportType | null
-      const d = localStorage.getItem('lastDate')
       if (s) setSport(s)
-      if (d) setDate(d)
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -305,10 +307,11 @@ export default function App() {
                 {'\u2039'}
               </button>
               <div className="relative flex-1 min-w-0">
-                <div className="px-2 py-1.5 text-sm text-slate-800 text-center select-none truncate">
+                <div className="px-2 pr-8 py-1.5 text-sm text-slate-800 text-center select-none truncate">
                   {displayDate}
                 </div>
                 <input
+                  ref={dateInputRef}
                   className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
                   type="date"
                   lang="ro-RO"
@@ -316,6 +319,29 @@ export default function App() {
                   onChange={e => setDate(e.target.value)}
                   aria-label="Data"
                 />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-black/70 hover:text-black focus:outline-none z-10"
+                  aria-label="Deschide calendarul"
+                  title="Deschide calendarul"
+                  onClick={() => {
+                    const el = dateInputRef.current
+                    if (!el) return
+                    try {
+                      // @ts-ignore
+                      if (typeof el.showPicker === 'function') { (el as any).showPicker(); return }
+                    } catch {}
+                    try { el.focus() } catch {}
+                    try { el.click() } catch {}
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </button>
               </div>
               <button
                 type="button"
@@ -342,7 +368,6 @@ export default function App() {
                 <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-rose-200"></span><span>indisponibil</span></div>
-                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border bg-emerald-300"></span><span>rezervarea dumneavoastră</span></div>
                 </div>
               </div>
             </>
@@ -381,3 +406,4 @@ export default function App() {
     </div>
   )
 }
+
