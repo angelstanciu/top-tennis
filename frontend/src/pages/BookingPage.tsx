@@ -30,7 +30,9 @@ export default function BookingPage() {
     if (!a || !b) return 0
     const [ah, am] = a.split(':').map(Number)
     const [bh, bm] = b.split(':').map(Number)
-    return (bh*60 + bm) - (ah*60 + am)
+    let diff = (bh*60 + bm) - (ah*60 + am)
+    if (diff < 0) diff += 24*60
+    return diff
   }
   const meetsMinDuration = minutesBetween(startTime, endTime) >= 60
 

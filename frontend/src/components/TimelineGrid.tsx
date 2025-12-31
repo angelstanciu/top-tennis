@@ -100,7 +100,9 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   function minutesBetween(a: string, b: string) {
     const [ah, am] = a.split(':').map(Number)
     const [bh, bm] = b.split(':').map(Number)
-    return (bh*60 + bm) - (ah*60 + am)
+    let diff = (bh*60 + bm) - (ah*60 + am)
+    if (diff < 0) diff += 24*60
+    return diff
   }
 
   function handleCellClick(courtId: number, t: string, next: string, isBooked: boolean, within: boolean, bookedRanges: {start:string,end:string}[]) {
@@ -143,22 +145,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   }
 
   function leavesThirtyMinuteGap(booked: {start:string,end:string}[], selStart: string, selEnd: string) {
-    // Find previous booking (max end <= selStart)
-    let prevEnd: string | null = null
-    for (const b of booked) {
-      if (b.end <= selStart) {
-        if (!prevEnd || b.end > prevEnd) prevEnd = b.end
-      }
-    }
-    if (prevEnd && (minutesSinceMidnightStr(selStart) - minutesSinceMidnightStr(prevEnd) === 30)) return true
-    // Find next booking (min start >= selEnd)
-    let nextStart: string | null = null
-    for (const b of booked) {
-      if (b.start >= selEnd) {
-        if (!nextStart || b.start < nextStart) nextStart = b.start
-      }
-    }
-    if (nextStart && (minutesSinceMidnightStr(nextStart) - minutesSinceMidnightStr(selEnd) === 30)) return true
+    // Gap rule disabled: always allow
     return false
   }
 
@@ -527,7 +514,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
-        if (!t || !next) return false
+        // If range crosses midnight, we optimistically allow (backend will validate next day)
+        if (!t || !next) return true
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
         if (isPast || isBooked) return false
@@ -541,8 +529,16 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     }
     function choose(mins: number) {
       const slots = mins / 30
-      const endTime = ticks[startIndex + slots]
-      if (!endTime) return
+      let endTime = ticks[startIndex + slots]
+      if (!endTime) {
+        // Compute end time across midnight
+        const [sh, sm] = startTime.split(':').map(Number)
+        const startMin = sh*60 + sm
+        const endMin = (startMin + mins) % (24*60)
+        const eh = Math.floor(endMin/60).toString().padStart(2,'0')
+        const em = (endMin%60).toString().padStart(2,'0')
+        endTime = `${eh}:${em}`
+      }
       setSelCourtId(courtId)
       setSelStart(startTime)
       setSelEnd(endTime)
