@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { SportType, BookingDto } from '../types'
 
 function b64(u: string, p: string) {
@@ -23,6 +24,7 @@ async function adminPatch(path: string, auth: string) {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [auth, setAuth] = useState<string | null>(null)
@@ -34,6 +36,22 @@ export default function AdminPage() {
 
   const logged = !!auth
   const title = useMemo(() => 'Administrare rezervări', [])
+
+
+  // Preload admin token and avoid re-login on child routes (1h expiration)
+  React.useEffect(() => {
+    try {
+      const token = localStorage.getItem('adminAuth')
+      const ts = Number(localStorage.getItem('adminAuthTS') || 0)
+      const valid = token && ts && (Date.now() - ts) <= 3600000
+      if (!valid) {
+        try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch {}
+        navigate('/login', { replace: true })
+      } else if (!auth) {
+        setAuth(token)
+      }
+    } catch {}
+  }, [])
 
   function sportLabel(s?: SportType) {
     switch (s) {
@@ -99,6 +117,7 @@ export default function AdminPage() {
         return (b.id || 0) - (a.id || 0)
       })
       setBookings(sorted)
+      try { localStorage.setItem('adminAuth', enc) } catch {}
     } catch (e: any) {
       setError(e.message || 'Autentificare eșuată')
       setAuth(null)
@@ -121,29 +140,44 @@ export default function AdminPage() {
     } catch {}
   }
 
-  async function reload() {
-    if (!auth) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await adminFetchBookings(date, sport, auth)
-      const sorted = [...data].sort((a, b) => {
-        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
-        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        if (tb !== ta) return tb - ta
-        return (b.id || 0) - (a.id || 0)
-      })
-      setBookings(sorted)
-    } catch (e: any) { setError(e.message || 'Eroare la încărcare') }
-    finally { setLoading(false) }
-  }
+    async function reload() {
+        if (!auth) return
+        setLoading(true)
+        setError(null)
+
+        try {
+            const data = await adminFetchBookings(date, sport, auth)
+            const sorted = [...data].sort((a, b) => {
+                const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                if (tb !== ta) return tb - ta
+                return (b.id || 0) - (a.id || 0)
+            })
+            setBookings(sorted)
+        } catch (e: any) {
+            setError(e?.message || 'Eroare la încărcare')
+        } finally {
+            setLoading(false)
+        }
+    }
 
   // Confirm action removed; bookings are auto-confirmed on creation
   async function cancel(id: number) { if (!auth) return; await adminPatch(`/admin/bookings/${id}/cancel`, auth); broadcastUpdate(); await reload() }
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold border-l-4 border-sky-500 pl-3">{title}</h1>
+      <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+        {logged && (
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50"
+            onClick={() => { try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch {}; setAuth(null); navigate('/login', { replace: true }) }}
+          >
+            Delogare
+          </button>
+        )}
+      </div>
       {!logged ? (
         <div className="max-w-sm rounded border border-sky-200 bg-sky-50 p-4 shadow-md">
           <form onSubmit={login} className="space-y-3">
@@ -161,6 +195,7 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          
           <div className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
             <div className="flex flex-wrap items-end gap-3">
               <div>
@@ -259,3 +294,7 @@ export default function AdminPage() {
     </div>
   )
 }
+
+
+
+
