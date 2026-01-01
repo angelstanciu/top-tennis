@@ -1,0 +1,21 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="180" viewBox="0 0 220 180">
+  <rect width="220" height="180" fill="none"/>
+  <g transform="translate(110 90)">
+    <animateTransform attributeName="transform" type="translate" values="110 90;110 84;110 90" dur="0.9s" repeatCount="indefinite"/>
+    <!-- ears -->
+    <polygon points="-35,-45 -15,-70 -5,-40" fill="#f4a261"/>
+    <polygon points="35,-45 5,-40 15,-70" fill="#f4a261"/>
+    <!-- head -->
+    <circle cx="0" cy="-25" r="28" fill="#f4a261"/>
+    <!-- eyes -->
+    <circle cx="-10" cy="-28" r="3" fill="#333333"/>
+    <circle cx="10" cy="-28" r="3" fill="#333333"/>
+    <!-- nose -->
+    <circle cx="0" cy="-18" r="2" fill="#333333"/>
+    <!-- body -->
+    <ellipse cx="0" cy="18" rx="34" ry="26" fill="#f4a261"/>
+    <!-- tail -->
+    <path d="M30,10 C50,5 55,25 40,30" fill="none" stroke="#f4a261" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

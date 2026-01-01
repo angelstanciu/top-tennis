@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { SportType } from '../types'
 
 const sports: { value: SportType, label: string }[] = [
@@ -9,10 +9,22 @@ const sports: { value: SportType, label: string }[] = [
   { value: 'FOOTVOLLEY', label: 'Tenis de picior ⚽' },
   { value: 'TABLE_TENNIS', label: 'Tenis de masă 🏓' },
 ]
+type SportPickerValue = SportType | ''
 
-export default function SportPicker({ value, onChange }: { value: SportType, onChange: (v: SportType) => void }) {
+export default function SportPicker({
+  value,
+  onChange,
+  includeAll = false,
+  allLabel = 'Toate',
+}: {
+  value: SportPickerValue
+  onChange: (v: SportPickerValue) => void
+  includeAll?: boolean
+  allLabel?: string
+}) {
   const selectRef = React.useRef<HTMLSelectElement | null>(null)
   const [width, setWidth] = React.useState<number | undefined>(undefined)
+  const options = includeAll ? [{ value: '', label: allLabel }, ...sports] : sports
 
   // Measure the widest option so the dropdown fits the longest label
   React.useEffect(() => {
@@ -28,7 +40,7 @@ export default function SportPicker({ value, onChange }: { value: SportType, onC
       }
       ctx.font = font
       let max = 0
-      for (const s of sports) {
+      for (const s of options) {
         const w = ctx.measureText(s.label).width
         if (w > max) max = w
       }
@@ -45,10 +57,10 @@ export default function SportPicker({ value, onChange }: { value: SportType, onC
         className="border rounded px-2 py-1.5 text-sm whitespace-nowrap bg-white text-slate-900"
         style={{ width: width ? `${width}px` : undefined }}
         value={value}
-        onChange={(e) => onChange(e.target.value as SportType)}
+        onChange={(e) => onChange(e.target.value as SportPickerValue)}
         aria-label="Selectează sportul"
       >
-        {sports.map((s) => (
+        {options.map((s) => (
           <option key={s.value} value={s.value}>
             {s.label}
           </option>
@@ -57,3 +69,4 @@ export default function SportPicker({ value, onChange }: { value: SportType, onC
     </div>
   )
 }
+

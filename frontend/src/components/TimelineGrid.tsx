@@ -144,6 +144,13 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return h*60 + m
   }
 
+  function isSelectedSlot(t: string, next: string) {
+    if (!selStart || !selEnd) return false
+    const wraps = selStart > selEnd
+    if (!wraps) return t >= selStart && next <= selEnd
+    return t >= selStart
+  }
+
   function leavesThirtyMinuteGap(booked: {start:string,end:string}[], selStart: string, selEnd: string) {
     // Gap rule disabled: always allow
     return false
@@ -345,7 +352,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                             const next = ticks[i+1]
                             const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
                             const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-                            const selected = selCourtId === row.court.id && selStart && selEnd && t >= selStart && next <= selEnd
+                            const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
                             const clickable = !isBooked && !isPast
                             let stateClass = ''
                             if (isBooked) stateClass = 'bg-rose-200'
@@ -448,7 +455,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   {data.map((row, rowIndex) => {
                     const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end }))
                     const isBooked = bookedRanges.some(b => !(b.end <= t || b.start >= next))
-                    const selected = selCourtId === row.court.id && selStart && selEnd && t >= selStart && next <= selEnd
+                    const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
                     const clickable = !isBooked && !isPastRow
                     let stateClass = ''
                     if (isBooked) stateClass = 'bg-rose-200'

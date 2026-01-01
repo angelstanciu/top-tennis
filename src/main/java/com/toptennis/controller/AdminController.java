@@ -6,7 +6,9 @@ import com.toptennis.model.SportType;
 import com.toptennis.service.BookingService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -34,6 +36,15 @@ public class AdminController {
     @PatchMapping("/bookings/{id}/cancel")
     public BookingDto cancel(@PathVariable Long id) {
         return BookingMapper.toDto(bookingService.cancel(id));
+    }
+
+    @PatchMapping("/bookings/{id}/restore")
+    public BookingDto restore(@PathVariable Long id) {
+        try {
+            return BookingMapper.toDto(bookingService.restore(id));
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
     }
 
     public record BlockRequest(@NotNull Long courtId,

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminHeader from '../components/AdminHeader'
 
 export default function AdminLanding() {
   const navigate = useNavigate()
@@ -12,8 +13,6 @@ export default function AdminLanding() {
       return !!valid
     } catch { return false }
   })()
-  const title = useMemo(() => 'Panou administrare', [])
-
   useEffect(() => {
     if (!isLogged) navigate('/login', { replace: true })
   }, [isLogged, navigate])
@@ -23,16 +22,7 @@ export default function AdminLanding() {
       
       {isLogged && (
         <>
-        <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-          <button
-            type="button"
-            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50"
-            onClick={() => { try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch {}; navigate('/login', { replace: true }) }}
-          >
-            Delogare
-          </button>
-        </div>
+        <AdminHeader active="landing" />
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Actiuni</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

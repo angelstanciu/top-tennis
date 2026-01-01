@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminHeader from '../components/AdminHeader'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -30,26 +31,32 @@ export default function LoginPage() {
     } finally { setLoading(false) }
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-4 space-y-4">
-      <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-        <div className="text-xs text-slate-500">Secțiune securizată</div>
-      </div>
-      <div className="max-w-sm rounded border border-sky-200 bg-sky-50 p-4 shadow-md">
-        <form onSubmit={onLogin} className="space-y-3">
-          {error && <div className="p-2 bg-rose-100 text-rose-700 border border-rose-200 rounded text-sm">{error}</div>}
-          <div>
-            <label className="block text-sm">Utilizator</label>
-            <input className="w-full border rounded px-3 py-2" value={username} onChange={e => setUsername(e.target.value)} />
+      return (
+    <div className="min-h-screen w-full p-4">
+      <div className="max-w-3xl mx-auto space-y-4">
+        <AdminHeader active="landing" />
+        <div className="flex justify-center">
+          <div className="w-full max-w-md">
+            <div className="rounded border border-sky-200 bg-sky-50 p-4 shadow-md">
+              <div className="text-lg font-semibold text-slate-900 mb-2">{title}</div>
+              <form onSubmit={onLogin} className="space-y-3">
+                {error && <div className="p-2 bg-rose-100 text-rose-700 border border-rose-200 rounded text-sm">{error}</div>}
+                <div>
+                  <label className="block text-sm">Utilizator</label>
+                  <input className="w-full border rounded px-3 py-2" value={username} onChange={e => setUsername(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm">Parola</label>
+                  <input type="password" className="w-full border rounded px-3 py-2" value={password} onChange={e => setPassword(e.target.value)} />
+                </div>
+                <button className="btn w-full" type="submit" disabled={!username || !password || loading}>{loading ? 'Se incarca...' : 'Autentificare'}</button>
+              </form>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm">Parola</label>
-            <input type="password" className="w-full border rounded px-3 py-2" value={password} onChange={e => setPassword(e.target.value)} />
-          </div>
-          <button className="btn" type="submit" disabled={!username || !password || loading}>{loading ? 'Se incarca...' : 'Autentificare'}</button>
-        </form>
+        </div>
       </div>
     </div>
   )
 }
+
+

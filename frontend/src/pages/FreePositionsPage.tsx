@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AvailabilityDto, CourtDto, SportType } from '../types'
 import { fetchAvailability } from '../api'
+import AdminHeader from '../components/AdminHeader'
 import SportPicker from '../components/SportPicker'
 
 function todayISOinTZ(tz: string) {
@@ -45,9 +46,23 @@ export default function FreePositionsPage() {
   const [courtId, setCourtId] = useState<number | ''>('')
   const [text, setText] = useState('')
   const [copied, setCopied] = useState(false)
+  const [highlightCopy, setHighlightCopy] = useState(false)
+  const [highlightCourt, setHighlightCourt] = useState(false)
   const copyTimer = useRef<number | null>(null)
+  const highlightTimer = useRef<number | null>(null)
+  const highlightCourtTimer = useRef<number | null>(null)
   const dateInputRef = useRef<HTMLInputElement | null>(null)
-
+  const backgroundBySport: Record<SportType, string> = {
+    TENNIS: '/tennis-background.png',
+    PADEL: '/padel-background.png',
+    BEACH_VOLLEY: '/volley-ball-background.png',
+    BASKETBALL: '/basketball-background.png',
+    FOOTVOLLEY: '/soccer-background.png',
+    TABLE_TENNIS: '/ping-pong-background.png',
+  }
+  const pageBgStyle = backgroundBySport[sport]
+    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
+    : undefined
   // Compact toast for missing court selection
   const [missingToastVisible, setMissingToastVisible] = useState(false)
   const [missingToastFading, setMissingToastFading] = useState(false)
@@ -75,7 +90,14 @@ export default function FreePositionsPage() {
       .finally(() => setLoading(false))
   }, [date, sport])
 
-  useEffect(() => () => { if (copyTimer.current) window.clearTimeout(copyTimer.current) }, [])
+  useEffect(() => {
+    if (!text) return
+    setHighlightCopy(true)
+    if (highlightTimer.current) window.clearTimeout(highlightTimer.current)
+    highlightTimer.current = window.setTimeout(() => setHighlightCopy(false), 5000)
+  }, [text])
+
+  useEffect(() => () => { if (copyTimer.current) window.clearTimeout(copyTimer.current); if (highlightTimer.current) window.clearTimeout(highlightTimer.current); if (highlightCourtTimer.current) window.clearTimeout(highlightCourtTimer.current) }, [])
   useEffect(() => () => {
     try { if (toastShowTimer.current) clearTimeout(toastShowTimer.current) } catch {}
     try { if (toastHideTimer.current) clearTimeout(toastHideTimer.current) } catch {}
@@ -88,11 +110,28 @@ export default function FreePositionsPage() {
   }, [courtId, courts])
 
   function formatHeader(s: SportType, court?: CourtDto | null) {
-    const head = `POZITII LIBERE ${sportLabelUpper(s)} ${court?.name ?? ''}`
-    return `${head}\n`
+    const sport = sportLabelUpper(s)
+    const rawCourt = court?.name ? String(court.name) : ''
+    const courtLabel = rawCourt.replace(/^Teren\s*/i, '')
+    return `💙💙 POZITII LIBERE - ${sport} - TEREN ${courtLabel} 💙💙`
+  }
+
+  function formatDateLine(iso?: string) {
+    if (!iso) return ''
+    const [y, m, d] = iso.split('-').map(Number)
+    if (!y || !m || !d) return iso
+    const months = ['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Noi','Dec']
+    const weekdays = ['DUMINICA','LUNI','MARTI','MIERCURI','JOI','VINERI','SAMBATA']
+    const dt = new Date(y, m - 1, d)
+    const dayLabel = weekdays[dt.getDay()] ?? ''
+    const monthLabel = months[m - 1] ?? ''
+    return `🩵 ${d} ${monthLabel} ${y} - ${dayLabel} 🩵`
   }
 
   function showMissingCourtToast() {
+    setHighlightCourt(true)
+    if (highlightCourtTimer.current) clearTimeout(highlightCourtTimer.current)
+    highlightCourtTimer.current = window.setTimeout(() => setHighlightCourt(false), 2000)
     setMissingToastVisible(true)
     setMissingToastFading(false)
     try {
@@ -159,9 +198,45 @@ export default function FreePositionsPage() {
         else last.end = Math.max(last.end, r.end)
       }
 
+      function splitRange(start: number, end: number) {
+        const out: Array<{ start: number, end: number }> = []
+        let cursor = start
+        let remaining = end - start
+        while (remaining > 240) {
+          out.push({ start: cursor, end: cursor + 120 })
+          cursor += 120
+          remaining -= 120
+        }
+        let chunks: number[] = []
+        switch (remaining) {
+          case 240: chunks = [120, 120]; break
+          case 210: chunks = [120, 90]; break
+          case 180: chunks = [90, 90]; break
+          case 150: chunks = [90, 60]; break
+          case 120: chunks = [120]; break
+          case 90: chunks = [90]; break
+          case 60: chunks = [60]; break
+          default: chunks = remaining > 0 ? [remaining] : []; break
+        }
+        for (const chunk of chunks) {
+          out.push({ start: cursor, end: cursor + chunk })
+          cursor += chunk
+          remaining -= chunk
+        }
+        return out
+      }
+
+      const expanded: Array<{ start: number, end: number }> = []
+      for (const seg of merged) {
+        const endIsEod = seg.end === (23 * 60 + 59)
+        const effectiveEnd = endIsEod ? 24 * 60 : seg.end
+        expanded.push(...splitRange(seg.start, effectiveEnd))
+      }
+
       const header = formatHeader(sport, row.court)
-      const body = merged.map(seg => `${fmtHHmm(seg.start)}-${fmtHHmm(seg.end)}`).join('\n')
-      setText(`${header}\n${body}`.trim())
+      const dateLine = formatDateLine(date)
+      const body = expanded.map(seg => `💙 ${fmtHHmm(seg.start)}-${fmtHHmm(seg.end)} 💙`).join('\n')
+      setText(`${header}\n\n${dateLine}\n\n${body}`.trim())
     } finally {
       setLoading(false)
     }
@@ -173,30 +248,23 @@ export default function FreePositionsPage() {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       if (copyTimer.current) window.clearTimeout(copyTimer.current)
-      copyTimer.current = window.setTimeout(() => setCopied(false), 2000)
+      copyTimer.current = window.setTimeout(() => setCopied(false), 5000)
     } catch {}
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-4">
-      <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Generare pozitii libere</h1>
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50"
-          onClick={() => { try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch {}; nav('/login', { replace: true }) }}
-        >Delogare</button>
-      </div>
+    <div className="min-h-screen w-full" style={pageBgStyle}><div className="max-w-3xl mx-auto p-4 space-y-4">
+      <AdminHeader active="free" />
 
       <div className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <div className="text-xs text-slate-600 mb-1">Sport</div>
-            <SportPicker value={sport} onChange={(v) => { setSport(v); setCourtId('') }} />
+            <SportPicker value={sport} onChange={(v) => { setSport(v as SportType); setCourtId('') }} />
           </div>
           <div>
             <div className="text-xs text-slate-600 mb-1">Teren</div>
-            <select className="border rounded px-2 py-1.5 w-full" value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)}>
+            <select className={`border rounded px-2 py-1.5 w-full ${highlightCourt ? "animate-pulse ring-2 ring-rose-300" : ""}`} value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)}>
               <option value="">Selecteaza terenul</option>
               {courts.map(c => {
                 const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
@@ -265,10 +333,11 @@ export default function FreePositionsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-3 flex gap-2">
-          <button className="px-4 py-2 rounded border bg-white hover:bg-slate-50" onClick={generate} disabled={loading}>Genereaza</button>
-          <button className="px-4 py-2 rounded border" onClick={copy} disabled={!text}>Copiaza pozitiile</button>
-          {copied && <span className="text-emerald-700 text-sm">Copiat!</span>}
+        <div className="mt-3 grid grid-cols-1 gap-2">
+          <button className="btn w-full" onClick={generate} disabled={loading}>Genereaza</button>
+          <button className={`px-3 py-1.5 rounded border w-full ${highlightCopy ? "animate-pulse ring-2 ring-emerald-300" : ""}`} onClick={copy} disabled={!text}>
+            {copied ? 'Copiat' : 'Copiaza pozitiile'}
+          </button>
         </div>
       </div>
 
@@ -282,7 +351,7 @@ export default function FreePositionsPage() {
           <div className="max-w-3xl mx-auto px-4">
             <div
               className={`relative rounded border border-rose-300 bg-rose-50 text-rose-800 shadow pointer-events-auto ${missingToastFading ? 'opacity-0' : 'opacity-100'} transition-opacity w-full mb-4`}
-              style={{ transitionDuration: '2000ms', height: '33vh' }}
+              style={{ transitionDuration: '2000ms', height: '16.5vh' }}
               role="alert"
             >
               <button
@@ -295,14 +364,17 @@ export default function FreePositionsPage() {
                   setMissingToastVisible(false)
                 }}
               >{'\u00D7'}</button>
-              <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-4">
-                <span className="text-2xl" aria-hidden>{'\u26A0'}</span>
-                <div className="text-base sm:text-lg text-rose-900">Selecteaza un teren inainte</div>
+              <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-3">
+                <span className="text-lg" aria-hidden>{'\u26A0'}</span>
+                <div className="text-sm text-rose-900">Selecteaza un teren inainte</div>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
+    </div>
   )
 }
+
+

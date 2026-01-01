@@ -133,6 +133,29 @@ public class BookingService {
     }
 
     @Transactional
+    public Booking restore(Long id) {
+        Booking b = get(id);
+        if (b.getStatus() != BookingStatus.CANCELLED) {
+            return b;
+        }
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        boolean overlaps = !bookingRepository.findOverlappingExcludingId(
+                b.getId(),
+                b.getCourt().getId(),
+                b.getBookingDate(),
+                b.getStartTime(),
+                b.getEndTime(),
+                activeStatuses
+        ).isEmpty();
+        if (overlaps) {
+            throw new IllegalStateException("Intervalul nu mai este disponibil.");
+        }
+        b.setStatus(BookingStatus.CONFIRMED);
+        b.setUpdatedAt(LocalDateTime.now());
+        return bookingRepository.save(b);
+    }
+
+    @Transactional
     public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);

@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType } from './types'
 import { fetchAvailability } from './api'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import fastCat from './assets/fast-cat.svg'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -42,17 +43,24 @@ function markInstallPromptShown() {
 function todayISO(offsetDays = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
-  return d.toISOString().slice(0,10)
+  return d.toISOString().slice(0, 10)
 }
 
 function formatDateDisplay(iso?: string) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-')
   if (!y || !m || !d) return iso
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const monthIdx = Math.max(0, Math.min(11, Number(m) - 1))
   const dd = String(Number(d))
   return `${dd} ${months[monthIdx]} ${y}`
+}
+
+function timeToMinutes(t: string) {
+  if (t === '24:00') return 24 * 60
+  if (t === '23:59') return 24 * 60
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
 }
 
 export default function App() {
@@ -82,6 +90,9 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstall, setShowInstall] = useState(false)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
+  const [unavailableVisible, setUnavailableVisible] = useState(false)
+  const [unavailableMessage, setUnavailableMessage] = useState('')
+
   const selectedCourtName = useMemo(() => {
     if (!selCourtId) return null
     const row = data.find(d => d.court.id === selCourtId)
@@ -90,15 +101,11 @@ export default function App() {
 
   const displayDate = useMemo(() => formatDateDisplay(date), [date])
 
-  // State is initialized from query params; no further sync needed
-
-  // On very first mount, restore last sport only (date defaults to today or URL param)
   useEffect(() => {
     try {
       const s = localStorage.getItem('lastSport') as SportType | null
       if (s) setSport(s)
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -108,7 +115,6 @@ export default function App() {
       .finally(() => setLoading(false))
   }, [date, sport])
 
-  // Cleanup toast timers on unmount
   useEffect(() => {
     return () => {
       try { if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current) } catch {}
@@ -116,7 +122,6 @@ export default function App() {
     }
   }, [])
 
-  // Persist last selected sport for returning from booking page (do not persist date)
   useEffect(() => {
     try {
       localStorage.setItem('lastSport', sport)
@@ -157,7 +162,7 @@ export default function App() {
   function shiftDate(days: number) {
     const d = new Date(date)
     d.setDate(d.getDate() + days)
-    setDate(d.toISOString().slice(0,10))
+    setDate(d.toISOString().slice(0, 10))
   }
 
   function handleSelectionChange(courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean) {
@@ -167,7 +172,6 @@ export default function App() {
     setSelValid(valid)
     const gi = !!gapInvalid
     setSelGapInvalid(gi)
-    // Manage detached toast for 30-min gap
     if (gi) {
       setGapToastVisible(true)
       setGapToastFading(false)
@@ -176,7 +180,6 @@ export default function App() {
       gapToastShowTimer.current = setTimeout(() => setGapToastFading(true), 5000)
       gapToastHideTimer.current = setTimeout(() => setGapToastVisible(false), 7000)
     } else {
-      // Hide immediately on any other selection
       if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
       if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current)
       setGapToastFading(false)
@@ -198,6 +201,33 @@ export default function App() {
     setClearTick(t => t + 1)
   }
 
+  function showUnavailable(message: string) {
+    setUnavailableMessage(message)
+    setUnavailableVisible(true)
+  }
+
+  function isSelectionStillFree() {
+    if (!selCourtId || !selStart || !selEnd) return true
+    if (selEnd < selStart) return true
+    const row = data.find(d => d.court.id === selCourtId)
+    if (!row) return true
+    const startMin = timeToMinutes(selStart)
+    const endMin = timeToMinutes(selEnd)
+    return row.free.some(range => {
+      const rangeStart = timeToMinutes(range.start)
+      const rangeEnd = timeToMinutes(range.end)
+      return startMin >= rangeStart && endMin <= rangeEnd
+    })
+  }
+
+  useEffect(() => {
+    if (!selCourtId || !selStart || !selEnd) return
+    if (!isSelectionStillFree()) {
+      clearSelection()
+      showUnavailable('Ups, teren ocupat! Alt juc\u0103tor a fost mai iute de lab\u0103! \uD83D\uDC31')
+    }
+  }, [data, selCourtId, selStart, selEnd])
+
   async function handleInstall() {
     if (!installPrompt) return
     try {
@@ -216,7 +246,6 @@ export default function App() {
     setShowIOSInstall(false)
   }
 
-  // Listen for booking updates from the admin page and refetch availability
   useEffect(() => {
     function refetch() {
       setLoading(true)
@@ -224,11 +253,9 @@ export default function App() {
     }
     let ch: BroadcastChannel | null = null
     try {
-      // @ts-ignore
       ch = new BroadcastChannel('bookingUpdates')
       ch.onmessage = (ev) => {
         if (!ev?.data) return
-        // If payload has date, refresh only when matching or always
         refetch()
       }
     } catch {}
@@ -251,22 +278,22 @@ export default function App() {
     TABLE_TENNIS: '/ping-pong-background.png',
   }
   const pageBgStyle = backgroundBySport[sport]
-    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
     : undefined
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-3 h-dvh overflow-hidden flex flex-col" style={pageBgStyle}>
+    <div className="min-h-screen w-full" style={pageBgStyle}><div className="max-w-7xl mx-auto p-4 space-y-3 h-dvh overflow-hidden flex flex-col">
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
-            <div className="text-lg font-semibold">Instalează aplicația Star Arena</div>
+            <div className="text-lg font-semibold">Instaleaza aplicatia Star Arena</div>
             <div className="mt-1 text-sm text-emerald-800">Acces rapid din ecranul principal.</div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-emerald-300 text-emerald-800" onClick={handleDismissInstall}>
-                Renunță
+                Renunta
               </button>
               <button className="px-4 py-2 rounded bg-emerald-600 text-white" onClick={handleInstall}>
-                Instalează
+                Instaleaza
               </button>
             </div>
           </div>
@@ -277,11 +304,11 @@ export default function App() {
           <div className="w-[90vw] max-w-md rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-xl">
             <div className="text-lg font-semibold">Instalare pe iPhone</div>
             <div className="mt-1 text-sm text-amber-800">
-              Apasă Partajează și apoi Adaugă pe ecranul principal pentru a instala aplicația.
+              Apasa Partajeaza si apoi Adauga pe ecranul principal pentru a instala aplicatia.
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded border border-amber-300 text-amber-800" onClick={handleDismissIOSInstall}>
-                Am înțeles
+                Am inteles
               </button>
             </div>
           </div>
@@ -291,7 +318,7 @@ export default function App() {
         <div className="flex items-end gap-4 w-full">
           <div className="flex flex-col shrink-0">
             <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
-            <SportPicker value={sport} onChange={setSport} />
+            <SportPicker value={sport} onChange={(v) => setSport(v as SportType)} />
           </div>
           <div className="flex flex-col flex-1 min-w-0 ml-2">
             <div className="text-xs text-slate-500 mb-1">Data</div>
@@ -299,9 +326,9 @@ export default function App() {
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                aria-label="Ziua anterioară"
+                aria-label="Ziua anterioara"
                 onClick={() => shiftDate(-1)}
-                title="Ziua anterioară"
+                title="Ziua anterioara"
               >
                 {'\u2039'}
               </button>
@@ -327,8 +354,7 @@ export default function App() {
                     const el = dateInputRef.current
                     if (!el) return
                     try {
-                      // @ts-ignore
-                      if (typeof el.showPicker === 'function') { (el as any).showPicker(); return }
+                      if (typeof (el as any).showPicker === 'function') { (el as any).showPicker(); return }
                     } catch {}
                     try { el.focus() } catch {}
                     try { el.click() } catch {}
@@ -345,9 +371,9 @@ export default function App() {
               <button
                 type="button"
                 className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none focus:bg-sky-50 shrink-0"
-                aria-label="Ziua următoare"
+                aria-label="Ziua urmatoare"
                 onClick={() => shiftDate(1)}
-                title="Ziua următoare"
+                title="Ziua urmatoare"
               >
                 {'\u203A'}
               </button>
@@ -355,14 +381,13 @@ export default function App() {
           </div>
         </div>
         <div className="mt-3 flex-1 min-h-0 flex flex-col">
-          {loading ? <div>{'Se încarcă\u2026'}</div> : (
+          {loading ? <div>{'Se incarca\u2026'}</div> : (
             <>
               <div className="-mx-3 flex-1 min-h-0">
                 <div className="border-y border-slate-300 h-full" ref={gridScrollRef}>
                   <TimelineGrid flat data={data} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
                 </div>
               </div>
-              {/* Inline gap error removed; moved to detached toast */}
               <div className="flex justify-center">
                 <div className="px-2 py-1 text-xs text-slate-700 flex gap-3 items-center">
                   <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 border border-emerald-400 bg-emerald-100"></span><span>disponibil</span></div>
@@ -373,7 +398,6 @@ export default function App() {
           )}
         </div>
       </section>
-      {/* Detached gap error toast */}
       {gapToastVisible && (
         <div className="fixed inset-x-0 bottom-0 z-[20000] pointer-events-none">
           <div className="max-w-7xl mx-auto px-4">
@@ -383,7 +407,7 @@ export default function App() {
               role="alert"
             >
               <button
-                aria-label="Închide"
+                aria-label="Inchide"
                 className="absolute top-2 right-2 text-rose-800/70 hover:text-rose-900"
                 onClick={() => {
                   if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
@@ -395,14 +419,52 @@ export default function App() {
               <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-4">
                 <span className="text-3xl" aria-hidden>{'\u26A0'}</span>
                 <div className="text-lg sm:text-xl text-rose-900">
-                  Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extindeți sau mutați selecția pentru a elimina golul.
+                  Rezervarea curenta lasa o pauza de 30 de minute langa o alta rezervare pe acelasi teren. Extinde sau muta selectia pentru a elimina golul.
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+      {unavailableVisible && (
+        <div className="fixed inset-0 w-screen h-screen z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[90vw] max-w-sm rounded border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">Rezervare indisponibila</div>
+              <button
+                aria-label="Inchide"
+                className="text-amber-900/70 hover:text-amber-900"
+                onClick={() => {
+                  setUnavailableVisible(false)
+                }}
+              >
+                {'\u00D7'}
+              </button>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <img src={fastCat} alt="Pisica grabita" className="w-16 h-16" />
+              <div className="text-sm">{unavailableMessage}</div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                className="px-3 py-1.5 rounded border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                onClick={() => {
+                  setUnavailableVisible(false)
+                }}
+              >
+                Am inteles!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
   )
 }
+
+
+
+
+
 
