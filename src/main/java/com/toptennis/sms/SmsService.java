@@ -217,7 +217,7 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervarea dumneavoastra a fost efectuata cu succes pentru intervalul " + start + " - " + end +
+        return "Rezervarea dv. a fost efectuata cu succes pentru intervalul " + start + " - " + end +
                 " la " + sportLabel + ", Teren " + courtNumber + " in data de " + date +
                 ". Veti avea de achitat suma de " + price + " RON.";
     }
