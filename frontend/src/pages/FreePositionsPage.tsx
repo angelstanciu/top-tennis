@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AvailabilityDto, CourtDto, SportType } from '../types'
-import { fetchAvailability } from '../api'
+import { fetchAvailability, fetchActiveCourts } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import SportPicker from '../components/SportPicker'
 
@@ -43,6 +43,7 @@ export default function FreePositionsPage() {
   const [date, setDate] = useState<string>(() => todayISOinTZ('Europe/Bucharest'))
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<AvailabilityDto[]>([])
+  const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [courtId, setCourtId] = useState<number | ''>('')
   const [text, setText] = useState('')
   const [copied, setCopied] = useState(false)
@@ -84,6 +85,12 @@ export default function FreePositionsPage() {
   }, [])
 
   useEffect(() => {
+    fetchActiveCourts()
+      .then(setActiveCourts)
+      .catch(() => setActiveCourts([]))
+  }, [])
+
+  useEffect(() => {
     setLoading(true)
     fetchAvailability(date, sport)
       .then(setData)
@@ -102,6 +109,16 @@ export default function FreePositionsPage() {
     try { if (toastShowTimer.current) clearTimeout(toastShowTimer.current) } catch {}
     try { if (toastHideTimer.current) clearTimeout(toastHideTimer.current) } catch {}
   }, [])
+
+  const activeSports = useMemo(() => new Set(activeCourts.map(c => c.sportType)), [activeCourts])
+  const disabledSports = useMemo(() => ([
+    'TENNIS',
+    'PADEL',
+    'BEACH_VOLLEY',
+    'BASKETBALL',
+    'FOOTVOLLEY',
+    'TABLE_TENNIS',
+  ].filter(s => !activeSports.has(s as SportType)) as SportType[]), [activeSports])
 
   const courts = useMemo(() => data.map(d => d.court), [data])
   const selectedCourt: CourtDto | null = useMemo(() => {
@@ -260,7 +277,7 @@ export default function FreePositionsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <div className="text-xs text-slate-600 mb-1">Sport</div>
-            <SportPicker value={sport} onChange={(v) => { setSport(v as SportType); setCourtId('') }} />
+            <SportPicker value={sport} onChange={(v) => { setSport(v as SportType); setCourtId('') }} disabledSports={disabledSports} />
           </div>
           <div>
             <div className="text-xs text-slate-600 mb-1">Teren</div>
@@ -376,5 +393,7 @@ export default function FreePositionsPage() {
     </div>
   )
 }
+
+
 
 

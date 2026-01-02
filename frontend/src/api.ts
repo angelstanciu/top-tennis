@@ -1,4 +1,4 @@
-import { AvailabilityDto, BookingDto } from './types'
+import { AvailabilityDto, BookingDto, CourtDto } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
@@ -29,6 +29,12 @@ export async function createBooking(payload: {
     const msg = await res.text()
     throw new Error(msg)
   }
+  return res.json()
+}
+
+export async function fetchActiveCourts(): Promise<CourtDto[]> {
+  const res = await fetch(`${BASE_URL}/courts`)
+  if (!res.ok) throw new Error('Nu am putut incarca terenurile')
   return res.json()
 }
 

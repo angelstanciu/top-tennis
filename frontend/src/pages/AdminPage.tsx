@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SportType, BookingDto, CourtDto } from '../types'
 import AdminHeader from '../components/AdminHeader'
 import SportPicker from '../components/SportPicker'
-import { fetchAvailability } from '../api'
+import { fetchAvailability, fetchActiveCourts } from '../api'
 import fastCat from '../assets/fast-cat.svg'
 
 function b64(u: string, p: string) {
@@ -46,12 +46,18 @@ export default function AdminPage() {
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'restore' | null>(null)
   const [restoringIds, setRestoringIds] = useState<Set<number>>(new Set())
   const [availabilityCourts, setAvailabilityCourts] = useState<CourtDto[]>([])
+  const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const dateInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const logged = !!auth
   const title = useMemo(() => 'Administrare rezervari', [])
+  const activeSports = useMemo(() => new Set(activeCourts.map(c => c.sportType)), [activeCourts])
+  const disabledSports = useMemo(() => {
+    const all: SportType[] = ['TENNIS','PADEL','BEACH_VOLLEY','BASKETBALL','FOOTVOLLEY','TABLE_TENNIS']
+    return all.filter(s => !activeSports.has(s))
+  }, [activeSports])
   const backgroundBySport: Record<SportType, string> = {
     TENNIS: '/tennis-background.png',
     PADEL: '/padel-background.png',
@@ -168,6 +174,12 @@ export default function AdminPage() {
       .then(res => setAvailabilityCourts(res.map(r => r.court)))
       .catch(() => setAvailabilityCourts([]))
   }, [date, sport])
+
+  useEffect(() => {
+    fetchActiveCourts()
+      .then(setActiveCourts)
+      .catch(() => setActiveCourts([]))
+  }, [])
 
   const filteredBookings = courtId ? bookings.filter(b => b.court?.id === courtId) : bookings
 
@@ -293,7 +305,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <div className="text-xs text-slate-500 mb-1">Sport</div>
-                <SportPicker value={sport} onChange={setSport} includeAll />
+                <SportPicker value={sport} onChange={setSport} includeAll disabledSports={disabledSports} />
               </div>
               <div>
                 <div className="text-xs text-slate-500 mb-1">Teren</div>
@@ -532,6 +544,9 @@ export default function AdminPage() {
     </div>
   )
 }
+
+
+
 
 
 

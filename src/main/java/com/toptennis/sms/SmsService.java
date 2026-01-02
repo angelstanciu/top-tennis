@@ -218,10 +218,24 @@ public class SmsService {
     private String buildOwnerMessage(Booking booking) {
         String start = formatTime(booking.getStartTime());
         String end = formatTime(booking.getEndTime());
-        String date = formatDate(booking.getBookingDate());
+        String date = formatDateDashed(booking.getBookingDate());
+        String price = formatPrice(booking.getPrice());
         String customer = booking.getCustomerName() == null ? "Client" : booking.getCustomerName();
+        String customerPhone = booking.getCustomerPhone() == null ? "" : booking.getCustomerPhone();
         String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
-        return customer + " a rezervat " + court + " in intervalul " + start + " - " + end + " pentu data " + date + ".";
+        String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
+                ? booking.getCourt().getSportType().name()
+                : "";
+        String courtNumber = extractCourtNumber(court);
+        String sportLabel = mapSportLabel(sport);
+        return "Aveti o rezervare noua:\n\n" +
+                "Sport: " + sportLabel + "\n" +
+                "Teren: " + courtNumber + "\n" +
+                "Data: " + date + "\n" +
+                "Interval rezervat: " + start + " - " + end + "\n" +
+                "Total de plata: " + price + " RON\n" +
+                "Nume client: " + customer + "\n" +
+                "Numar de telefon: " + customerPhone;
     }
 
     private String formatDate(LocalDate date) {
@@ -229,6 +243,13 @@ public class SmsService {
             return "";
         }
         return date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    }
+
+    private String formatDateDashed(LocalDate date) {
+        if (date == null) {
+            return "";
+        }
+        return date.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
     }
 
     private String formatTime(LocalTime time) {
@@ -250,6 +271,37 @@ public class SmsService {
 
     private String safe(String value) {
         return value == null || value.isBlank() ? "Client" : value;
+    }
+
+    private String extractCourtNumber(String courtName) {
+        if (courtName == null) {
+            return "";
+        }
+        String trimmed = courtName.trim();
+        if (trimmed.toLowerCase().startsWith("teren")) {
+            String rest = trimmed.substring(5).trim();
+            return rest.isEmpty() ? trimmed : rest;
+        }
+        return trimmed;
+    }
+
+    private String mapSportLabel(String sport) {
+        switch (sport) {
+            case "TENNIS":
+                return "Tenis";
+            case "PADEL":
+                return "Padel";
+            case "BEACH_VOLLEY":
+                return "Volei pe plaja";
+            case "BASKETBALL":
+                return "Baschet";
+            case "FOOTVOLLEY":
+                return "Tenis de picior";
+            case "TABLE_TENNIS":
+                return "Tenis de masa";
+            default:
+                return sport == null ? "" : sport;
+        }
     }
 
     private java.util.function.Predicate<String> doneOkOrError() {

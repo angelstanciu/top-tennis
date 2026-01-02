@@ -1,8 +1,8 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
-import { AvailabilityDto, SportType } from './types'
-import { fetchAvailability } from './api'
+import { AvailabilityDto, SportType, CourtDto } from './types'
+import { fetchAvailability, fetchActiveCourts } from './api'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import fastCat from './assets/fast-cat.svg'
 
@@ -72,6 +72,7 @@ export default function App() {
   const [sport, setSport] = useState<SportType>(initialSport)
   const [date, setDate] = useState<string>(initialDate)
   const [data, setData] = useState<AvailabilityDto[]>([])
+  const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [loading, setLoading] = useState(false)
   const [hover, setHover] = useState<string>('')
   const nav = useNavigate()
@@ -100,6 +101,11 @@ export default function App() {
   }, [selCourtId, data])
 
   const displayDate = useMemo(() => formatDateDisplay(date), [date])
+  const activeSports = useMemo(() => new Set(activeCourts.map(c => c.sportType)), [activeCourts])
+  const disabledSports = useMemo(() => {
+    const all: SportType[] = ['TENNIS','PADEL','BEACH_VOLLEY','BASKETBALL','FOOTVOLLEY','TABLE_TENNIS']
+    return all.filter(s => !activeSports.has(s))
+  }, [activeSports])
 
   useEffect(() => {
     try {
@@ -114,6 +120,12 @@ export default function App() {
       .then(setData)
       .finally(() => setLoading(false))
   }, [date, sport])
+
+  useEffect(() => {
+    fetchActiveCourts()
+      .then(setActiveCourts)
+      .catch(() => setActiveCourts([]))
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -318,7 +330,7 @@ export default function App() {
         <div className="flex items-end gap-4 w-full">
           <div className="flex flex-col shrink-0">
             <div className="text-xs text-slate-500 mb-1">Alege sportul</div>
-            <SportPicker value={sport} onChange={(v) => setSport(v as SportType)} />
+            <SportPicker value={sport} onChange={(v) => setSport(v as SportType)} disabledSports={disabledSports} />
           </div>
           <div className="flex flex-col flex-1 min-w-0 ml-2">
             <div className="text-xs text-slate-500 mb-1">Data</div>
@@ -462,6 +474,8 @@ export default function App() {
     </div>
   )
 }
+
+
 
 
 
