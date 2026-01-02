@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType, CourtDto } from './types'
@@ -43,8 +43,12 @@ function markInstallPromptShown() {
 function todayISO(offsetDays = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
 }
+
 
 function formatDateDisplay(iso?: string) {
   if (!iso) return ''

@@ -18,6 +18,7 @@ export interface AvailabilityTimeRange {
   start: string
   end: string
   status: string
+  customerName?: string
 }
 
 export interface AvailabilityDto {

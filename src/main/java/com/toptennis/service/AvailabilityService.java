@@ -39,6 +39,7 @@ public class AvailabilityService {
                 tr.start = b.getStartTime().toString();
                 tr.end = b.getEndTime().toString();
                 tr.status = b.getStatus().name();
+                tr.customerName = b.getCustomerName();
                 dto.booked.add(tr);
             }
             dto.free = computeFreeSlots(java.time.LocalTime.MIN, java.time.LocalTime.of(23,59), bookings);

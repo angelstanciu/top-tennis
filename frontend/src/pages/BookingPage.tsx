@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
 import type { CourtDto } from '../types'
@@ -156,7 +156,7 @@ export default function BookingPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm">Nume</label>
+            <label className="block text-sm">Nume + Prenume</label>
             <input className="w-full border rounded px-3 py-2" value={name} onChange={e => setName(e.target.value)} required />
           </div>
           <div>

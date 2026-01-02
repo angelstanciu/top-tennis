@@ -2,11 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AvailabilityDto } from '../types'
 
+function todayISO() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
 function timeLabel(t: string) {
+
   // Display 24-hour format HH:mm
   const [h, m] = t.split(':')
   return `${h.padStart(2,'0')}:${m.padStart(2,'0')}`
 }
+
+const SHOW_BOOKING_LABELS = true
 
 function enumerateSlots(start: string, end: string) {
   const out: string[] = []
@@ -44,12 +55,79 @@ function sportLabel(s: string) {
   }
 }
 
+function getDisplayName(booking: { customerName?: string } | null | undefined) {
+  const raw = booking?.customerName ? booking.customerName.trim() : ''
+  if (!raw) return 'REZERVAT'
+  const parts = raw.split(/\s+/).filter(Boolean)
+  return parts[0] || 'REZERVAT'
+}
+type BookingBlock = {
+  startIndex: number
+  endIndex: number
+  label: string
+}
+
+
+function computeBookingBlocks(booked: { start: string, end: string, customerName?: string }[], tickIndex: Map<string, number>): BookingBlock[] {
+  const blocks: BookingBlock[] = []
+  for (const b of booked) {
+    const startIndex = tickIndex.get(b.start)
+    const endIndex = tickIndex.get(b.end)
+    if (startIndex === undefined || endIndex === undefined) continue
+    if (endIndex <= startIndex) continue
+    blocks.push({
+      startIndex,
+      endIndex,
+      label: getDisplayName(b),
+    })
+  }
+  blocks.sort((a, b) => a.startIndex - b.startIndex)
+  return blocks
+}
+
+function BookingLabelBlock({
+  label,
+  className,
+  style,
+}: {
+  label: string
+  className?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      className={`pointer-events-none flex items-start justify-center overflow-hidden pt-1 ${className || ""}`}
+      style={style}
+    >
+      <div
+        className="text-white"
+        style={{
+          fontFamily: "Impact, 'Arial Black', system-ui, sans-serif",
+          fontStyle: "italic",
+          textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+          writingMode: "vertical-rl",
+          textOrientation: "mixed",
+          fontSize: "17px",
+          lineHeight: 1,
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  )
+}
+
 export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef }: Props) {
   if (data.length === 0) return <div>Nu au fost gâ”€Ã¢site terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
   const maxClose = '24:00'
   const ticks = enumerateSlots(minOpen, maxClose)
+  const tickIndex = useMemo(() => {
+    const map = new Map<string, number>()
+    ticks.forEach((t, i) => map.set(t, i))
+    return map
+  }, [ticks])
 
   // Responsive: use mobile layout under 768px
   const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
@@ -157,7 +235,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   }
 
   // Past time disabling
-  const todayStr = new Date().toISOString().slice(0,10)
+  const todayStr = todayISO()
   const nowTime = new Date().toTimeString().slice(0,5) // HH:mm
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -383,54 +461,73 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                     <div className="absolute top-0 bottom-0" style={{ width, backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)', pointerEvents: 'none' }} />
                     {data.map((row, rowIndex) => {
                       const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
+                      const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex) : []
                       return (
-                        <div key={row.court.id} className="grid items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
-                          {ticks.slice(0,-1).map((t, i) => {
-                            const next = ticks[i+1]
-                            const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
-                            const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-                            const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                            const clickable = !isBooked && !isPast
-                            let stateClass = ''
-                            if (isBooked) stateClass = 'bg-rose-200'
-                            else if (selected) stateClass = 'bg-emerald-300'
-                            else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-                            const disabledClass = isPast ? 'cursor-not-allowed pointer-events-none' : (clickable ? 'cursor-pointer' : '')
-                            return (
-                              <div
-                                key={`${row.court.id}-${t}`}
-                                className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
-                                onMouseEnter={() => onHover?.(`${row.court.name} â€¢ ${t} - ${next} â€¢ ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
-                                onClick={(e) => {
-                                  if (!clickable) return
-                                  // If any selection exists, clear it and require a new click to start fresh
-                                  if (selCourtId && selStart && selEnd) {
-                                    setSelCourtId(null); setSelStart(null); setSelEnd(null)
-                                    onSelectionChange?.(null, null, null, false, false)
-                                    // continue to handle this click as a fresh selection
-                                  }
-                                  // Pre-check default 60 min selection for 30-min gap; if gap would occur, signal error and do not open popup
-                                  const end60 = ticks[i+2]
-                                  if (end60) {
-                                    const within = t >= row.court.openTime && end60 <= row.court.closeTime
-                                    const slot2Booked = booked.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
-                                    const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                                    const free60 = within && !isBooked && !slot2Booked && !isPast && !slot2Past
-                                    if (free60) {
-                                      const simpleBooked = booked.map(b => ({ start: b.start, end: b.end }))
-                                      const gapInvalid = leavesThirtyMinuteGap(simpleBooked, t, end60)
-                                      if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+                        <div key={row.court.id} className="relative">
+                          <div className="grid items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
+
+                            {ticks.slice(0,-1).map((t, i) => {
+                              const next = ticks[i+1]
+                              const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
+                              const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
+                              const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
+                              const clickable = !isBooked && !isPast
+                              let stateClass = ''
+                              if (isBooked) stateClass = 'bg-rose-200'
+                              else if (selected) stateClass = 'bg-emerald-300'
+                              else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
+                              const disabledClass = isPast ? 'cursor-not-allowed pointer-events-none' : (clickable ? 'cursor-pointer' : '')
+                              return (
+                                <div
+                                  key={`${row.court.id}-${t}`}
+                                  className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
+                                  onMouseEnter={() => onHover?.(`${row.court.name} ƒ?› ${t} - ${next} ƒ?› ${isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                                  onClick={(e) => {
+                                    if (!clickable) return
+                                    // If any selection exists, clear it and require a new click to start fresh
+                                    if (selCourtId && selStart && selEnd) {
+                                      setSelCourtId(null); setSelStart(null); setSelEnd(null)
+                                      onSelectionChange?.(null, null, null, false, false)
+                                      // continue to handle this click as a fresh selection
                                     }
-                                  }
-                                  popupRowIndexRef.current = rowIndex
-                                  handleCellClick(row.court.id, t, next, isBooked, true, booked)
-                                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                                  setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
-                                }}
-                                title={`${row.court.name} â€¢ ${t} - ${next}`}
-                              />
-                            )
-                          })}
+                                    // Pre-check default 60 min selection for 30-min gap; if gap would occur, signal error and do not open popup
+                                    const end60 = ticks[i+2]
+                                    if (end60) {
+                                      const within = t >= row.court.openTime && end60 <= row.court.closeTime
+                                      const slot2Booked = booked.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
+                                      const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
+                                      const free60 = within && !isBooked && !slot2Booked && !isPast && !slot2Past
+                                      if (free60) {
+                                        const simpleBooked = booked.map(b => ({ start: b.start, end: b.end }))
+                                        const gapInvalid = leavesThirtyMinuteGap(simpleBooked, t, end60)
+                                        if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+                                      }
+                                    }
+                                    popupRowIndexRef.current = rowIndex
+                                    handleCellClick(row.court.id, t, next, isBooked, true, booked)
+                                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                                    setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
+                                  }}
+                                  title={`${row.court.name} ƒ?› ${t} - ${next}`}
+                                />
+                              )
+                            })}
+                          </div>
+                          {SHOW_BOOKING_LABELS && blocks.length > 0 && (
+                            <div className="absolute inset-0 pointer-events-none">
+                              {blocks.map((block, blockIndex) => (
+                                <BookingLabelBlock
+                                  key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
+                                  className="absolute inset-y-0"
+                                  style={{
+                                    width: (block.endIndex - block.startIndex) * colWidth,
+                                    left: block.startIndex * colWidth,
+                                  }}
+                                  label={block.label}
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -453,6 +550,9 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     const pastRows = (date < todayStr)
       ? (ticks.length - 1)
       : (date === todayStr ? ticks.slice(0, -1).filter(t => t < nowTime).length : 0)
+    const blocksByCourt = SHOW_BOOKING_LABELS
+      ? data.map(row => computeBookingBlocks(row.booked as any, tickIndex))
+      : []
     return (
       <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col`}>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
@@ -481,6 +581,31 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                 }}
               />
             )}
+            {SHOW_BOOKING_LABELS && (
+              <div
+                className="absolute inset-0 pointer-events-none z-10 grid"
+                style={{
+                  gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))`,
+                  gridTemplateRows: `repeat(${ticks.length-1}, ${rowHeight}px)`,
+                }}
+              >
+                {data.map((row, colIndex) => (
+                  <React.Fragment key={`label-col-${row.court.id}`}> 
+                    {blocksByCourt[colIndex].map((block, blockIndex) => (
+                      <BookingLabelBlock
+                        key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
+                        style={{
+                          gridColumn: colIndex + 2,
+                          gridRow: `${block.startIndex + 1} / ${block.endIndex + 1}`,
+                        }}
+                        label={block.label}
+                      />
+                    ))}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
             {ticks.slice(0,-1).map((t, i) => {
               const next = ticks[i+1]
               const isPastRow = (date < todayStr) || (date === todayStr && t < nowTime)
