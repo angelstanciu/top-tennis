@@ -219,7 +219,6 @@ public class SmsService {
         String start = formatTime(booking.getStartTime());
         String end = formatTime(booking.getEndTime());
         String date = formatDateDashed(booking.getBookingDate());
-        String price = formatPrice(booking.getPrice());
         String customer = booking.getCustomerName() == null ? "Client" : booking.getCustomerName();
         String customerPhone = booking.getCustomerPhone() == null ? "" : booking.getCustomerPhone();
         String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
@@ -233,9 +232,7 @@ public class SmsService {
                 "Teren: " + courtNumber + "\n" +
                 "Data: " + date + "\n" +
                 "Interval rezervat: " + start + " - " + end + "\n" +
-                "Total de plata: " + price + " RON\n" +
-                "Nume client: " + customer + "\n" +
-                "Numar de telefon: " + customerPhone;
+                "Client: " + customer + " / " + customerPhone;
     }
 
     private String formatDate(LocalDate date) {
