@@ -211,8 +211,15 @@ public class SmsService {
         String end = formatTime(booking.getEndTime());
         String date = formatDate(booking.getBookingDate());
         String price = formatPrice(booking.getPrice());
+        String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
+        String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
+                ? booking.getCourt().getSportType().name()
+                : "";
+        String courtNumber = extractCourtNumber(court);
+        String sportLabel = mapSportLabel(sport);
         return "Rezervarea dumneavoastra a fost efectuata cu succes pentru intervalul " + start + " - " + end +
-                " in data de " + date + ". Veti avea de achitat suma de " + price + " RON.";
+                " la " + sportLabel + ", Teren " + courtNumber + " in data de " + date +
+                ". Veti avea de achitat suma de " + price + " RON.";
     }
 
     private String buildOwnerMessage(Booking booking) {
