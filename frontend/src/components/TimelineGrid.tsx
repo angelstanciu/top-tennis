@@ -238,7 +238,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         if (isPast) continue
         for (const row of data) {
-          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
+          const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
+          const isWithin = t >= row.court.openTime && next <= closeTime
           if (!isWithin) continue
           const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
           if (!isBooked) return i
@@ -248,6 +249,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     }
     const idx = findFirstClickableIndex()
     if (idx !== null) {
+      if (idx <= 1) return
       if (!isMobile) {
         // Desktop: scroll horizontally to the first available slot
         const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
@@ -260,10 +262,26 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         // Mobile: vertical scroll to align the first free row at the top
         const container = mobileBodyRef.current
         if (!container) return
-        const rowEl = container.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
+        const targetIndex = Math.max(0, idx - 1)
+        const rowEl = container.querySelector(`[data-row-index="${targetIndex}"]`) as HTMLElement | null
         if (rowEl) {
           const top = Math.max(0, rowEl.offsetTop)
           animateScrollY(container, top, 600)
+        }
+      }
+    } else {
+      if (!isMobile) {
+        const maxLeft = scrollRef.current ? scrollRef.current.scrollWidth - scrollRef.current.clientWidth : 0
+        if (scrollRef.current) {
+          animateScrollX(scrollRef.current, Math.max(0, maxLeft), 600, (left) => {
+            if (headerRef.current) headerRef.current.scrollLeft = left
+          })
+        }
+      } else if (isMobile) {
+        const container = mobileBodyRef.current
+        if (container) {
+          const maxTop = container.scrollHeight - container.clientHeight
+          animateScrollY(container, Math.max(0, maxTop), 600)
         }
       }
     }
@@ -279,7 +297,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         if (isPast) continue
         for (const row of data) {
-          const isWithin = t >= row.court.openTime && next <= row.court.closeTime
+          const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
+          const isWithin = t >= row.court.openTime && next <= closeTime
           if (!isWithin) continue
           const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
           if (!isBooked) return i
@@ -288,21 +307,39 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       return null
     }
     const idx = findFirstClickableIndex()
-    if (idx === null) return
     const timer = setTimeout(() => {
-      if (!isMobile) {
-        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
-        if (scrollRef.current) {
-          animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
-            if (headerRef.current) headerRef.current.scrollLeft = left
-          })
+      if (idx !== null) {
+        if (idx <= 1) return
+        if (!isMobile) {
+          const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
+          if (scrollRef.current) {
+            animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
+              if (headerRef.current) headerRef.current.scrollLeft = left
+            })
+          }
+        } else if (isMobile) {
+          const container = mobileBodyRef.current
+          const targetIndex = Math.max(0, idx - 1)
+          const rowEl = container?.querySelector(`[data-row-index="${targetIndex}"]`) as HTMLElement | null
+          if (container && rowEl) {
+            const top = Math.max(0, rowEl.offsetTop)
+            animateScrollY(container, top, 600)
+          }
         }
-      } else if (isMobile) {
-        const container = mobileBodyRef.current
-        const rowEl = container?.querySelector(`[data-row-index="${idx}"]`) as HTMLElement | null
-        if (container && rowEl) {
-          const top = Math.max(0, rowEl.offsetTop)
-          animateScrollY(container, top, 600)
+      } else {
+        if (!isMobile) {
+          const maxLeft = scrollRef.current ? scrollRef.current.scrollWidth - scrollRef.current.clientWidth : 0
+          if (scrollRef.current) {
+            animateScrollX(scrollRef.current, Math.max(0, maxLeft), 600, (left) => {
+              if (headerRef.current) headerRef.current.scrollLeft = left
+            })
+          }
+        } else if (isMobile) {
+          const container = mobileBodyRef.current
+          if (container) {
+            const maxTop = container.scrollHeight - container.clientHeight
+            animateScrollY(container, Math.max(0, maxTop), 600)
+          }
         }
       }
     }, 80)
