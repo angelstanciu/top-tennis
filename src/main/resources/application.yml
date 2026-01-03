@@ -26,8 +26,7 @@ sms:
   commandTimeoutMs: 8000
   sendTimeoutMs: 30000
   interCommandDelayMs: 100
-  clubNumber: "+40746917027"
-
+  clubNumber: "+40742197487"
 logging:
   level:
     com.toptennis: INFO
