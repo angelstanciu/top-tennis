@@ -1,6 +1,7 @@
 package com.toptennis.service;
 
 import com.toptennis.config.ReminderProperties;
+import com.toptennis.config.ReminderScheduleProvider;
 import com.toptennis.model.Booking;
 import com.toptennis.model.BookingStatus;
 import com.toptennis.model.SportType;
@@ -30,14 +31,14 @@ public class ReminderService {
         this.reminderProperties = reminderProperties;
     }
 
-    @Scheduled(cron = "#{@reminderService.firstBatchCron}", zone = "Europe/Bucharest")
+    @Scheduled(cron = "#{@reminderScheduleProvider.firstBatchCron}", zone = "Europe/Bucharest")
     public void sendSameDayReminders() {
         LocalDate today = LocalDate.now(ZONE);
         LocalTimeRange range = parseRange(reminderProperties.getFirstBatchIntervals());
         sendReminders(today, range.start, range.end, true);
     }
 
-    @Scheduled(cron = "#{@reminderService.secondBatchCron}", zone = "Europe/Bucharest")
+    @Scheduled(cron = "#{@reminderScheduleProvider.secondBatchCron}", zone = "Europe/Bucharest")
     public void sendNextDayReminders() {
         LocalDate tomorrow = LocalDate.now(ZONE).plusDays(1);
         LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
@@ -114,19 +115,6 @@ public class ReminderService {
             default:
                 return sportType.name();
         }
-    }
-
-    public String getFirstBatchCron() {
-        return hourToCron(reminderProperties.getFirstBatchHour());
-    }
-
-    public String getSecondBatchCron() {
-        return hourToCron(reminderProperties.getSecondBatchHour());
-    }
-
-    private String hourToCron(String hhmm) {
-        LocalTime t = LocalTime.parse(hhmm, TIME_FMT);
-        return String.format("0 %d %d * * *", t.getMinute(), t.getHour());
     }
 
     private LocalTimeRange parseRange(String raw) {

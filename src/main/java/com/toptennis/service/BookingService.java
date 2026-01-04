@@ -2,12 +2,13 @@ package com.toptennis.service;
 
 import com.toptennis.model.*;
 import com.toptennis.sms.SmsService;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
  
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +23,10 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final CourtRepository courtRepository;
     private final SmsService smsService;
-    private final TaskExecutor taskExecutor;
+    private final ThreadPoolTaskExecutor taskExecutor;
  
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, TaskExecutor taskExecutor) {
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
         this.smsService = smsService;
@@ -275,7 +276,7 @@ public class BookingService {
 @Configuration
 class SmsTaskConfig {
     @Bean
-    public TaskExecutor smsTaskExecutor() {
+    public org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor smsTaskExecutor() {
         var exec = new org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor();
         exec.setCorePoolSize(1);
         exec.setMaxPoolSize(1);
