@@ -31,6 +31,12 @@ logging:
   level:
     com.toptennis: INFO
 
+reminder:
+  firstBatchHour: 09:00
+  secondBatchIntervals: 00:00-10:00
+  secondBatchHour: 18:00
+  firstBatchIntervals: 10:00-24:00
+
 server:
   port: 8080
   servlet:
