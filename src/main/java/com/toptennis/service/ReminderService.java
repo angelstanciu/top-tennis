@@ -143,6 +143,9 @@ public class ReminderService {
         if (!LocalTime.of(23, 59).equals(booking.getEndTime())) {
             return null;
         }
+        if (booking.getCourt().getSportType() == null) {
+            return null;
+        }
         String phone = booking.getCustomerPhone();
         String name = booking.getCustomerName();
         if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
@@ -151,13 +154,13 @@ public class ReminderService {
         LocalDate nextDate = booking.getBookingDate().plusDays(1);
         List<Booking> candidates = bookingRepository.findByDateStartCourtAndCustomer(
                 nextDate,
-                BookingStatus.CONFIRMED,
                 LocalTime.of(0, 0),
                 booking.getCourt().getId(),
                 phone,
                 name
         );
         return candidates.stream()
+                .filter(b -> sameSport(booking, b))
                 .filter(b -> isWithinWindow(booking, b))
                 .findFirst()
                 .orElse(null);
@@ -170,6 +173,9 @@ public class ReminderService {
         if (!LocalTime.of(0, 0).equals(booking.getStartTime())) {
             return null;
         }
+        if (booking.getCourt().getSportType() == null) {
+            return null;
+        }
         String phone = booking.getCustomerPhone();
         String name = booking.getCustomerName();
         if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
@@ -178,13 +184,13 @@ public class ReminderService {
         LocalDate prevDate = booking.getBookingDate().minusDays(1);
         List<Booking> candidates = bookingRepository.findByDateEndCourtAndCustomer(
                 prevDate,
-                BookingStatus.CONFIRMED,
                 LocalTime.of(23, 59),
                 booking.getCourt().getId(),
                 phone,
                 name
         );
         return candidates.stream()
+                .filter(b -> sameSport(booking, b))
                 .filter(b -> isWithinWindow(b, booking))
                 .findFirst()
                 .orElse(null);
@@ -196,6 +202,16 @@ public class ReminderService {
         }
         Duration delta = Duration.between(first.getCreatedAt(), second.getCreatedAt()).abs();
         return !delta.minus(SPLIT_PAIR_WINDOW).isNegative();
+    }
+
+    private boolean sameSport(Booking first, Booking second) {
+        if (first.getCourt() == null || second.getCourt() == null) {
+            return false;
+        }
+        if (first.getCourt().getSportType() == null || second.getCourt().getSportType() == null) {
+            return false;
+        }
+        return first.getCourt().getSportType() == second.getCourt().getSportType();
     }
 
     private LocalTimeRange parseRange(String raw) {

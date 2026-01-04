@@ -32,9 +32,9 @@ logging:
     com.toptennis: INFO
 
 reminder:
-  firstBatchHour: 00:33
+  firstBatchHour: 00:47
   firstBatchIntervals: 10:00-24:00
-  secondBatchHour: 00:34
+  secondBatchHour: 00:48
   secondBatchIntervals: 00:00-10:00
 
 server:
