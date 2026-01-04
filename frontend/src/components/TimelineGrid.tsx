@@ -751,7 +751,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               className={'rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}
               style={{ transitionDuration: '1000ms' }}
             >
-              Te rug─âm selecteaz─â una din selec╚¢iile disponibile.
+              Te rugam alege una din selectiile disponibile!
             </div>
           )}
           <div className="flex flex-col">

@@ -174,6 +174,11 @@ export default function BookingPage() {
           <div>
             <label className="block text-sm">Email (optional)</label>
             <input className="w-full border rounded px-3 py-2" value={email} onChange={e => setEmail(e.target.value)} type="email" />
+            <div className="mt-3">
+              <p className="text-xs text-slate-600">
+                Prin apasarea butonului "Confirma rezervarea", iti exprimi acordul pentru prelucrarea datelor tale personale (nume, telefon, email) exclusiv in scopul efectuarii si administrarii acestei rezervari.
+              </p>
+            </div>
           </div>
           <div className="mt-3 flex justify-center gap-3">
             <button className="btn" disabled={submitting || !meetsMinDuration} type="submit">Confirma rezervarea</button>
