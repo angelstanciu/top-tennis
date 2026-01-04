@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -23,6 +24,7 @@ public class ReminderService {
     private static final Logger log = LoggerFactory.getLogger(ReminderService.class);
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final Duration SPLIT_PAIR_WINDOW = Duration.ofSeconds(1);
 
     private final BookingRepository bookingRepository;
     private final SmsService smsService;
@@ -59,21 +61,27 @@ public class ReminderService {
                         booking.getCourt() != null ? booking.getCourt().getSportType() : null);
                 continue;
             }
+            Booking paired = sameDay ? findNextDaySplitPair(booking) : findPreviousDaySplitPair(booking);
+            if (paired != null && !sameDay) {
+                log.info("Reminder skip bookingId={} (paired split with previous day)", booking.getId());
+                continue;
+            }
             String phone = booking.getCustomerPhone();
             if (phone == null || phone.isBlank()) {
                 log.info("Reminder skip bookingId={} missing phone", booking.getId());
                 continue;
             }
-            String message = buildReminderMessage(booking, sameDay);
+            LocalTime overrideEnd = paired != null ? paired.getEndTime() : null;
+            String message = buildReminderMessage(booking, sameDay, overrideEnd);
             log.info("Reminder send bookingId={} phone={} interval={} - {}", booking.getId(), phone,
-                    formatTime(booking.getStartTime()), formatTime(booking.getEndTime()));
+                    formatTime(booking.getStartTime()), formatTime(overrideEnd != null ? overrideEnd : booking.getEndTime()));
             smsService.sendSms(phone, message);
         }
     }
 
-    private String buildReminderMessage(Booking booking, boolean sameDay) {
+    private String buildReminderMessage(Booking booking, boolean sameDay, LocalTime overrideEnd) {
         String start = formatTime(booking.getStartTime());
-        String end = formatTime(booking.getEndTime());
+        String end = formatTime(overrideEnd != null ? overrideEnd : booking.getEndTime());
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
         if (sameDay) {
@@ -126,6 +134,68 @@ public class ReminderService {
             default:
                 return sportType.name();
         }
+    }
+
+    private Booking findNextDaySplitPair(Booking booking) {
+        if (booking == null || booking.getCourt() == null) {
+            return null;
+        }
+        if (!LocalTime.of(23, 59).equals(booking.getEndTime())) {
+            return null;
+        }
+        String phone = booking.getCustomerPhone();
+        String name = booking.getCustomerName();
+        if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
+            return null;
+        }
+        LocalDate nextDate = booking.getBookingDate().plusDays(1);
+        List<Booking> candidates = bookingRepository.findByDateStartCourtAndCustomer(
+                nextDate,
+                BookingStatus.CONFIRMED,
+                LocalTime.of(0, 0),
+                booking.getCourt().getId(),
+                phone,
+                name
+        );
+        return candidates.stream()
+                .filter(b -> isWithinWindow(booking, b))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Booking findPreviousDaySplitPair(Booking booking) {
+        if (booking == null || booking.getCourt() == null) {
+            return null;
+        }
+        if (!LocalTime.of(0, 0).equals(booking.getStartTime())) {
+            return null;
+        }
+        String phone = booking.getCustomerPhone();
+        String name = booking.getCustomerName();
+        if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
+            return null;
+        }
+        LocalDate prevDate = booking.getBookingDate().minusDays(1);
+        List<Booking> candidates = bookingRepository.findByDateEndCourtAndCustomer(
+                prevDate,
+                BookingStatus.CONFIRMED,
+                LocalTime.of(23, 59),
+                booking.getCourt().getId(),
+                phone,
+                name
+        );
+        return candidates.stream()
+                .filter(b -> isWithinWindow(b, booking))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isWithinWindow(Booking first, Booking second) {
+        if (first.getCreatedAt() == null || second.getCreatedAt() == null) {
+            return false;
+        }
+        Duration delta = Duration.between(first.getCreatedAt(), second.getCreatedAt()).abs();
+        return !delta.minus(SPLIT_PAIR_WINDOW).isNegative();
     }
 
     private LocalTimeRange parseRange(String raw) {
