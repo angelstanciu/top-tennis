@@ -7,6 +7,8 @@ import com.toptennis.model.BookingStatus;
 import com.toptennis.model.SportType;
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.sms.SmsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,7 @@ import java.util.List;
 
 @Service
 public class ReminderService {
+    private static final Logger log = LoggerFactory.getLogger(ReminderService.class);
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -35,6 +38,7 @@ public class ReminderService {
     public void sendSameDayReminders() {
         LocalDate today = LocalDate.now(ZONE);
         LocalTimeRange range = parseRange(reminderProperties.getFirstBatchIntervals());
+        log.info("Reminder batch (same-day) date={} start={} end={}", today, range.start, range.end);
         sendReminders(today, range.start, range.end, true);
     }
 
@@ -42,20 +46,27 @@ public class ReminderService {
     public void sendNextDayReminders() {
         LocalDate tomorrow = LocalDate.now(ZONE).plusDays(1);
         LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
+        log.info("Reminder batch (next-day) date={} start={} end={}", tomorrow, range.start, range.end);
         sendReminders(tomorrow, range.start, range.end, false);
     }
 
     private void sendReminders(LocalDate date, LocalTime start, LocalTime end, boolean sameDay) {
         List<Booking> bookings = bookingRepository.findForReminder(date, BookingStatus.CONFIRMED, start, end);
+        log.info("Reminder candidates found: {}", bookings.size());
         for (Booking booking : bookings) {
             if (booking.getCourt() == null || booking.getCourt().getSportType() != SportType.TABLE_TENNIS) {
+                log.info("Reminder skip bookingId={} sport={}", booking.getId(),
+                        booking.getCourt() != null ? booking.getCourt().getSportType() : null);
                 continue;
             }
             String phone = booking.getCustomerPhone();
             if (phone == null || phone.isBlank()) {
+                log.info("Reminder skip bookingId={} missing phone", booking.getId());
                 continue;
             }
             String message = buildReminderMessage(booking, sameDay);
+            log.info("Reminder send bookingId={} phone={} interval={} - {}", booking.getId(), phone,
+                    formatTime(booking.getStartTime()), formatTime(booking.getEndTime()));
             smsService.sendSms(phone, message);
         }
     }
