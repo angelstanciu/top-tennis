@@ -27,8 +27,6 @@ public class ReminderService {
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final Duration SPLIT_PAIR_WINDOW = Duration.ofSeconds(1);
-    private static final LocalTime EARLY_NEXT_DAY_END = LocalTime.of(1, 30);
-    private static final LocalTime LATE_TODAY_START = LocalTime.of(22, 30);
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59);
 
     private final BookingRepository bookingRepository;
@@ -46,23 +44,27 @@ public class ReminderService {
         LocalDate today = LocalDate.now(ZONE);
         LocalTimeRange range = parseRange(reminderProperties.getFirstBatchIntervals());
         log.info("Reminder batch (same-day) date={} start={} end={}", today, range.start, range.end);
-        Set<Long> sent = new HashSet<>();
-        sendReminders(today, range.start, range.end, true, false, sent);
-        LocalDate tomorrow = today.plusDays(1);
-        log.info("Reminder batch (same-day extra) date={} start={} end={}", tomorrow, LocalTime.of(0, 0), EARLY_NEXT_DAY_END);
-        sendReminders(tomorrow, LocalTime.of(0, 0), EARLY_NEXT_DAY_END, false, false, sent);
+        sendBatchWithWrap(today, range, true, false);
     }
 
     @Scheduled(cron = "#{@reminderScheduleProvider.secondBatchCron}", zone = "Europe/Bucharest")
     public void sendNextDayReminders() {
         LocalDate today = LocalDate.now(ZONE);
         LocalDate tomorrow = today.plusDays(1);
-        log.info("Reminder batch (next-day extra) date={} start={} end={}", today, LATE_TODAY_START, END_OF_DAY);
-        Set<Long> sent = new HashSet<>();
-        sendReminders(today, LATE_TODAY_START, END_OF_DAY, true, true, sent);
         LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
         log.info("Reminder batch (next-day) date={} start={} end={}", tomorrow, range.start, range.end);
-        sendReminders(tomorrow, range.start, range.end, false, true, sent);
+        sendBatchWithWrap(today, range, false, true);
+    }
+
+    private void sendBatchWithWrap(LocalDate baseDate, LocalTimeRange range, boolean sameDay, boolean skipPairedAlways) {
+        Set<Long> sent = new HashSet<>();
+        if (range.start.equals(range.end) || range.start.isBefore(range.end)) {
+            sendReminders(baseDate, range.start, range.end, sameDay, skipPairedAlways, sent);
+            return;
+        }
+        sendReminders(baseDate, range.start, END_OF_DAY, sameDay, skipPairedAlways, sent);
+        LocalDate nextDay = baseDate.plusDays(1);
+        sendReminders(nextDay, LocalTime.of(0, 0), range.end, false, skipPairedAlways, sent);
     }
 
     private void sendReminders(LocalDate date, LocalTime start, LocalTime end, boolean sameDay, boolean skipPairedAlways, Set<Long> sent) {
@@ -72,9 +74,8 @@ public class ReminderService {
             if (sent.contains(booking.getId())) {
                 continue;
             }
-            if (booking.getCourt() == null || booking.getCourt().getSportType() != SportType.TABLE_TENNIS) {
-                log.info("Reminder skip bookingId={} sport={}", booking.getId(),
-                        booking.getCourt() != null ? booking.getCourt().getSportType() : null);
+            if (booking.getCourt() == null) {
+                log.info("Reminder skip bookingId={} missing court", booking.getId());
                 continue;
             }
             Booking paired = sameDay ? findNextDaySplitPair(booking) : findPreviousDaySplitPair(booking);
