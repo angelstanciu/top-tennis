@@ -21,7 +21,7 @@ spring:
     locations: classpath:db/migration
 
 sms:
-  port: /dev/ttySMS
+  port: /dev/ttyUSB0
   baud: 115200
   commandTimeoutMs: 8000
   sendTimeoutMs: 30000
