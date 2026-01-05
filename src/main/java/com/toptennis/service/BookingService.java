@@ -59,6 +59,7 @@ public class BookingService {
             b.setCreatedAt(LocalDateTime.now());
             b.setUpdatedAt(LocalDateTime.now());
             b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
+            b.setMidnightBooking(false);
             Booking saved = bookingRepository.save(b);
             taskExecutor.execute(() -> smsService.sendReservationNotifications(saved));
             return saved;
@@ -86,6 +87,7 @@ public class BookingService {
             b1.setCreatedAt(LocalDateTime.now());
             b1.setUpdatedAt(LocalDateTime.now());
             b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
+            b1.setMidnightBooking(true);
             Booking saved1 = bookingRepository.save(b1);
 
             Booking b2 = new Booking();
@@ -100,6 +102,7 @@ public class BookingService {
             b2.setCreatedAt(LocalDateTime.now());
             b2.setUpdatedAt(LocalDateTime.now());
             b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.of(0,0), end));
+            b2.setMidnightBooking(true);
             Booking saved2 = bookingRepository.save(b2);
 
             taskExecutor.execute(() -> { smsService.sendReservationNotifications(saved1); smsService.sendReservationNotifications(saved2); });

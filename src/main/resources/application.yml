@@ -32,10 +32,11 @@ logging:
     com.toptennis: INFO
 
 reminder:
-  firstBatchHour: 09:00
-  firstBatchIntervals: 10:00-01:29
-  secondBatchHour: 18:00
-  secondBatchIntervals: 22:30-09:59
+  firstBatchHour: 14:05
+  firstBatchIntervals: 10:00-23:59
+  secondBatchHour: 14:06
+  secondBatchIntervals: 00:00-09:59
+  mockSms: true
 
 server:
   port: 8080

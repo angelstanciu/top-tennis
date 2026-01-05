@@ -12,21 +12,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class ReminderService {
     private static final Logger log = LoggerFactory.getLogger(ReminderService.class);
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final Duration SPLIT_PAIR_WINDOW = Duration.ofSeconds(1);
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59);
 
     private final BookingRepository bookingRepository;
@@ -53,34 +49,28 @@ public class ReminderService {
         LocalDate tomorrow = today.plusDays(1);
         LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
         log.info("Reminder batch (next-day) date={} start={} end={}", tomorrow, range.start, range.end);
-        sendBatchWithWrap(today, range, false, true);
+        sendBatchWithWrap(tomorrow, range, false, true);
     }
 
     private void sendBatchWithWrap(LocalDate baseDate, LocalTimeRange range, boolean sameDay, boolean skipPairedAlways) {
-        Set<Long> sent = new HashSet<>();
         if (range.start.equals(range.end) || range.start.isBefore(range.end)) {
-            sendReminders(baseDate, range.start, range.end, sameDay, skipPairedAlways, sent);
+            sendReminders(baseDate, range.start, range.end, sameDay);
             return;
         }
-        sendReminders(baseDate, range.start, END_OF_DAY, sameDay, skipPairedAlways, sent);
         LocalDate nextDay = baseDate.plusDays(1);
-        sendReminders(nextDay, LocalTime.of(0, 0), range.end, false, skipPairedAlways, sent);
+        sendReminders(nextDay, LocalTime.of(0, 0), range.end, sameDay);
     }
 
-    private void sendReminders(LocalDate date, LocalTime start, LocalTime end, boolean sameDay, boolean skipPairedAlways, Set<Long> sent) {
+    private void sendReminders(LocalDate date, LocalTime start, LocalTime end, boolean sameDay) {
         List<Booking> bookings = bookingRepository.findForReminder(date, BookingStatus.CONFIRMED, start, end);
         log.info("Reminder candidates found: {}", bookings.size());
         for (Booking booking : bookings) {
-            if (sent.contains(booking.getId())) {
-                continue;
-            }
             if (booking.getCourt() == null) {
                 log.info("Reminder skip bookingId={} missing court", booking.getId());
                 continue;
             }
-            Booking paired = sameDay ? findNextDaySplitPair(booking) : findPreviousDaySplitPair(booking);
-            if (paired != null && (skipPairedAlways || !sameDay)) {
-                log.info("Reminder skip bookingId={} (paired split with previous day)", booking.getId());
+            if (!sameDay && booking.isMidnightBooking()) {
+                log.info("Reminder skip bookingId={} midnight booking in second batch", booking.getId());
                 continue;
             }
             String phone = booking.getCustomerPhone();
@@ -88,14 +78,13 @@ public class ReminderService {
                 log.info("Reminder skip bookingId={} missing phone", booking.getId());
                 continue;
             }
-            LocalTime overrideEnd = paired != null ? paired.getEndTime() : null;
-            String message = buildReminderMessage(booking, sameDay, overrideEnd);
+            String message = buildReminderMessage(booking, sameDay, null);
             log.info("Reminder send bookingId={} phone={} interval={} - {}", booking.getId(), phone,
-                    formatTime(booking.getStartTime()), formatTime(overrideEnd != null ? overrideEnd : booking.getEndTime()));
-            smsService.sendSms(phone, message);
-            sent.add(booking.getId());
-            if (paired != null) {
-                sent.add(paired.getId());
+                    formatTime(booking.getStartTime()), formatTime(booking.getEndTime()));
+            if (reminderProperties.isMockSms()) {
+                log.info("{}", message);
+            } else {
+                smsService.sendSms(phone, message);
             }
         }
     }
@@ -106,11 +95,11 @@ public class ReminderService {
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
         if (sameDay) {
-            return "Buna ziua! Va reamintim ca azi, in intervalul " + start + "-" + end +
-                    ", aveti rezervare la " + sport + ", terenul " + court + ". Jocuri frumoase!";
+            return "Buna ziua! Va reamintim ca azi, incepand cu orele " + start +
+                    ", aveti rezervare la baza sportiva Star Arena, " + sport + ", Teren " + court + ". Jocuri frumoase!";
         }
-        return "Buna seara! Va reamintim ca maine, in intervalul " + start + "-" + end +
-                ", aveti rezervare la " + sport + ", terenul " + court + ". Jocuri frumoase!";
+        return "Buna seara! Va reamintim ca maine, incepand cu orele " + start +
+                ", aveti rezervare la baza sportiva Star Arena, " + sport + ", Teren " + court + ". Jocuri frumoase!";
     }
 
     private String formatTime(LocalTime time) {
@@ -155,84 +144,6 @@ public class ReminderService {
             default:
                 return sportType.name();
         }
-    }
-
-    private Booking findNextDaySplitPair(Booking booking) {
-        if (booking == null || booking.getCourt() == null) {
-            return null;
-        }
-        if (!LocalTime.of(23, 59).equals(booking.getEndTime())) {
-            return null;
-        }
-        if (booking.getCourt().getSportType() == null) {
-            return null;
-        }
-        String phone = booking.getCustomerPhone();
-        String name = booking.getCustomerName();
-        if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
-            return null;
-        }
-        LocalDate nextDate = booking.getBookingDate().plusDays(1);
-        List<Booking> candidates = bookingRepository.findByDateStartCourtAndCustomer(
-                nextDate,
-                LocalTime.of(0, 0),
-                booking.getCourt().getId(),
-                phone,
-                name
-        );
-        return candidates.stream()
-                .filter(b -> sameSport(booking, b))
-                .filter(b -> isWithinWindow(booking, b))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private Booking findPreviousDaySplitPair(Booking booking) {
-        if (booking == null || booking.getCourt() == null) {
-            return null;
-        }
-        if (!LocalTime.of(0, 0).equals(booking.getStartTime())) {
-            return null;
-        }
-        if (booking.getCourt().getSportType() == null) {
-            return null;
-        }
-        String phone = booking.getCustomerPhone();
-        String name = booking.getCustomerName();
-        if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
-            return null;
-        }
-        LocalDate prevDate = booking.getBookingDate().minusDays(1);
-        List<Booking> candidates = bookingRepository.findByDateEndCourtAndCustomer(
-                prevDate,
-                LocalTime.of(23, 59),
-                booking.getCourt().getId(),
-                phone,
-                name
-        );
-        return candidates.stream()
-                .filter(b -> sameSport(booking, b))
-                .filter(b -> isWithinWindow(b, booking))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private boolean isWithinWindow(Booking first, Booking second) {
-        if (first.getCreatedAt() == null || second.getCreatedAt() == null) {
-            return false;
-        }
-        Duration delta = Duration.between(first.getCreatedAt(), second.getCreatedAt()).abs();
-        return !delta.minus(SPLIT_PAIR_WINDOW).isNegative();
-    }
-
-    private boolean sameSport(Booking first, Booking second) {
-        if (first.getCourt() == null || second.getCourt() == null) {
-            return false;
-        }
-        if (first.getCourt().getSportType() == null || second.getCourt().getSportType() == null) {
-            return false;
-        }
-        return first.getCourt().getSportType() == second.getCourt().getSportType();
     }
 
     private LocalTimeRange parseRange(String raw) {

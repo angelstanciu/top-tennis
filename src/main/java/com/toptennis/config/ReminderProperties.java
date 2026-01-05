@@ -10,6 +10,7 @@ public class ReminderProperties {
     private String firstBatchIntervals;
     private String secondBatchHour;
     private String secondBatchIntervals;
+    private boolean mockSms;
 
     public String getFirstBatchHour() {
         return firstBatchHour;
@@ -41,5 +42,13 @@ public class ReminderProperties {
 
     public void setSecondBatchIntervals(String secondBatchIntervals) {
         this.secondBatchIntervals = secondBatchIntervals;
+    }
+
+    public boolean isMockSms() {
+        return mockSms;
+    }
+
+    public void setMockSms(boolean mockSms) {
+        this.mockSms = mockSms;
     }
 }

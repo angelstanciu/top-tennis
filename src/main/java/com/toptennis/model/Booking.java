@@ -44,6 +44,7 @@ public class Booking {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
+    private boolean isMidnightBooking;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -69,5 +70,8 @@ public class Booking {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
+
+    public boolean isMidnightBooking() { return isMidnightBooking; }
+    public void setMidnightBooking(boolean midnightBooking) { this.isMidnightBooking = midnightBooking; }
 }
 
