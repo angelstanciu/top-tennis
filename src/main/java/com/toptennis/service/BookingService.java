@@ -45,8 +45,6 @@ public class BookingService {
                 throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existent.");
             }
 
-            // 30-minute gap rule removed (no enforcement)
-
             Booking b = new Booking();
             b.setCourt(court);
             b.setBookingDate(date);
@@ -69,10 +67,10 @@ public class BookingService {
             LocalDate nextDate = date.plusDays(1);
 
             if (!bookingRepository.findOverlapping(courtId, date, start, part1End, activeStatuses).isEmpty()) {
-                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existent (ziua curent).");
+                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua curenta).");
             }
             if (!bookingRepository.findOverlapping(courtId, nextDate, LocalTime.of(0,0), end, activeStatuses).isEmpty()) {
-                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existent (ziua urmtoare).");
+                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua urmatoare).");
             }
 
             Booking b1 = new Booking();
@@ -105,7 +103,7 @@ public class BookingService {
             b2.setMidnightBooking(true);
             Booking saved2 = bookingRepository.save(b2);
 
-            taskExecutor.execute(() -> { smsService.sendReservationNotifications(saved1); smsService.sendReservationNotifications(saved2); });
+            taskExecutor.execute(() -> smsService.sendReservationNotificationsCrossMidnight(saved1, saved2));
             return saved1;
         }
     }
@@ -234,46 +232,6 @@ public class BookingService {
         }
         return t.getHour() * 60 + t.getMinute();
     }
-
-    private void ensureNoThirtyMinuteGap(Long courtId, LocalDate date, LocalTime start, LocalTime end) {
-        // disabled: preserving method signature for compatibility
-        if (true) return;
-        // fetch same-day bookings ordered by start
-        var all = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(courtId, date);
-        // consider only active bookings
-        var relevant = all.stream()
-                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.BLOCKED)
-                .toList();
-
-        // Find previous booking that ends at or before the new start
-        LocalTime prevEnd = null;
-        for (var b : relevant) {
-            if (!b.getEndTime().isAfter(start)) {
-                if (prevEnd == null || b.getEndTime().isAfter(prevEnd)) {
-                    prevEnd = b.getEndTime();
-                }
-            } else {
-                break;
-            }
-        }
-        if (prevEnd != null && minutesSinceMidnight(start) - minutesSinceMidnight(prevEnd) == 30) {
-            throw new IllegalArgumentException("Nu este permis să lăsați o pauză de 30 de minute între rezervări pe același teren.");
-        }
-
-        // Find next booking that starts at or after the new end
-        LocalTime nextStart = null;
-        for (var b : relevant) {
-            if (!b.getStartTime().isBefore(end)) {
-                nextStart = b.getStartTime();
-                break;
-            }
-        }
-        if (nextStart != null && minutesSinceMidnight(nextStart) - minutesSinceMidnight(end) == 30) {
-            throw new IllegalArgumentException("Nu este permis să lăsați o pauză de 30 de minute între rezervări pe același teren.");
-        }
-    }
-
-    
 }
 
 @Configuration
@@ -289,6 +247,3 @@ class SmsTaskConfig {
         return exec;
     }
 }
-
-
-

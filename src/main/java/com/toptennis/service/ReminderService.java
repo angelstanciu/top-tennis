@@ -1,7 +1,6 @@
 package com.toptennis.service;
 
 import com.toptennis.config.ReminderProperties;
-import com.toptennis.config.ReminderScheduleProvider;
 import com.toptennis.model.Booking;
 import com.toptennis.model.BookingStatus;
 import com.toptennis.model.SportType;
@@ -23,7 +22,6 @@ public class ReminderService {
     private static final Logger log = LoggerFactory.getLogger(ReminderService.class);
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59);
 
     private final BookingRepository bookingRepository;
     private final SmsService smsService;
@@ -40,7 +38,7 @@ public class ReminderService {
         LocalDate today = LocalDate.now(ZONE);
         LocalTimeRange range = parseRange(reminderProperties.getFirstBatchIntervals());
         log.info("Reminder batch (same-day) date={} start={} end={}", today, range.start, range.end);
-        sendBatchWithWrap(today, range, true, false);
+        sendBatchWithWrap(today, range, true);
     }
 
     @Scheduled(cron = "#{@reminderScheduleProvider.secondBatchCron}", zone = "Europe/Bucharest")
@@ -49,10 +47,10 @@ public class ReminderService {
         LocalDate tomorrow = today.plusDays(1);
         LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
         log.info("Reminder batch (next-day) date={} start={} end={}", tomorrow, range.start, range.end);
-        sendBatchWithWrap(tomorrow, range, false, true);
+        sendBatchWithWrap(tomorrow, range, false);
     }
 
-    private void sendBatchWithWrap(LocalDate baseDate, LocalTimeRange range, boolean sameDay, boolean skipPairedAlways) {
+    private void sendBatchWithWrap(LocalDate baseDate, LocalTimeRange range, boolean sameDay) {
         if (range.start.equals(range.end) || range.start.isBefore(range.end)) {
             sendReminders(baseDate, range.start, range.end, sameDay);
             return;
@@ -78,7 +76,7 @@ public class ReminderService {
                 log.info("Reminder skip bookingId={} missing phone", booking.getId());
                 continue;
             }
-            String message = buildReminderMessage(booking, sameDay, null);
+            String message = buildReminderMessage(booking, sameDay);
             log.info("Reminder send bookingId={} phone={} interval={} - {}", booking.getId(), phone,
                     formatTime(booking.getStartTime()), formatTime(booking.getEndTime()));
             if (reminderProperties.isMockSms()) {
@@ -89,9 +87,8 @@ public class ReminderService {
         }
     }
 
-    private String buildReminderMessage(Booking booking, boolean sameDay, LocalTime overrideEnd) {
+    private String buildReminderMessage(Booking booking, boolean sameDay) {
         String start = formatTime(booking.getStartTime());
-        String end = formatTime(overrideEnd != null ? overrideEnd : booking.getEndTime());
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
         if (sameDay) {
@@ -128,22 +125,14 @@ public class ReminderService {
         if (sportType == null) {
             return "";
         }
-        switch (sportType) {
-            case TENNIS:
-                return "Tenis";
-            case PADEL:
-                return "Padel";
-            case BEACH_VOLLEY:
-                return "Volei pe plaja";
-            case BASKETBALL:
-                return "Baschet";
-            case FOOTVOLLEY:
-                return "Tenis de picior";
-            case TABLE_TENNIS:
-                return "Tenis de masa";
-            default:
-                return sportType.name();
-        }
+        return switch (sportType) {
+            case TENNIS -> "Tenis";
+            case PADEL -> "Padel";
+            case BEACH_VOLLEY -> "Volei pe plaja";
+            case BASKETBALL -> "Baschet";
+            case FOOTVOLLEY -> "Tenis de picior";
+            case TABLE_TENNIS -> "Tenis de masa";
+        };
     }
 
     private LocalTimeRange parseRange(String raw) {
@@ -160,13 +149,6 @@ public class ReminderService {
         return new LocalTimeRange(start, end);
     }
 
-    private static class LocalTimeRange {
-        private final LocalTime start;
-        private final LocalTime end;
-
-        private LocalTimeRange(LocalTime start, LocalTime end) {
-            this.start = start;
-            this.end = end;
-        }
+    private record LocalTimeRange(LocalTime start, LocalTime end) {
     }
 }
