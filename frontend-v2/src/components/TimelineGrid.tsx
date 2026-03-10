@@ -802,11 +802,11 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           </div>
 
           <div className="p-4 flex flex-col gap-3">
-             <div className="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-2xl flex items-center justify-between border border-emerald-100/50 mb-1">
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+             <div className="bg-emerald-50 text-emerald-700 px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border border-emerald-100/50 mb-1">
+                <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider opacity-70 leading-tight shrink">
                   {selEnd ? 'Interval selectat' : 'Începere la ora'}
                 </span>
-                <span className="font-black text-lg">
+                <span className="font-black text-base md:text-lg whitespace-nowrap shrink-0 text-right">
                   {selEnd ? `${startTime} - ${selEnd}` : startTime}
                 </span>
              </div>

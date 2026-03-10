@@ -38,7 +38,14 @@ export default defineConfig({
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
-                changeOrigin: true
+                changeOrigin: true,
+                secure: false,
+                rewrite: (path) => path,
+                configure: (proxy, _options) => {
+                    proxy.on('proxyReq', (proxyReq, req, _res) => {
+                        proxyReq.setHeader('Origin', 'http://localhost:5173');
+                    });
+                }
             }
         }
     },
