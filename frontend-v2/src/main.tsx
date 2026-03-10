@@ -12,6 +12,8 @@ import HomePageD from './pages/HomePageD'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import CookiesPage from './pages/CookiesPage'
+import AdminBlockDayPage from './pages/AdminBlockDayPage'
+import AdminWeeklyBookingPage from './pages/AdminWeeklyBookingPage'
 import { registerSW } from 'virtual:pwa-register'
 
 registerSW()
@@ -27,6 +29,8 @@ const router = createBrowserRouter([
   { path: '/admin', element: <AdminLanding /> },
   { path: '/admin/administrare-rezervari', element: <AdminPage /> },
   { path: '/admin/pozitii-libere', element: <FreePositionsPage /> },
+  { path: '/admin/block-day', element: <AdminBlockDayPage /> },
+  { path: '/admin/weekly', element: <AdminWeeklyBookingPage /> },
 ])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

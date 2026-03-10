@@ -72,6 +72,7 @@ type BookingBlock = {
   endIndex: number
   label: string
   timeRange?: string
+  status?: string
 }
 
 
@@ -85,8 +86,9 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
     blocks.push({
       startIndex,
       endIndex,
-      label: getDisplayName(b),
+      label: getDisplayName(b as any),
       timeRange: `${b.start} - ${b.end}`,
+      status: (b as any).status,
     })
   }
   blocks.sort((a, b) => a.startIndex - b.startIndex)
@@ -98,32 +100,46 @@ function BookingLabelBlock({
   timeRange,
   className,
   style,
+  vertical,
+  isBlocked,
 }: {
   label: string
   timeRange?: string
   className?: string
   style?: React.CSSProperties
+  vertical?: boolean
+  isBlocked?: boolean
 }) {
+  const displayText = isBlocked ? Array(10).fill(`${label}`).join('   •   ') : label
+
   return (
     <div
-      className={`pointer-events-none flex flex-col items-start justify-center overflow-hidden px-2 ${className || ""}`}
+      className={`pointer-events-none flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
       style={style}
     >
       <div
-        className="text-white font-bold truncate w-full"
+        className="text-white font-bold truncate w-full text-center"
         style={{
-          fontSize: "12px",
+          fontSize: isBlocked ? "13px" : "12px",
           lineHeight: 1.2,
           textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          letterSpacing: '0.01em',
+          letterSpacing: '0.02em',
         }}
       >
-        {label}
+        {displayText}
       </div>
-      {timeRange && (
+      {timeRange && !isBlocked && (
         <div
-          className="text-white/80 truncate w-full"
+          className="text-white/80 truncate w-full text-center mt-0.5"
           style={{ fontSize: "10px", lineHeight: 1.2 }}
+        >
+          {timeRange}
+        </div>
+      )}
+      {timeRange && isBlocked && (
+        <div
+          className="text-white/90 truncate w-full text-center mt-0.5 font-semibold tracking-wider"
+          style={{ fontSize: "11px", lineHeight: 1.2 }}
         >
           {timeRange}
         </div>
@@ -549,18 +565,22 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                       </div>
                       {SHOW_BOOKING_LABELS && blocks.length > 0 && (
                         <div className="absolute inset-0 pointer-events-none">
-                          {blocks.map((block, blockIndex) => (
-                            <BookingLabelBlock
-                              key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                              className="absolute inset-y-0 flex items-center bg-rose-500/80 rounded-sm"
-                              style={{
-                                width: (block.endIndex - block.startIndex) * colWidth - 2,
-                                left: block.startIndex * colWidth + 1,
-                              }}
-                              label={block.label}
-                              timeRange={block.timeRange}
-                            />
-                          ))}
+                          {blocks.map((block, blockIndex) => {
+                            const isBlock = block.status === 'BLOCKED'
+                            return (
+                              <BookingLabelBlock
+                                key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
+                                className={`absolute inset-y-0 flex items-center rounded-sm ${isBlock ? 'bg-slate-700/80 shadow-inner' : 'bg-rose-500/80'}`}
+                                style={{
+                                  width: (block.endIndex - block.startIndex) * colWidth - 2,
+                                  left: block.startIndex * colWidth + 1,
+                                }}
+                                label={block.label}
+                                timeRange={block.timeRange}
+                                isBlocked={isBlock}
+                              />
+                            )
+                          })}
                         </div>
                       )}
                     </div>

@@ -58,6 +58,54 @@ export async function fetchActiveCourts(): Promise<CourtDto[]> {
   return courts
 }
 
+export async function adminBlockSlot(payload: {
+  courtId: number
+  date: string
+  startTime: string
+  endTime: string
+  note: string
+}, auth: string): Promise<BookingDto> {
+  const res = await fetch(`${BASE_URL}/admin/block-slot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const msg = await res.text()
+    throw new Error(msg)
+  }
+  return res.json()
+}
 
+export async function adminCreateWeeklyBooking(payload: {
+  courtId: number
+  startDate: string
+  startTime: string
+  endTime: string
+  customerName: string
+  customerPhone: string
+  customerEmail?: string
+}, weeks: number): Promise<BookingDto[]> {
+  const promises = []
+  
+  // payload.startDate e de tip YYYY-MM-DD
+  const parts = payload.startDate.split('-')
+  const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
 
+  for (let i = 0; i < weeks; i++) {
+    const d = new Date(baseDate)
+    d.setDate(d.getDate() + i * 7)
+    
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    const iterDateStr = `${y}-${m}-${day}`
 
+    promises.push(createBooking({
+      ...payload,
+      date: iterDateStr
+    }))
+  }
+  
+  return Promise.all(promises)
+}

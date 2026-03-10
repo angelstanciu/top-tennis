@@ -2,7 +2,7 @@ import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 type AdminHeaderProps = {
-  active?: 'landing' | 'bookings' | 'free'
+  active?: 'landing' | 'bookings' | 'free' | 'block-day' | 'weekly'
 }
 
 export default function AdminHeader({ active }: AdminHeaderProps) {
@@ -10,6 +10,8 @@ export default function AdminHeader({ active }: AdminHeaderProps) {
   const activeLabel =
     active === 'bookings' ? 'Administrare rezervari' :
     active === 'free' ? 'Pozitii libere' :
+    active === 'block-day' ? 'Blocare Terenuri' :
+    active === 'weekly' ? 'Abonamente Săptămânale' :
     null
   const isLanding = active === 'landing'
 

@@ -302,15 +302,23 @@ export default function AdminPage() {
         <div className="space-y-3">
 
           <div className="rounded border border-sky-200 bg-sky-50 p-4 shadow-md">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
+            <div className="flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 w-full">
                 <div className="text-xs text-slate-500 mb-1">Sport</div>
-                <SportPicker value={sport} onChange={setSport} includeAll disabledSports={disabledSports} />
+                <select className="border rounded px-2 py-1.5 w-full bg-white h-10" value={sport} onChange={e => setSport(e.target.value as SportType | '')}>
+                  <option value="">Toate</option>
+                  <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
+                  <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
+                  <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
+                  <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Fotbal-Tenis</option>
+                  <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
+                  <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
+                </select>
               </div>
-              <div>
+              <div className="flex-1 w-full">
                 <div className="text-xs text-slate-500 mb-1">Teren</div>
                 <select
-                  className="border rounded px-2 py-1.5 w-full"
+                  className="border rounded px-2 py-1.5 w-full bg-white h-10"
                   value={courtId as any}
                   onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -321,20 +329,20 @@ export default function AdminPage() {
                   })}
                 </select>
               </div>
-              <div>
+              <div className="flex-1 w-full">
                 <div className="text-xs text-slate-500 mb-1">Data</div>
-                <div className="relative flex items-stretch border rounded bg-white overflow-hidden">
+                <div className="relative flex items-stretch border rounded bg-white overflow-hidden h-10">
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none"
+                    className="inline-flex items-center justify-center px-3 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none transition-colors"
                     aria-label="Ziua anterioara"
                     title="Ziua anterioara"
                     onClick={() => shiftDate(-1)}
                   >
                     {'\u2039'}
                   </button>
-                  <div className="relative flex-1 min-w-0">
-                    <div className="px-2 pr-8 py-1.5 text-sm text-slate-800 text-center select-none truncate">
+                  <div className="relative flex-1 min-w-0 flex items-center justify-center">
+                    <div className="text-sm font-semibold text-slate-800 text-center select-none truncate">
                       {formatDateDisplay(date)}
                     </div>
                     <input
@@ -348,21 +356,11 @@ export default function AdminPage() {
                     />
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-black/70 hover:text-black focus:outline-none z-10"
+                      className="absolute right-2 p-1 text-slate-400 pointer-events-none z-10"
                       aria-label="Deschide calendarul"
                       title="Deschide calendarul"
-                      onClick={() => {
-                        const el = dateInputRef.current
-                        if (!el) return
-                        try {
-                          // @ts-ignore
-                          if (typeof el.showPicker === 'function') { (el as any).showPicker(); return }
-                        } catch { }
-                        try { el.focus() } catch { }
-                        try { el.click() } catch { }
-                      }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="16" y1="2" x2="16" y2="6"></line>
                         <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -372,7 +370,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none"
+                    className="inline-flex items-center justify-center px-3 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none transition-colors"
                     aria-label="Ziua urmatoare"
                     onClick={() => shiftDate(1)}
                     title="Ziua urmatoare"
@@ -381,12 +379,18 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex items-end">
-                <button className="btn w-full sm:w-auto" onClick={reload} disabled={loading}>Incarca</button>
+              <div className="w-full md:w-auto">
+                <button
+                  className="bg-sky-600 hover:bg-sky-500 text-white px-6 w-full md:w-auto h-10 rounded shadow-sm font-bold flex items-center justify-center transition-colors disabled:opacity-50"
+                  onClick={reload}
+                  disabled={loading}
+                >
+                  {loading ? '...' : 'Încarcă'}
+                </button>
               </div>
             </div>
-          </div>{error && <div className="p-2 bg-rose-100 text-rose-700 border border-rose-200 rounded">{error}</div>}
-          {/* Mobile cards */}
+          </div>
+          {error && <div className="p-2 bg-rose-100 text-rose-700 border border-rose-200 rounded">{error}</div>}
           <div className="space-y-3 md:hidden">
             {filteredBookings.map(b => (
               <div key={b.id} className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
