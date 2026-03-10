@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #10b981; /* Emerald 500 */
+  --brand-dark: #064e3b;   /* Emerald 900 */
+  --bg-main: #f8fafc;
+}
+
+body {
+  @apply text-slate-800 bg-slate-50 font-sans antialiased;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .outfit-font {
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+
+/* Base button styles */
+.btn {
+  @apply px-4 py-2 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md;
+}
+
+/* Premium Card */
+.glass-card {
+  @apply bg-white/95 backdrop-blur-xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden;
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+}
+
+/* Hide native calendar icon; we provide our own button */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
+input[type="date"]::-webkit-clear-button { display: none; }
+input[type="date"]::-webkit-inner-spin-button { display: none; }
+input[type="date"] { -webkit-appearance: none; appearance: none; }
+
+select option:disabled { color: #94a3b8; background-color: #f8fafc; }
+
+

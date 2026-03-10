@@ -31,6 +31,13 @@ frontend/.vite/
 frontend/.eslintcache
 frontend/tsconfig.tsbuildinfo
 
+# Node / Vite (frontend-v2)
+frontend-v2/node_modules/
+frontend-v2/dist/
+frontend-v2/.vite/
+frontend-v2/.eslintcache
+frontend-v2/tsconfig.tsbuildinfo
+
 # Env files / secrets
 .env
 *.env
@@ -45,3 +52,8 @@ coverage/
 
 # Local/sensitive stray files
 twilio_2FA_recovery_code.txt
+
+# Assistant helper files
+task*.md
+node_local/
+.node_local/
