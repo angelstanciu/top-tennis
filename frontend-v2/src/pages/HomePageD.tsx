@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, Phone, Clock, ArrowRight, CheckCircle2, Trophy, CalendarDays, ChevronRight } from 'lucide-react'
 import { LampHero } from '@/components/ui/lamp'
 import { DateSlider } from '@/components/ui/date-slider'
+import Footer from '../components/Footer'
 
 export default function HomePageD() {
   const nav = useNavigate()
@@ -202,28 +203,7 @@ export default function HomePageD() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-900 py-16 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
-          <div className="flex flex-col items-center md:items-start text-center md:text-left">
-            <span className="font-black text-3xl tracking-tighter text-white mb-4">
-              STAR<span className="text-lime-400">ARENA</span>
-            </span>
-            <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
-              Complex sportiv de elită în Bascov. Facilități moderne pentru performanța ta zilnică.
-            </p>
-          </div>
-          <div className="flex flex-col items-center md:items-end gap-5">
-            <div className="flex gap-8 text-sm font-semibold text-slate-400">
-              <button onClick={() => window.scrollTo(0,0)} className="hover:text-lime-400 transition-colors">Acasă</button>
-              <button onClick={() => nav('/rezerva')} className="hover:text-lime-400 transition-colors">Rezervări</button>
-              <a href="tel:0742197487" className="hover:text-lime-400 transition-colors">Contact</a>
-            </div>
-            <p className="text-xs text-slate-600 tracking-widest uppercase">
-              © {new Date().getFullYear()} Star Arena Bascov. Toate drepturile rezervate.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
