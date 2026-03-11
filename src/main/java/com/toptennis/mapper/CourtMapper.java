@@ -17,6 +17,7 @@ public class CourtMapper {
         dto.pricePerHour = c.getPricePerHour();
         dto.openTime = c.getOpenTime();
         dto.closeTime = c.getCloseTime();
+        dto.active = c.isActive();
         return dto;
     }
 }

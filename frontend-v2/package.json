@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "ai": "^6.0.116",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -20,7 +24,9 @@
     "react-day-picker": "^9.14.0",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "tailwind-merge": "^3.5.0"
+    "recharts": "^3.8.0",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^22.7.6",

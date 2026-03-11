@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Phone, Clock, ArrowRight, CheckCircle2, Trophy, CalendarDays, ChevronRight } from 'lucide-react'
-import { LampHero } from '@/components/ui/lamp'
-import { DateSlider } from '@/components/ui/date-slider'
+import { LampHero } from '../components/ui/lamp'
+import { DateSlider } from '../components/ui/date-slider'
 import Footer from '../components/Footer'
 
 export default function HomePageD() {
@@ -138,7 +138,10 @@ export default function HomePageD() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Tenis */}
-            <div className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5">
+            <div 
+              onClick={() => nav('/rezerva?sport=TENNIS')}
+              className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5 cursor-pointer active:scale-95 transition-all"
+            >
               <img
                 src="/img-tenis-aerial.jpg"
                 alt="Terenuri Tenis Star Arena"
@@ -152,7 +155,10 @@ export default function HomePageD() {
             </div>
 
             {/* Padel */}
-            <div className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5">
+            <div 
+              onClick={() => nav('/rezerva?sport=PADEL')}
+              className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5 cursor-pointer active:scale-95 transition-all"
+            >
               <img
                 src="/img-padel-court.jpg"
                 alt="Padel Star Arena"
@@ -166,7 +172,10 @@ export default function HomePageD() {
             </div>
 
             {/* Baschet */}
-            <div className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5">
+            <div 
+              onClick={() => nav('/rezerva?sport=BASKETBALL')}
+              className="rounded-[2.5rem] overflow-hidden aspect-[4/5] relative group shadow-2xl border border-white/5 cursor-pointer active:scale-95 transition-all"
+            >
               <img
                 src="/img-basketball.jpg"
                 alt="Terenuri Baschet Star Arena"

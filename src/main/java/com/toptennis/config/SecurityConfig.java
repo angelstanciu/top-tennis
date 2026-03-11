@@ -25,7 +25,9 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .anyRequest().permitAll()
             )
-            .httpBasic(Customizer.withDefaults())
+            .httpBasic(basic -> basic.authenticationEntryPoint(
+                (request, response, authException) -> response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+            ))
             .formLogin(Customizer.withDefaults());
         return http.build();
     }

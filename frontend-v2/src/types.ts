@@ -12,6 +12,7 @@ export interface CourtDto {
   pricePerHour: number
   openTime: string
   closeTime: string
+  active: boolean
 }
 
 export interface AvailabilityTimeRange {

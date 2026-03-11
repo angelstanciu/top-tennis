@@ -16,5 +16,6 @@ public class CourtDto {
     public BigDecimal pricePerHour;
     public LocalTime openTime;
     public LocalTime closeTime;
+    public boolean active;
 }
 

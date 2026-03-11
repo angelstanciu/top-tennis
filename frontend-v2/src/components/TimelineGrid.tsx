@@ -47,6 +47,7 @@ type Props = {
   clearSignal?: number
   flat?: boolean
   scrollContainerRef?: React.RefObject<HTMLDivElement>
+  onAdminClick?: (courtId: number, startTime: string, endTime: string, booking?: any) => void
 }
 
 function sportLabel(s: string) {
@@ -76,19 +77,30 @@ type BookingBlock = {
 }
 
 
-function computeBookingBlocks(booked: { start: string, end: string, customerName?: string }[], tickIndex: Map<string, number>): BookingBlock[] {
+function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string }[], tickIndex: Map<string, number>): BookingBlock[] {
   const blocks: BookingBlock[] = []
+  const maxIdx = tickIndex.get('24:00') || 48
   for (const b of booked) {
     const startIndex = tickIndex.get(b.start)
-    const endIndex = tickIndex.get(b.end)
+    let endIndex = tickIndex.get(b.end)
+    
     if (startIndex === undefined || endIndex === undefined) continue
-    if (endIndex <= startIndex) continue
+    
+    if (endIndex <= startIndex) {
+      // Over midnight booking - show until 24:00 on current day
+      endIndex = maxIdx
+    }
+
+    // If blocked, use the note as the primary label if available
+    const isBlocked = b.status === 'BLOCKED'
+    const label = isBlocked && b.note ? b.note : getDisplayName(b as any)
+
     blocks.push({
       startIndex,
       endIndex,
-      label: getDisplayName(b as any),
+      label,
       timeRange: `${b.start} - ${b.end}`,
-      status: (b as any).status,
+      status: b.status,
     })
   }
   blocks.sort((a, b) => a.startIndex - b.startIndex)
@@ -110,7 +122,9 @@ function BookingLabelBlock({
   vertical?: boolean
   isBlocked?: boolean
 }) {
-  const displayText = isBlocked ? Array(10).fill(`${label}`).join('   •   ') : label
+  const repeatCount = vertical ? 1 : Math.max(1, Math.floor((style?.width as number || 0) / 100))
+  // For long blocks, we want the text to appear periodically
+  const displayText = isBlocked ? Array(repeatCount).fill(`${label}`).join('   •   ') : label
 
   return (
     <div
@@ -148,7 +162,7 @@ function BookingLabelBlock({
   )
 }
 
-export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef }: Props) {
+export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef, onAdminClick }: Props) {
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
@@ -260,8 +274,23 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return t >= selStart
   }
 
-  function leavesThirtyMinuteGap(booked: {start:string,end:string}[], selStart: string, selEnd: string) {
-    // Gap rule disabled: always allow
+  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string) {
+    const active = booked.filter(b => b.status !== 'CANCELLED')
+    
+    // Check gap BEFORE
+    const gap30Before = sub30(selStart)
+    const hasBookingAtStart = active.some(b => b.end === selStart)
+    const hasBookingEnding30MinBefore = active.some(b => b.end === gap30Before)
+    
+    if (hasBookingEnding30MinBefore && !hasBookingAtStart) return true
+    
+    // Check gap AFTER
+    const gap30After = add30(selEnd)
+    const hasBookingAtEnd = active.some(b => b.start === selEnd)
+    const hasBookingStarting30MinAfter = active.some(b => b.start === gap30After)
+    
+    if (hasBookingStarting30MinAfter && !hasBookingAtEnd) return true
+    
     return false
   }
 
@@ -499,10 +528,10 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                   const pastWidth = pastCount * colWidth
                   return (
                     <div
-                      className="absolute top-0 left-0 bottom-0 pointer-events-none z-10"
+                      className="absolute top-0 left-0 bottom-0 pointer-events-none z-20"
                       style={{
                         width: pastWidth,
-                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.25) 0, rgba(148,163,184,0.25) 8px, transparent 8px, transparent 16px)',
+                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 8px, transparent 8px, transparent 16px)',
                       }}
                     />
                   )
@@ -533,9 +562,14 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                           return (
                             <div
                               key={`${row.court.id}-${t}`}
-                              className={`h-full border-t border-l border-slate-200/60 ${stateClass} ${disabledClass}`}
+                              className={`h-full border-t border-l border-slate-200/60 ${stateClass} ${disabledClass} ${onAdminClick && isBooked ? 'ring-inset hover:ring-2 hover:ring-rose-400' : ''}`}
                               onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'OCUPAT' : (isPast ? 'INDISPONIBIL' : 'LIBER')}`)}
                               onClick={(e) => {
+                                if (onAdminClick && isBooked) {
+                                  const b = booked.find(br => !(br.end <= t || br.start >= next))
+                                  onAdminClick(row.court.id, t, next, b)
+                                  return
+                                }
                                 if (!clickable) return
                                 if (selCourtId && selStart && selEnd) {
                                   setSelCourtId(null); setSelStart(null); setSelEnd(null)
@@ -570,7 +604,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                             return (
                               <BookingLabelBlock
                                 key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                                className={`absolute inset-y-0 flex items-center rounded-sm ${isBlock ? 'bg-slate-700/80 shadow-inner' : 'bg-rose-500/80'}`}
+                                className={`absolute inset-y-0 flex items-center rounded-sm ${isBlock ? 'bg-slate-700/80 shadow-inner' : 'bg-rose-500/20'}`}
                                 style={{
                                   width: (block.endIndex - block.startIndex) * colWidth - 2,
                                   left: block.startIndex * colWidth + 1,
@@ -609,8 +643,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col`}>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
           {/* Header: corner cell with diagonal split + court names */}
-          <div className="grid sticky top-0 z-20" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
-            <div className="px-2 py-2 text-xs font-semibold bg-white text-center">Ora</div>
+          <div className="grid sticky top-0 z-30" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, minmax(0,1fr))` }}>
+            <div className="px-2 py-2 text-xs font-semibold bg-white text-center shadow-sm">Ora</div>
             {data.map(row => (
               <div key={`head-${row.court.id}`} className="px-0.5 py-1.5 text-[11px] font-bold bg-white border-l border-slate-300 text-center leading-tight flex flex-col items-center justify-center gap-0.5">
                 <span className="text-slate-800">{row.court.name}</span>
@@ -624,14 +658,14 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           <div className="relative">
             {pastRows > 0 && (
               <div
-                className="absolute z-10"
+                className="absolute z-20"
                 style={{
                   top: 0,
                   left: timeColWidth,
                   right: 0,
                   // Subtract 1px to avoid bleeding over the next row border
                   height: Math.max(0, pastRows * rowHeight - 1),
-                  backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)',
+                  backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.4) 0, rgba(148,163,184,0.4) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)',
                   pointerEvents: 'none',
                 }}
               />
@@ -649,7 +683,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                     {blocksByCourt[colIndex].map((block, blockIndex) => (
                       <BookingLabelBlock
                         key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                        className="bg-rose-500/90 rounded-sm"
+                        className="bg-rose-500/20 rounded-sm"
                         style={{
                           gridColumn: colIndex + 2,
                           gridRow: `${block.startIndex + 1} / ${block.endIndex + 1}`,
@@ -683,13 +717,18 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                     else if (isBooked || isBlocked) stateClass = 'bg-rose-200'
                     else if (isPastRow) stateClass = 'bg-slate-100'
                     else stateClass = 'bg-emerald-50 hover:bg-emerald-100 transition-colors'
-                    const disabledClass = unavailable ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+                    const disabledClass = unavailable && !onAdminClick ? 'cursor-not-allowed pointer-events-none' : (unavailable ? 'cursor-not-allowed' : 'cursor-pointer')
                     return (
                       <div
                         key={`cell-${row.court.id}-${t}`}
                         className={`h-10 border-t border-l border-slate-300 ${stateClass} ${disabledClass}`}
                         onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : 'LIBER'}`)}
                         onClick={(e) => {
+                          if (onAdminClick && isBooked) {
+                            const b = bookedRanges.find(br => !(br.end <= t || br.start >= next))
+                            onAdminClick(row.court.id, t, next, b)
+                            return
+                          }
                           if (!clickable) return
                           // If any selection exists, clear it and require a new click to start fresh
                           if (selCourtId && selStart && selEnd) {

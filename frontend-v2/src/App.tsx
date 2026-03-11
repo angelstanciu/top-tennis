@@ -390,12 +390,24 @@ export default function App() {
     FOOTVOLLEY: '/soccer-background.png',
     TABLE_TENNIS: '/ping-pong-background.png',
   }
-  const pageBgStyle = backgroundBySport[sport]
-    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
-    : undefined
+  const bg = backgroundBySport[sport]
 
   return (
-    <div className="min-h-screen w-full" style={pageBgStyle}><div className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-1.5">
+    <div className="min-h-dvh relative font-sans text-slate-100 selection:bg-emerald-500 selection:text-white">
+      {/* Fixed Background Layer */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none transition-all duration-700"
+        style={{ 
+          backgroundImage: bg ? `url('${bg}')` : 'none', 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center', 
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-1.5 relative z-10">
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">

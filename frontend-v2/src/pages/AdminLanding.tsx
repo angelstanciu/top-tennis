@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import AdminHeader from '../components/AdminHeader'
-import { CalendarDays, Megaphone, ShieldBan, RepeatIcon } from 'lucide-react'
+import { CalendarDays, Megaphone, ShieldBan, RepeatIcon, TrendingUp, DollarSign } from 'lucide-react'
+import { fetchAvailability } from '../api'
 
 export default function AdminLanding() {
   const navigate = useNavigate()
@@ -16,8 +17,32 @@ export default function AdminLanding() {
     } catch { return false }
   })()
 
+  const [globalRevenue, setGlobalRevenue] = React.useState<number | null>(null)
+
   useEffect(() => {
-    if (!isLogged) navigate('/login', { replace: true })
+    if (!isLogged) {
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const nowStr = new Date().toTimeString().slice(0, 5)
+
+    fetchAvailability(today)
+      .then(res => {
+        let total = 0
+        res.forEach(court => {
+          court.booked.forEach(b => {
+             const status = (b as any).status
+             const endTime = (b as any).endTime
+             if ((status === 'CONFIRMED' || status === 'FINISHED' || !status) && endTime <= nowStr) {
+                total += Number((b as any).price || 0)
+             }
+          })
+        })
+        setGlobalRevenue(total)
+      })
+      .catch(() => setGlobalRevenue(0))
   }, [isLogged, navigate])
 
   return (
@@ -27,9 +52,24 @@ export default function AdminLanding() {
           <AdminHeader active="landing" />
           
           <div className="max-w-5xl mx-auto px-4 mt-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-black text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Panou Administrator</h1>
-              <p className="text-slate-500 mt-2">Gestionează rezervările, blochează terenuri și creează abonamente recurente.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div>
+                <h1 className="text-4xl font-black text-slate-800 tracking-tighter" style={{ fontFamily: 'Outfit, sans-serif' }}>Panou Administrator</h1>
+                <p className="text-slate-500 mt-2 font-medium">Gestionează rezervările, blochează terenuri și creează abonamente.</p>
+              </div>
+              
+              {/* Global Revenue Quick Stat */}
+              <div className="bg-white rounded-[2rem] p-6 border border-sky-100 shadow-xl shadow-sky-900/5 flex items-center gap-5 min-w-[280px]">
+                <div className="bg-emerald-500 text-white p-4 rounded-3xl shadow-lg shadow-emerald-500/30">
+                  <TrendingUp className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Încasat Azi</div>
+                  <div className="text-3xl font-black text-slate-800 tracking-tight">
+                    {globalRevenue === null ? '...' : globalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-300 italic">RON</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

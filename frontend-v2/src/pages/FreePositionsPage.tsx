@@ -277,7 +277,14 @@ export default function FreePositionsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <div className="text-xs text-slate-600 mb-1">Sport</div>
-            <SportPicker value={sport} onChange={(v) => { setSport(v as SportType); setCourtId('') }} disabledSports={disabledSports} />
+            <select className="border rounded px-2 py-1.5 w-full bg-white h-9" value={sport} onChange={e => { setSport(e.target.value as SportType); setCourtId(''); }}>
+              <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
+              <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
+              <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
+              <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Fotbal-Tenis</option>
+              <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
+              <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
+            </select>
           </div>
           <div>
             <div className="text-xs text-slate-600 mb-1">Teren</div>

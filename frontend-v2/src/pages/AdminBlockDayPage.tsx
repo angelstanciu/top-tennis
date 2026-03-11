@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CourtDto, SportType } from '../types'
 import { fetchActiveCourts, adminBlockSlot } from '../api'
 import AdminHeader from '../components/AdminHeader'
+import CalendarDemo from '../components/ui/calendar-1'
 
 function generateTimeOptions(isEnd = false) {
   const opts = []
@@ -87,9 +88,20 @@ export default function AdminBlockDayPage() {
       // Reset after 3s
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
-      let errorMsg = err.message || 'A apărut o eroare la blocarea terenului.'
+      let errorMsg = 'A apărut o eroare la blocarea terenului.'
+      
+      try {
+        // Try to parse if it's a JSON string from the server
+        const parsed = JSON.parse(err.message)
+        errorMsg = parsed.message || errorMsg
+      } catch {
+        errorMsg = err.message || errorMsg
+      }
+
       if (errorMsg.includes('multiplu de 30')) {
-        errorMsg = 'Eroare sistem: Orele selectate trebuie să fie divizibile cu 30 de minute (ex: 12:00, 12:30). Re-selectați cu atenție intervalul!'
+        errorMsg = 'Eroare: Orele trebuie să fie din 30 în 30 de minute (ex: 12:00, 12:30).'
+      } else if (errorMsg.toLowerCase().includes('overlap') || errorMsg.toLowerCase().includes('conflict') || errorMsg.toLowerCase().includes('suprapune')) {
+        errorMsg = 'Conflict: Acest interval se suprapune cu o rezervare existentă. Verificați calendarul și eliberați intervalul dorit înainte de a-l bloca.'
       }
       setError(errorMsg)
     } finally {
@@ -151,29 +163,26 @@ export default function AdminBlockDayPage() {
                     >
                       {'\u2039'}
                     </button>
-                    <div className="relative flex-1 flex items-center justify-center">
-                      <div className="font-semibold text-slate-800">
-                        {formatDateDisplay(date)}
+                    <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
+                      <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4">
+                        <div className="font-semibold text-slate-800 text-center select-none truncate group-hover:text-emerald-700 transition-colors">
+                          {formatDateDisplay(date)}
+                        </div>
+                        <button
+                          type="button"
+                          className="absolute right-3 p-1 text-slate-400 pointer-events-none z-10 group-hover:text-emerald-500 transition-colors"
+                          aria-label="Deschide calendarul"
+                          title="Deschide calendarul"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                          </svg>
+                        </button>
                       </div>
-                      <input
-                        ref={dateInputRef}
-                        className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
-                        type="date"
-                        value={date}
-                        onChange={e => setDate(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 p-1 text-slate-400 hover:text-rose-500 focus:outline-none pointer-events-none"
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                          <line x1="16" y1="2" x2="16" y2="6"></line>
-                          <line x1="8" y1="2" x2="8" y2="6"></line>
-                          <line x1="3" y1="10" x2="21" y2="10"></line>
-                        </svg>
-                      </button>
-                    </div>
+                    </CalendarDemo>
                     <button
                       type="button"
                       className="px-4 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-l border-slate-200 focus:outline-none transition-colors"

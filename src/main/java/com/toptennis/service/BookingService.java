@@ -197,6 +197,53 @@ public class BookingService {
             throw new IllegalArgumentException("Durata minimă a rezervării este de 1 oră.");
         }
         // No opening hours constraint: base is open non-stop
+        validateGaps(court, date, start, end);
+    }
+
+    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end) {
+        List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        
+        // Filter only active/blocked ones for gap analysis
+        List<Booking> active = dayBookings.stream()
+                .filter(b -> activeStatuses.contains(b.getStatus()))
+                .toList();
+        
+        if (active.isEmpty()) return;
+
+        // Check gap BEFORE the new booking
+        LocalTime beforeStart = start.minusMinutes(30);
+        boolean hasBookingAtStart = false;
+        boolean hasBookingEnding30MinBefore = false;
+
+        for (Booking b : active) {
+            if (b.getEndTime().equals(start)) hasBookingAtStart = true;
+            if (b.getEndTime().equals(beforeStart)) hasBookingEnding30MinBefore = true;
+        }
+
+        if (hasBookingEnding30MinBefore && !hasBookingAtStart) {
+            throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent (ex: de la " + beforeStart + ") sau să lași un gol de cel puțin o oră.");
+        }
+
+        // Check gap AFTER the new booking
+        LocalTime afterEnd = end.plusMinutes(30);
+        // Handle end-of-day special case if needed (23:59 represents 24:00)
+        if (end.getHour() == 23 && end.getMinute() == 59) {
+            // No gap check after midnight for now, as it involves next day
+            return;
+        }
+
+        boolean hasBookingAtEnd = false;
+        boolean hasBookingStarting30MinAfter = false;
+
+        for (Booking b : active) {
+            if (b.getStartTime().equals(end)) hasBookingAtEnd = true;
+            if (b.getStartTime().equals(afterEnd)) hasBookingStarting30MinAfter = true;
+        }
+
+        if (hasBookingStarting30MinAfter && !hasBookingAtEnd) {
+            throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent sau să lași un gol de cel puțin o oră.");
+        }
     }
 
     private String normalizePhone(String phone) {

@@ -1,9 +1,9 @@
 "use client";
 import * as React from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Calendar } from "../../components/ui/calendar";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+import { cn } from "../../lib/utils";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 

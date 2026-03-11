@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 export const LampContainer = ({
   children,
@@ -13,10 +13,19 @@ export const LampContainer = ({
   return (
     <div
       className={cn(
-        "relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-slate-950 w-full z-0",
+        "relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-slate-950 w-full z-0",
         className
       )}
     >
+      {/* Background Image Layer */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <img 
+          src="/sports_hero_bg_dark_1773229339592.png" 
+          alt="Sports Hero Background" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/60 to-slate-950" />
+      </div>
       <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0">
         <motion.div
           initial={{ opacity: 0.5, width: "15rem" }}
