@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp } from '../api';
+import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp, loginWithGoogle } from '../api';
 import { PlayerUser } from '../types';
+import { GoogleLogin } from '@react-oauth/google';
 import { Chrome, Facebook, Smartphone, Lock, User, ArrowRight, ChevronLeft, Mail } from 'lucide-react';
 
 export default function PlayerAuthPage() {
@@ -294,9 +295,38 @@ export default function PlayerAuthPage() {
                   </button>
                 </div>
 
-                <div className="relative flex items-center py-1 lg:py-2">
+                {/* Google Login Placeholder Button (Styled to match Arena) */}
+                <div className="flex flex-col items-center justify-center py-2">
+                   <GoogleLogin
+                     onSuccess={async (credentialResponse: any) => {
+                       if (credentialResponse.credential) {
+                         setLoading(true);
+                         try {
+                           const { user, token } = await loginWithGoogle(credentialResponse.credential);
+                           handleSuccess(user, token);
+                           confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#84cc16', '#22c55e', '#ffffff'] });
+                           nav('/profile');
+                         } catch (err: any) {
+                           setError(err.message || 'Eroare la autentificarea cu Google.');
+                         } finally {
+                           setLoading(false);
+                         }
+                       }
+                     }}
+                     onError={() => {
+                       setError('Eroare la autentificarea cu Google.');
+                     }}
+                     theme="filled_black"
+                     shape="pill"
+                     size="large"
+                     text="continue_with"
+                     width="100%"
+                   />
+                </div>
+
+                <div className="flex items-center gap-4 py-2">
                   <div className="flex-grow border-t border-white/5"></div>
-                  <span className="flex-shrink mx-3 lg:mx-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">SAU</span>
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">sau cu telefon</span>
                   <div className="flex-grow border-t border-white/5"></div>
                 </div>
 

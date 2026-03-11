@@ -17,13 +17,13 @@ public class PlayerUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "phone_number", nullable = false, unique = true)
+    @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "email")
+    @Column(name = "email", unique = true)
     private String email;
 
     @Enumerated(EnumType.STRING)

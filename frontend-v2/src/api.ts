@@ -187,6 +187,19 @@ export async function registerPlayer(phone: string, password: string, fullName: 
   return res.json()
 }
 
+export async function loginWithGoogle(credential: string): Promise<{ token: string, user: PlayerUser }> {
+  const res = await fetch(`${BASE_URL}/player/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential }),
+  })
+  if (!res.ok) {
+    const msg = await res.text()
+    throw new Error(msg || 'Eroare la autentificare cu Google.')
+  }
+  return res.json()
+}
+
 export async function fetchPlayerMe(token: string): Promise<PlayerUser> {
   const res = await fetch(`${BASE_URL}/player/me`, {
     headers: {

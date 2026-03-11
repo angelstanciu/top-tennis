@@ -39,6 +39,10 @@ reminder:
   secondBatchIntervals: 00:00-09:59
   mockSms: false
 
+google:
+  auth:
+    client-id: ${GOOGLE_CLIENT_ID:617835105268-m8h07g94gkvsn669r170n09vrt6688ee.apps.googleusercontent.com}
+
 server:
   port: 8080
   servlet:
