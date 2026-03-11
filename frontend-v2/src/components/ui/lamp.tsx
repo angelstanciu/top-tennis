@@ -20,7 +20,7 @@ export const LampContainer = ({
       {/* Background Image Layer */}
       <div className="absolute inset-0 z-0 opacity-40">
         <img 
-          src="/sports_hero_bg_dark_1773229339592.png" 
+          src="/sports_hero_bg_dark.png" 
           alt="Sports Hero Background" 
           className="w-full h-full object-cover"
         />

@@ -80,28 +80,50 @@ type BookingBlock = {
 function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string }[], tickIndex: Map<string, number>): BookingBlock[] {
   const blocks: BookingBlock[] = []
   const maxIdx = tickIndex.get('24:00') || 48
+  const minIdx = tickIndex.get('00:00') || 0
+
   for (const b of booked) {
+    const normalizedEnd = (b.end === '23:59' || b.end === '24:00') ? '24:00' : b.end
     const startIndex = tickIndex.get(b.start)
-    let endIndex = tickIndex.get(b.end)
+    let endIndex = tickIndex.get(normalizedEnd)
     
     if (startIndex === undefined || endIndex === undefined) continue
     
-    if (endIndex <= startIndex) {
-      // Over midnight booking - show until 24:00 on current day
-      endIndex = maxIdx
-    }
-
     // If blocked, use the note as the primary label if available
     const isBlocked = b.status === 'BLOCKED'
     const label = isBlocked && b.note ? b.note : getDisplayName(b as any)
 
-    blocks.push({
-      startIndex,
-      endIndex,
-      label,
-      timeRange: `${b.start} - ${b.end}`,
-      status: b.status,
-    })
+    if (endIndex <= startIndex && normalizedEnd !== '00:00' && normalizedEnd !== '24:00') {
+      // Over midnight booking - create TWO blocks
+      // 1. From start to midnight
+      blocks.push({
+        startIndex,
+        endIndex: maxIdx,
+        label,
+        timeRange: `${b.start} - ${b.end}`,
+        status: b.status,
+      })
+      // 2. From midnight to end
+      blocks.push({
+        startIndex: minIdx,
+        endIndex,
+        label,
+        timeRange: `${b.start} - ${b.end}`,
+        status: b.status,
+      })
+    } else {
+      // Normal booking
+      let effectiveEnd = endIndex
+      if (endIndex <= startIndex) effectiveEnd = maxIdx
+
+      blocks.push({
+        startIndex,
+        endIndex: effectiveEnd,
+        label,
+        timeRange: `${b.start} - ${b.end}`,
+        status: b.status,
+      })
+    }
   }
   blocks.sort((a, b) => a.startIndex - b.startIndex)
   return blocks
