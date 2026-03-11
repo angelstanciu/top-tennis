@@ -1,0 +1,9 @@
+CREATE TABLE player_users (
+    id SERIAL PRIMARY KEY,
+    phone_number VARCHAR(20) NOT NULL UNIQUE,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
+    preferred_sport VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

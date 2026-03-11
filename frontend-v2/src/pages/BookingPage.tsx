@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
-import type { CourtDto } from '../types'
+import { CourtDto, calculateGranularPrice } from '../types'
 import fastCat from '../assets/fast-cat.svg'
 
 function formatDateDisplay(iso?: string) {
@@ -17,10 +17,34 @@ export default function BookingPage() {
   const { courtId, date, startTime, endTime } = useParams()
   const [searchParams] = useSearchParams()
   const sport = searchParams.get('sport') || 'TENNIS'
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
+  const [name, setName] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('playerData') || '{}').fullName || '' } catch { return '' }
+  })
+  const [phone, setPhone] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('playerData') || '{}').phoneNumber || '' } catch { return '' }
+  })
+  const [email, setEmail] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('playerData') || '{}').email || '' } catch { return '' }
+  })
+  const isLoggedUser = useMemo(() => {
+    try { return !!JSON.parse(localStorage.getItem('playerData') || '{}').phoneNumber } catch { return false }
+  }, [])
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    function syncAuth() {
+      try {
+        const data = JSON.parse(localStorage.getItem('playerData') || '{}')
+        if (data.phoneNumber) {
+          setName(data.fullName || '')
+          setPhone(data.phoneNumber || '')
+          setEmail(data.email || '')
+        }
+      } catch {}
+    }
+    window.addEventListener('auth-change', syncAuth)
+    return () => window.removeEventListener('auth-change', syncAuth)
+  }, [])
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const [successVisible, setSuccessVisible] = useState(false)
@@ -85,14 +109,15 @@ export default function BookingPage() {
   const totalPrice = useMemo(() => {
     try {
       if (!court || !startTime || !endTime) return null
-      const normalizedEnd = endTime === '24:00' ? '23:59' : endTime
-      const mins = minutesBetween(startTime, normalizedEnd)
-      if (mins <= 0) return null
-      const hours = mins / 60
-      const amount = (court.pricePerHour as unknown as number) * hours
-      return amount
+      return calculateGranularPrice(court.sportType, court.indoor, startTime, endTime, date || '')
     } catch { return null }
-  }, [court, startTime, endTime])
+  }, [court, startTime, endTime, date])
+
+  function timeToMinutes(t: string) {
+    if (t === '24:00' || t === '23:59') return 24 * 60
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
 
   const courtDetailSuffix = useMemo(() => {
     if (!court) return ''
@@ -200,12 +225,13 @@ export default function BookingPage() {
                 <input
                   ref={phoneInputRef}
                   type="tel"
-                  className="w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 transition-all font-semibold text-slate-800"
+                  className={`w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none ${isLoggedUser ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10'} transition-all font-semibold text-slate-800`}
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  onInput={(e) => validatePhone(e.currentTarget)}
+                  onChange={e => !isLoggedUser && setPhone(e.target.value)}
+                  onInput={(e) => !isLoggedUser && validatePhone(e.currentTarget)}
                   placeholder="07XX XXX XXX"
                   required
+                  readOnly={isLoggedUser}
                 />
               </div>
             </div>

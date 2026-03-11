@@ -43,7 +43,21 @@ export default function AdminLanding() {
         setGlobalRevenue(total)
       })
       .catch(() => setGlobalRevenue(0))
+
+    if (isLogged) {
+        fetch('/api/admin/subscriptions/requests', {
+            headers: { 'Authorization': `Basic ${localStorage.getItem('adminAuth')}` }
+        })
+        .then(r => r.json())
+        .then((data: any[]) => {
+            const pending = data.filter(r => r.status === 'PENDING').length
+            setPendingSubsCount(pending)
+        })
+        .catch(() => {})
+    }
   }, [isLogged, navigate])
+
+  const [pendingSubsCount, setPendingSubsCount] = React.useState(0)
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -115,6 +129,24 @@ export default function AdminLanding() {
                 <div>
                   <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-amber-600 transition-colors">Abonamente Săptămânale</h3>
                   <p className="text-sm text-slate-500 leading-relaxed">Adaugă clienți "de casă". Rezervă automat aceeași oră pentru un anumit număr de săptămâni consecutive.</p>
+                </div>
+              </Link>
+
+              {/* Card 5: Cereri Abonamente */}
+              <Link to="/admin/abonamente" className="group bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all flex items-start gap-5 cursor-pointer">
+                <div className="bg-indigo-50 text-indigo-600 p-4 rounded-2xl group-hover:scale-110 transition-transform relative">
+                   {pendingSubsCount > 0 && (
+                     <div className="absolute -top-2 -right-2 min-w-[20px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full border-2 border-white flex items-center justify-center px-1 animate-in zoom-in">
+                        {pendingSubsCount}
+                     </div>
+                   )}
+                   <TrendingUp className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors flex items-center gap-2">
+                    Cereri Abonamente
+                  </h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">Vezi cine dorește abonament nou. Gestionează cererile, sună clienții și aprobă programul dorit.</p>
                 </div>
               </Link>
 

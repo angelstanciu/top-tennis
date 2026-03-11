@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
  
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
+import com.toptennis.repository.PlayerUserRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,13 +24,15 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final CourtRepository courtRepository;
     private final SmsService smsService;
+    private final PlayerUserRepository playerUserRepository;
     private final ThreadPoolTaskExecutor taskExecutor;
  
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, PlayerUserRepository playerUserRepository, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
         this.smsService = smsService;
+        this.playerUserRepository = playerUserRepository;
         this.taskExecutor = taskExecutor;
     }
 
@@ -58,6 +61,14 @@ public class BookingService {
             b.setUpdatedAt(LocalDateTime.now());
             b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
             b.setMidnightBooking(false);
+            
+            String normPhone = normalizePhone(phone);
+            playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                b.setPlayerUser(pu);
+                pu.setMatchesPlayed(pu.getMatchesPlayed() + 1);
+                playerUserRepository.save(pu);
+            });
+
             Booking saved = bookingRepository.save(b);
             taskExecutor.execute(() -> smsService.sendReservationNotifications(saved));
             return saved;
@@ -86,8 +97,6 @@ public class BookingService {
             b1.setUpdatedAt(LocalDateTime.now());
             b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
             b1.setMidnightBooking(true);
-            Booking saved1 = bookingRepository.save(b1);
-
             Booking b2 = new Booking();
             b2.setCourt(court);
             b2.setBookingDate(nextDate);
@@ -101,6 +110,16 @@ public class BookingService {
             b2.setUpdatedAt(LocalDateTime.now());
             b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.of(0,0), end));
             b2.setMidnightBooking(true);
+
+            String normPhone = normalizePhone(phone);
+            playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                b1.setPlayerUser(pu);
+                b2.setPlayerUser(pu);
+                pu.setMatchesPlayed(pu.getMatchesPlayed() + 1);
+                playerUserRepository.save(pu);
+            });
+
+            Booking saved1 = bookingRepository.save(b1);
             Booking saved2 = bookingRepository.save(b2);
 
             taskExecutor.execute(() -> smsService.sendReservationNotificationsCrossMidnight(saved1, saved2));
@@ -111,6 +130,11 @@ public class BookingService {
     @Transactional(readOnly = true)
     public Booking get(Long id) {
         return bookingRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Rezervarea nu a fost găsită: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Booking> getPlayerHistory(Integer userId) {
+        return bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId);
     }
 
     @Transactional(readOnly = true)

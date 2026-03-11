@@ -74,6 +74,9 @@ public class AtSerialClient {
     }
 
     private void ensureOpen() {
+        if ("mock".equalsIgnoreCase(props.getMode())) {
+            return;
+        }
         if (port != null && port.isOpen()) {
             return;
         }

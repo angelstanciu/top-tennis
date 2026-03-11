@@ -98,6 +98,7 @@ export default function App() {
   const [selEnd, setSelEnd] = useState<string | null>(null)
   const [selValid, setSelValid] = useState<boolean>(false)
   const [selGapInvalid, setSelGapInvalid] = useState<boolean>(false)
+  const [player, setPlayer] = useState<any>(null)
   const [gapToastVisible, setGapToastVisible] = useState<boolean>(false)
   const [gapToastFading, setGapToastFading] = useState<boolean>(false)
   const gapToastShowTimer = React.useRef<any>(null)
@@ -123,10 +124,21 @@ export default function App() {
   }, [activeSports])
 
   useEffect(() => {
-    try {
-      const s = localStorage.getItem('lastSport') as SportType | null
-      if (s) setSport(s)
-    } catch {}
+    function syncAuth() {
+      const data = localStorage.getItem('playerData')
+      if (data) {
+        try { setPlayer(JSON.parse(data)) } catch { setPlayer(null) }
+      } else {
+        setPlayer(null)
+      }
+    }
+    syncAuth()
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('auth-change', syncAuth)
+    return () => {
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('auth-change', syncAuth)
+    }
   }, [])
 
   useEffect(() => {
@@ -134,33 +146,51 @@ export default function App() {
     fetchAvailability(date, sport)
       .then(originalData => {
         // Apply seasonal rules, price overrides and sort by availability
-        const processed = originalData.map(row => {
+        const filteredData = originalData.filter(row => {
+          const isPadel = row.court.sportType === 'PADEL'
+          const courtName = row.court.name.trim()
+          // Padel Teren 4 is removed as per user request
+          if (isPadel && courtName === '4') return false
+          // Support only 1 Basketball court as per user request (Round 21.5)
+          if (row.court.sportType === 'BASKETBALL' && courtName !== '1') return false
+          return true
+        })
+
+        const processed = filteredData.map(row => {
           const newRow = { ...row }
           const isPadel = row.court.sportType === 'PADEL'
           const isBasketball = row.court.sportType === 'BASKETBALL'
           const isTennis = row.court.sportType === 'TENNIS'
+          const isFootVolley = row.court.sportType === 'FOOTVOLLEY'
+          const isTableTennis = row.court.sportType === 'TABLE_TENNIS'
+          const isVolley = row.court.sportType === 'BEACH_VOLLEY'
           const isOutdoor = !row.court.indoor
-          const isBeforeApril15 = date < '2026-04-15'
 
-          // Price overrides for Padel
-          if (isPadel) {
-             if (row.court.indoor) {
-                newRow.court.pricePerHour = 150
-             } else {
-                newRow.court.pricePerHour = 80
-             }
+          // Pricing logic from Cosmin (WhatsApp 11.03.2026)
+          // Updated Granular Pricing (Match with TimelineGrid & BookingPage)
+          if (isTennis && row.court.indoor) {
+            newRow.court.pricePerHour = 60 // 60 lei oricând
+          } else if (isTennis && isOutdoor) {
+            newRow.court.pricePerHour = 40 // Day price
+          } else if (isFootVolley) {
+            newRow.court.pricePerHour = 75 // Day price
+          } else if (isPadel && isOutdoor) {
+            newRow.court.pricePerHour = 80 // Day price
+          } else if (isPadel && row.court.indoor) {
+            // After April 1st logic handled in dynamic components
+            newRow.court.pricePerHour = 150 
+          } else if (isBasketball) {
+            newRow.court.pricePerHour = 80
+          } else if (isTableTennis) {
+            newRow.court.pricePerHour = 35
+          } else if (isVolley) {
+            newRow.court.pricePerHour = 100
           }
 
-          // Seasonal unavailability (until April 15)
+          // Seasonal unavailability
           let forceUnavailable = false
-          if (isBeforeApril15) {
-            if (isOutdoor && (isTennis || isBasketball)) {
-              forceUnavailable = true
-            } else if (isOutdoor && !isPadel) {
-              // Alte sporturi outdoor (volei, etc)
-              forceUnavailable = true
-            }
-            // Padel: gestionat mai jos impreuna cu location tagging
+          if (isOutdoor && isTennis && date < '2026-04-01') {
+             forceUnavailable = true
           }
 
           if (forceUnavailable) {
@@ -168,27 +198,15 @@ export default function App() {
              newRow.booked = [{ start: '00:00', end: '24:00', status: 'BLOCKED' } as any]
           }
 
-          // PADEL COURTS - reguli stricte per locatie fizica:
-          // Teren 1: Outdoor, Cosmin Top Tenis, ACTIV
-          // Teren 2: Indoor, Star Arena, ACTIV
-          // Teren 3: Indoor, Star Arena, ACTIV
-          // Teren 4: Outdoor, Cosmin Top Tenis, BLOCAT pana pe 15 Aprilie
-          // Teren 5: Outdoor, Cosmin Top Tenis, BLOCAT pana pe 15 Aprilie
+          // PADEL COURTS - Location Tagging
           if (isPadel) {
             const courtName = row.court.name.trim()
-            if (courtName === '4' || courtName === '5') {
-              // BLOCAT sezonier — aplicat direct, independent de forceUnavailable
-              if (isBeforeApril15) {
-                newRow.free = []
-                newRow.booked = [{ start: '00:00', end: '24:00', status: 'BLOCKED' } as any]
-              }
-              newRow.court.notes = 'Cosmin Top Tenis'
+            if (courtName === '5') {
+              newRow.court.notes = 'Baza Cosmin Top Tenis'
             } else if (courtName === '2' || courtName === '3') {
-              // Indoor Star Arena - ACTIV + tag locatie diferita
               newRow.court.notes = '📍 Star Arena (Altă Locație)'
             } else {
-              // Teren 1: Outdoor Cosmin Top Tenis - ACTIV
-              newRow.court.notes = 'Cosmin Top Tenis'
+              newRow.court.notes = 'Baza Cosmin Top Tenis'
             }
           }
 
@@ -445,10 +463,42 @@ export default function App() {
             STAR<span className="text-emerald-400">ARENA</span>
           </span>
         </div>
-        <div className="hidden sm:block">
-          <h2 className="text-xs font-bold text-white uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30">
-            {sport.replace('_', ' ')}
-          </h2>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block">
+            <h2 className="text-xs font-bold text-white uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30">
+              {sport.replace('_', ' ')}
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              if (player) nav('/profile');
+              else nav('/cont');
+            }}
+            className={`p-1.5 rounded-full backdrop-blur-md transition-all active:scale-95 flex items-center justify-center shadow-lg border ${player ? 'bg-amber-500 border-amber-400/50' : 'bg-emerald-500 border-emerald-400/50'} text-white`}
+            aria-label="Contul Meu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {player && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-lime-400 border-2 border-white rounded-full"></span>
+            )}
+          </button>
+          {player && (
+            <button
+               onClick={() => {
+                 localStorage.removeItem('playerToken');
+                 localStorage.removeItem('playerData');
+                 window.dispatchEvent(new Event('auth-change'));
+                 nav('/');
+               }}
+               className="bg-white/10 hover:bg-white/20 text-white/70 hover:text-white p-1.5 rounded-full transition-all flex items-center justify-center"
+               title="Ieșire"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          )}
         </div>
       </nav>
 
@@ -571,9 +621,7 @@ export default function App() {
                 return (
                   <>
                     <div className="-mx-2 flex-1 min-h-0">
-                      <div className="h-full overflow-y-auto" ref={gridScrollRef}>
-                        <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
-                      </div>
+                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
                     </div>
                     {hasSeasonalOutdoor && (
                       <div className="mx-1 mt-1.5 px-4 py-2.5 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-2xl flex items-center gap-3">

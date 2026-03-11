@@ -38,4 +38,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                   @Param("end") LocalTime end);
 
     List<Booking> findByCourtIdAndBookingDateOrderByStartTimeAsc(Long courtId, LocalDate date);
+
+    List<Booking> findByPlayerUserIdOrderByBookingDateDesc(Integer playerUserId);
 }

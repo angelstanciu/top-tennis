@@ -19,5 +19,6 @@ public class BookingDto {
     public LocalDateTime createdAt;
     public LocalDateTime updatedAt;
     public BigDecimal price;
+    public Integer playerMatchesCount;
 }
 

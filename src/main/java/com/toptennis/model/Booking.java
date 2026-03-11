@@ -45,6 +45,13 @@ public class Booking {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
     private boolean isMidnightBooking;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "player_user_id")
+    private PlayerUser playerUser;
+
+    public PlayerUser getPlayerUser() { return playerUser; }
+    public void setPlayerUser(PlayerUser playerUser) { this.playerUser = playerUser; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

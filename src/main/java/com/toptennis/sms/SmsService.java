@@ -31,6 +31,18 @@ public class SmsService {
     }
 
     public SmsSendResult sendSms(String toE164, String text) {
+        if ("mock".equalsIgnoreCase(props.getMode())) {
+            log.info("====== SMS MOCK (MODE=MOCK) ======");
+            log.info("To: {}", toE164);
+            log.info("Text: {}", text);
+            log.info("==================================");
+            SmsSendResult result = new SmsSendResult();
+            result.success = true;
+            result.messageId = "MOCK-" + System.currentTimeMillis();
+            result.transcript = "Mock mode active. No real SMS sent.";
+            return result;
+        }
+
         sendLock.lock();
         StringBuilder transcript = new StringBuilder();
         try {

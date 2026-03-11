@@ -20,6 +20,9 @@ public class BookingMapper {
         dto.createdAt = b.getCreatedAt();
         dto.updatedAt = b.getUpdatedAt();
         dto.price = b.getPrice();
+        if (b.getPlayerUser() != null) {
+            dto.playerMatchesCount = b.getPlayerUser().getMatchesPlayed();
+        }
         return dto;
     }
 }

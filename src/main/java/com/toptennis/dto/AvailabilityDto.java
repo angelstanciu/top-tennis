@@ -12,6 +12,7 @@ public class AvailabilityDto {
         public String end;   // HH:mm
         public String status; // optional label, e.g., BOOKED/BLOCKED
         public String customerName; // optional, only for booked slots
+        public Integer playerMatchesCount;
     }
 }
 

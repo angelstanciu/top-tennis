@@ -6,8 +6,27 @@ import CalendarDemo from '../components/ui/calendar-1'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import TimelineGrid from '../components/TimelineGrid'
 import fastCat from '../assets/fast-cat.svg'
-import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List } from 'lucide-react'
+import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award } from 'lucide-react'
 import { RevenueChart } from '../components/RevenueChart'
+
+// Rank Config (same as ProfilePage)
+const RANKS = [
+  { name: 'Bronze', min: 0, max: 6, color: 'bg-orange-400/10 text-orange-600 border-orange-400/20' },
+  { name: 'Silver', min: 7, max: 19, color: 'bg-slate-200 text-slate-600 border-slate-300' },
+  { name: 'Gold', min: 20, max: 49, color: 'bg-amber-100 text-amber-600 border-amber-200' },
+  { name: 'Diamond', min: 50, max: 99, color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
+  { name: 'Platinum', min: 100, max: Infinity, color: 'bg-purple-100 text-purple-600 border-purple-200' }
+];
+
+function getRankBadge(matches?: number) {
+  if (matches === undefined || matches === null) return null;
+  const r = RANKS.find(rank => matches >= rank.min && matches <= rank.max) || RANKS[0];
+  return (
+    <span className={`text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border ${r.color}`}>
+      {r.name}
+    </span>
+  );
+}
 
 function b64(u: string, p: string) {
   if (typeof window === 'undefined') return ''
@@ -183,9 +202,20 @@ export default function AdminPage() {
   useEffect(() => {
     fetchAvailability(date, sport || undefined)
       .then(res => {
-        const activeOnly = res.filter(r => r.court.active !== false)
-        setAvailabilityCourts(activeOnly.map(r => r.court))
-        setAvailabilityData(activeOnly)
+        let items = res.filter(r => r.court.active !== false)
+        // Task 1: Remove Padel Court 4 if it exists and clean labels
+        items = items.filter(r => !(r.court.sportType === 'PADEL' && r.court.name === '4'))
+        
+        items.forEach(item => {
+          if (item.court.sportType === 'PADEL' && (item.court.name === '2' || item.court.name === '3')) {
+            // Force only Indoor label
+            item.court.indoor = true
+            item.court.notes = undefined
+          }
+        })
+
+        setAvailabilityCourts(items.map(r => r.court))
+        setAvailabilityData(items)
       })
       .catch(() => {
         setAvailabilityCourts([])
@@ -685,7 +715,7 @@ export default function AdminPage() {
                              <span className="font-extrabold text-slate-800">{b.court.name}</span>
                              {b.court?.sportType === 'PADEL' && (
                                 <span className={`text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest ${b.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
-                                   {b.court.indoor ? 'INT' : 'EXT'}
+                                   {b.court.indoor ? 'IN' : 'EXT'}
                                 </span>
                              )}
                           </div>
@@ -694,7 +724,10 @@ export default function AdminPage() {
                         <td className="px-5 py-4 border-b border-slate-50 font-black text-slate-800 tracking-tight">{formatTime(b.startTime)} - {formatTime(b.endTime)}</td>
                         <td className="px-5 py-4 border-b border-slate-50 font-black text-emerald-700 italic">{(b.price as unknown as number)?.toFixed?.(0)} RON</td>
                         <td className="px-5 py-4 border-b border-slate-50 pr-8">
-                          <div className="font-black text-slate-800 uppercase tracking-tight text-[13px]">{b.customerName}</div>
+                          <div className="flex items-center gap-2">
+                             <div className="font-black text-slate-800 uppercase tracking-tight text-[13px]">{b.customerName}</div>
+                             {getRankBadge(b.playerMatchesCount)}
+                          </div>
                           <div className="text-[10px] font-bold text-slate-400 tracking-wider lowercase">tel: {b.customerPhone}{b.customerEmail ? ` • ${b.customerEmail}` : ''}</div>
                         </td>
                         <td className="px-5 py-4 border-b border-slate-50">

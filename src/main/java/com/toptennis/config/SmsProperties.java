@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "sms")
 public class SmsProperties {
+    private String mode = "production";
     private String port = "/dev/ttyUSB0";
     private int baud = 115200;
     private long commandTimeoutMs = 4000;
@@ -13,6 +14,8 @@ public class SmsProperties {
     private long interCommandDelayMs = 100;
     private String clubNumber;
 
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
     public String getPort() { return port; }
     public void setPort(String port) { this.port = port; }
     public int getBaud() { return baud; }

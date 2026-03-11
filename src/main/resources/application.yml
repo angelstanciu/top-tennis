@@ -21,6 +21,7 @@ spring:
     locations: classpath:db/migration
 
 sms:
+  mode: mock
   port: /dev/ttyUSB0
   baud: 115200
   commandTimeoutMs: 8000
