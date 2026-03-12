@@ -19,15 +19,22 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mail:
+    host: smtp.zoho.eu
+    port: 465
+    username: rezervari@star-arena.ro
+    password: qWiZF33Br1rc
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls.enable: false
+          ssl.enable: true
+          socketFactory.port: 465
+          socketFactory.class: javax.net.ssl.SSLSocketFactory
 
 sms:
-  mode: mock
-  port: /dev/ttyUSB0
-  baud: 115200
-  commandTimeoutMs: 8000
-  sendTimeoutMs: 30000
-  interCommandDelayMs: 100
-  clubNumber: "+40742197487"
+
 logging:
   level:
     com.toptennis: INFO

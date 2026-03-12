@@ -25,19 +25,23 @@ public class BookingService {
     private final CourtRepository courtRepository;
     private final SmsService smsService;
     private final PlayerUserRepository playerUserRepository;
+    private final PlayerAuthService playerAuthService;
+    private final EmailService emailService;
     private final ThreadPoolTaskExecutor taskExecutor;
  
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, PlayerUserRepository playerUserRepository, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, PlayerUserRepository playerUserRepository, EmailService emailService, PlayerAuthService playerAuthService, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
         this.smsService = smsService;
         this.playerUserRepository = playerUserRepository;
+        this.emailService = emailService;
+        this.playerAuthService = playerAuthService;
         this.taskExecutor = taskExecutor;
     }
 
     @Transactional
-    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email) {
+    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);
 
@@ -63,14 +67,27 @@ public class BookingService {
             b.setMidnightBooking(false);
             
             String normPhone = normalizePhone(phone);
-            playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
-                b.setPlayerUser(pu);
-                pu.setMatchesPlayed(pu.getMatchesPlayed() + 1);
-                playerUserRepository.save(pu);
-            });
+            PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
+            
+            if (playerFromToken != null) {
+                b.setPlayerUser(playerFromToken);
+                int current = playerFromToken.getMatchesPlayed() != null ? playerFromToken.getMatchesPlayed() : 0;
+                playerFromToken.setMatchesPlayed(current + 1);
+                playerUserRepository.save(playerFromToken);
+            } else {
+                playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                    b.setPlayerUser(pu);
+                    int current = pu.getMatchesPlayed() != null ? pu.getMatchesPlayed() : 0;
+                    pu.setMatchesPlayed(current + 1);
+                    playerUserRepository.save(pu);
+                });
+            }
 
             Booking saved = bookingRepository.save(b);
-            taskExecutor.execute(() -> smsService.sendReservationNotifications(saved));
+            taskExecutor.execute(() -> {
+                smsService.sendReservationNotifications(saved);
+                emailService.sendBookingConfirmation(saved);
+            });
             return saved;
         } else {
             // Cross-midnight: split into two bookings [start, 24:00) and [00:00, end) on next day
@@ -112,17 +129,31 @@ public class BookingService {
             b2.setMidnightBooking(true);
 
             String normPhone = normalizePhone(phone);
-            playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
-                b1.setPlayerUser(pu);
-                b2.setPlayerUser(pu);
-                pu.setMatchesPlayed(pu.getMatchesPlayed() + 1);
-                playerUserRepository.save(pu);
-            });
+            PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
+
+            if (playerFromToken != null) {
+                b1.setPlayerUser(playerFromToken);
+                b2.setPlayerUser(playerFromToken);
+                int current = playerFromToken.getMatchesPlayed() != null ? playerFromToken.getMatchesPlayed() : 0;
+                playerFromToken.setMatchesPlayed(current + 1);
+                playerUserRepository.save(playerFromToken);
+            } else {
+                playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                    b1.setPlayerUser(pu);
+                    b2.setPlayerUser(pu);
+                    int current = pu.getMatchesPlayed() != null ? pu.getMatchesPlayed() : 0;
+                    pu.setMatchesPlayed(current + 1);
+                    playerUserRepository.save(pu);
+                });
+            }
 
             Booking saved1 = bookingRepository.save(b1);
             Booking saved2 = bookingRepository.save(b2);
 
-            taskExecutor.execute(() -> smsService.sendReservationNotificationsCrossMidnight(saved1, saved2));
+            taskExecutor.execute(() -> {
+                smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
+                emailService.sendBookingConfirmation(saved1); // Send confirmation for the main booking
+            });
             return saved1;
         }
     }
@@ -133,8 +164,26 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<Booking> getPlayerHistory(Integer userId) {
-        return bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId);
+    public List<Booking> getPlayerHistory(Long userId) {
+        PlayerUser user = playerUserRepository.findById(userId).orElse(null);
+        List<Booking> byId = bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId);
+        
+        if (user != null && user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
+            List<Booking> byPhone = bookingRepository.findByCustomerPhoneOrderByBookingDateDesc(user.getPhoneNumber());
+            
+            // Merge and de-duplicate by ID
+            java.util.Set<Long> seenIds = byId.stream().map(Booking::getId).collect(java.util.stream.Collectors.toSet());
+            for (Booking b : byPhone) {
+                if (!seenIds.contains(b.getId())) {
+                    byId.add(b);
+                    seenIds.add(b.getId());
+                }
+            }
+            // Re-sort by date desc
+            byId.sort((a,b) -> b.getBookingDate().compareTo(a.getBookingDate()));
+        }
+        
+        return byId;
     }
 
     @Transactional(readOnly = true)
@@ -274,9 +323,14 @@ public class BookingService {
         if (phone == null) {
             return null;
         }
-        String stripped = phone.replaceAll("\\s+", "");
-        if (stripped.matches("^0\\d{9}$")) {
-            return "+4" + stripped;
+        String stripped = phone.replaceAll("[^0-9+]", "");
+        if (stripped.startsWith("+40")) stripped = stripped.substring(3);
+        else if (stripped.startsWith("+4")) stripped = stripped.substring(2);
+        else if (stripped.startsWith("40") && stripped.length() >= 11) stripped = stripped.substring(2);
+        else if (stripped.startsWith("0040")) stripped = stripped.substring(4);
+        
+        if (stripped.startsWith("7") && stripped.length() == 9) {
+            stripped = "0" + stripped;
         }
         return stripped;
     }

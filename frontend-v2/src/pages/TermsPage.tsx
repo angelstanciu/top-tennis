@@ -15,7 +15,7 @@ export default function TermsPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           Înapoi
         </button>
-        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Top Tenis</h1>
+        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Star Arena</h1>
         <div className="w-20"></div> {/* Spacer */}
       </div>
 
@@ -26,7 +26,7 @@ export default function TermsPage() {
           <div className="space-y-6 text-slate-600 leading-relaxed">
             <section>
               <h3 className="text-xl font-bold text-slate-800 mb-3">1. Introducere</h3>
-              <p>Acest site web este operat de Top Tenis Arena. Termenii "noi", "ne" și "nostru" se referă la Top Tenis. Prin utilizarea site-ului și efectuarea rezervărilor, acceptați acești Termeni și Condiții în totalitate.</p>
+              <p>Acest site web este operat de Star Arena. Termenii "noi", "ne" și "nostru" se referă la Star Arena. Prin utilizarea site-ului și efectuarea rezervărilor, acceptați acești Termeni și Condiții în totalitate.</p>
             </section>
 
             <section>
@@ -46,7 +46,7 @@ export default function TermsPage() {
 
             <section>
               <h3 className="text-xl font-bold text-slate-800 mb-3">5. Forță majoră</h3>
-              <p>Top Tenis nu este responsabil pentru imposibilitatea onorării rezervărilor în caz de forță majoră, inclusiv factori meteorologici extremi pentru terenurile outdoor.</p>
+              <p>Star Arena nu este responsabil pentru imposibilitatea onorării rezervărilor în caz de forță majoră, inclusiv factori meteorologici extremi pentru terenurile outdoor.</p>
             </section>
 
             <p className="text-sm text-slate-400 mt-10 pt-6 border-t border-slate-100 italic">Ultima actualizare: Martie 2026</p>

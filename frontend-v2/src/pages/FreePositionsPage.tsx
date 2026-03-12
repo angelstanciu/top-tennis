@@ -29,10 +29,10 @@ function sportLabelUpper(s: SportType) {
   switch (s) {
     case 'TENNIS': return 'TENIS'
     case 'PADEL': return 'PADEL'
-    case 'BEACH_VOLLEY': return 'VOLEI PE PLAJA'
+    case 'BEACH_VOLLEY': return 'VOLEI PE PLAJĂ'
     case 'BASKETBALL': return 'BASCHET'
     case 'FOOTVOLLEY': return 'TENIS DE PICIOR'
-    case 'TABLE_TENNIS': return 'TENIS DE MASA'
+    case 'TABLE_TENNIS': return 'TENIS DE MASĂ'
     default: return String(s)
   }
 }

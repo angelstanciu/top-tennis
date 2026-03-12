@@ -44,7 +44,7 @@ export default function HomePageD() {
               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            Contul Meu
+            <span className="hidden md:inline">Contul Meu</span>
           </button>
 
           <button
@@ -69,7 +69,7 @@ export default function HomePageD() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Padel Subscription Card */}
-          <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/abonamente')}>
+          <div className="glass-dark border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/abonamente')}>
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all"></div>
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-6">
@@ -78,32 +78,32 @@ export default function HomePageD() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-white">Tarif Padel 2026</h3>
-                  <p className="text-indigo-300 font-bold text-sm">Abonamente Early Booking</p>
+                  <p className="text-indigo-400/80 font-bold text-xs uppercase tracking-widest mt-0.5">Abonamente Early Booking</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Interval Zi (08:00-19:00)</p>
-                    <p className="text-xl font-black text-white">80 <span className="text-xs text-slate-400">LEI/H</span></p>
+                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Exterior</p>
+                    <p className="text-2xl font-black text-white tracking-tighter">80 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
-                <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Interval Nocturnă (după 19:00)</p>
-                    <p className="text-xl font-black text-white">100 <span className="text-xs text-slate-400">LEI/H</span></p>
+                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Indoor</p>
+                    <p className="text-2xl font-black text-white tracking-tighter">150 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">* Vezi oferte abonamente Early Booking / 3 Luni</span>
-                <button className="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2 rounded-full font-bold text-sm transition-colors flex items-center gap-2">
-                  Vezi Oferte <ArrowRight className="w-4 h-4" />
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">* Oferte abonamente Early Booking / 3 Luni</span>
+                <button className="whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2.5 rounded-full font-black text-xs transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-indigo-500/20">
+                  VEZI OFERTE <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* General Sports Promo */}
-          <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900 border border-emerald-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-emerald-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/rezerva')}>
+          <div className="glass-dark border border-emerald-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-emerald-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/rezerva')}>
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-6">
@@ -112,29 +112,33 @@ export default function HomePageD() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-white">Prețuri Sportive</h3>
-                  <p className="text-emerald-300 font-bold text-sm">Cele mai bune tarife din zonă</p>
+                  <p className="text-emerald-400/80 font-bold text-xs uppercase tracking-widest mt-0.5">Cele mai bune tarife din zonă</p>
                 </div>
               </div>
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                  <span className="text-slate-400 font-medium">Tenis de Câmp (Până la 19:00)</span>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Câmp</span>
                   <span className="text-white font-black">40 LEI/H</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                  <span className="text-slate-400 font-medium">Tenis de Picior (Până la 19:00)</span>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Picior</span>
                   <span className="text-white font-black">75 LEI/H</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-400 font-medium">Baschet & Tenis de Masă</span>
-                  <span className="text-emerald-400 font-black">De la 35 LEI</span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Baschet</span>
+                  <span className="text-emerald-400 font-black">80 LEI/H</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Masă</span>
+                  <span className="text-emerald-400 font-black">35 LEI/H</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">* Prețurile variază după ora 19:00 (Nocturnă)</span>
-                <button className="bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2 rounded-full font-bold text-sm transition-colors flex items-center gap-2">
-                  Rezervă <ArrowRight className="w-4 h-4" />
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">* Nocturnă după ora 19:00</span>
+                <button className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2.5 rounded-full font-black text-xs transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/20">
+                  REZERVĂ <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -298,7 +302,7 @@ export default function HomePageD() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent p-10 flex flex-col justify-end">
                 <span className="text-orange-400 font-bold uppercase tracking-widest text-[10px] mb-2">1 Teren Outdoor</span>
-                <h3 className="text-white text-3xl font-black mb-1 leading-tight">Basketball Arena</h3>
+                <h3 className="text-white text-3xl font-black mb-1 leading-tight">Baschet</h3>
                 <p className="text-slate-300 text-sm">Coșuri omologate, suprafață de joc sigură.</p>
               </div>
             </div>

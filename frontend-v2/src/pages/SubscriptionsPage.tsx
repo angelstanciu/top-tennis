@@ -37,8 +37,8 @@ export default function SubscriptionsPage() {
     {
       title: "Ocazional",
       subtitle: "Joc liber, oricând",
-      price: "80/100",
-      features: ["80 LEI - Lumină naturală", "100 LEI - Nocturnă", "Fără obligații", "Plată rapidă"],
+      price: "80/150",
+      features: ["80 LEI - Padel Exterior", "150 LEI - Padel Indoor", "Fără obligații", "Plată rapidă la locație"],
       color: "from-slate-700 to-slate-900",
       bg: "bg-slate-500/10"
     }

@@ -2,12 +2,39 @@ import { AvailabilityDto, BookingDto, CourtDto, PlayerUser } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+function normalizePhone(phone: string): string {
+  if (!phone) return ''
+  let stripped = phone.replace(/[^0-9+]/g, '')
+  if (stripped.startsWith('+40')) stripped = stripped.substring(3)
+  else if (stripped.startsWith('+4')) stripped = stripped.substring(2)
+  else if (stripped.startsWith('40') && stripped.length >= 11) stripped = stripped.substring(2)
+  else if (stripped.startsWith('0040')) stripped = stripped.substring(4)
+  
+  if (stripped.startsWith('7') && stripped.length === 9) {
+    stripped = '0' + stripped
+  }
+  return stripped
+}
+
+async function parseError(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    return data.message || 'Eroare necunoscută.';
+  } catch {
+    try {
+      return await res.text();
+    } catch {
+      return 'Eroare de comunicare cu serverul.';
+    }
+  }
+}
+
 export async function fetchAvailability(date: string, sportType?: string): Promise<AvailabilityDto[]> {
   const url = new URL(`${BASE_URL}/availability`, window.location.origin)
   url.searchParams.set('date', date)
   if (sportType) url.searchParams.set('sportType', sportType)
   const res = await fetch(url)
-  if (!res.ok) throw new Error('Nu am putut incarca disponibilitatea')
+  if (!res.ok) throw new Error(await parseError(res))
   
   const data: AvailabilityDto[] = await res.json()
   data.forEach(item => {
@@ -30,21 +57,27 @@ export async function createBooking(payload: {
   customerPhone: string
   customerEmail?: string
 }): Promise<BookingDto> {
+  const token = localStorage.getItem('playerToken')
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const normalizedPayload = {
+    ...payload,
+    customerPhone: normalizePhone(payload.customerPhone)
+  }
+
   const res = await fetch(`${BASE_URL}/bookings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    headers,
+    body: JSON.stringify(normalizedPayload),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg)
-  }
+  if (!res.ok) throw new Error(await parseError(res))
   return res.json()
 }
 
 export async function fetchActiveCourts(): Promise<CourtDto[]> {
   const res = await fetch(`${BASE_URL}/courts`)
-  if (!res.ok) throw new Error('Nu am putut incarca terenurile')
+  if (!res.ok) throw new Error(await parseError(res))
   
   const courts: CourtDto[] = await res.json()
   courts.forEach(c => {
@@ -70,10 +103,7 @@ export async function adminBlockSlot(payload: {
     headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
     body: JSON.stringify(payload),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg)
-  }
+  if (!res.ok) throw new Error(await parseError(res))
   return res.json()
 }
 
@@ -88,7 +118,6 @@ export async function adminCreateWeeklyBooking(payload: {
 }, weeks: number): Promise<BookingDto[]> {
   const promises = []
   
-  // payload.startDate e de tip YYYY-MM-DD
   const parts = payload.startDate.split('-')
   const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
 
@@ -124,10 +153,7 @@ export async function createWeeklyUserBooking(payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg)
-  }
+  if (!res.ok) throw new Error(await parseError(res))
   return res.json()
 }
 
@@ -137,27 +163,22 @@ export async function requestPlayerOtp(phone: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/player/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone: normalizePhone(phone) }),
   })
   if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Eroare la trimiterea codului.')
+    const msg = await parseError(res)
+    if (msg.includes('recently sent')) throw new Error('Un cod a fost trimis recent. Te rugăm să aștepți 1 minut.')
+    throw new Error(msg || 'Eroare la trimiterea codului SMS. Verifică numărul.')
   }
 }
-
-
-// Moved to types.ts
 
 export async function verifyPlayerOtp(phone: string, otp: string): Promise<{ token: string, user: PlayerUser }> {
   const res = await fetch(`${BASE_URL}/player/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, otp }),
+    body: JSON.stringify({ phone: normalizePhone(phone), otp }),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Codul introdus este greșit.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Codul introdus este greșit.')
   return res.json()
 }
 
@@ -165,12 +186,9 @@ export async function loginPlayer(phone: string, password: string): Promise<{ to
   const res = await fetch(`${BASE_URL}/player/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ phone: normalizePhone(phone), password }),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Eroare la autentificare.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la autentificare.')
   return res.json()
 }
 
@@ -178,12 +196,19 @@ export async function registerPlayer(phone: string, password: string, fullName: 
   const res = await fetch(`${BASE_URL}/player/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, password, fullName }),
+    body: JSON.stringify({ phone: normalizePhone(phone), password, fullName }),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Eroare la crearea contului.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la crearea contului.')
+  return res.json()
+}
+
+export async function loginWithFacebook(accessToken: string): Promise<{ token: string, user: PlayerUser }> {
+  const res = await fetch(`${BASE_URL}/player/auth/facebook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken }),
+  })
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la autentificare cu Facebook.')
   return res.json()
 }
 
@@ -193,10 +218,7 @@ export async function loginWithGoogle(credential: string): Promise<{ token: stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential }),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Eroare la autentificare cu Google.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la autentificare cu Google.')
   return res.json()
 }
 
@@ -206,22 +228,27 @@ export async function fetchPlayerMe(token: string): Promise<PlayerUser> {
       'Authorization': `Bearer ${token}`
     }
   })
-  if (!res.ok) {
-    throw new Error('Token expirat.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Sesiune expirată.')
   return res.json()
 }
 
-export async function updatePlayerProfile(token: string, payload: { fullName?: string, email?: string, preferredSport?: string, age?: number, avatarUrl?: string }): Promise<PlayerUser> {
+export async function updatePlayerProfile(token: string, payload: { fullName?: string, email?: string, phoneNumber?: string, preferredSport?: string, age?: number, gender?: string, avatarUrl?: string }): Promise<PlayerUser> {
   const res = await fetch(`${BASE_URL}/player/auth/update-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify(payload),
   })
-  if (!res.ok) {
-    const msg = await res.text()
-    throw new Error(msg || 'Eroare la salvarea profilului.')
-  }
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json()
+}
+
+export async function linkPlayerPhone(token: string, phone: string, otp: string): Promise<PlayerUser> {
+  const res = await fetch(`${BASE_URL}/player/auth/link-phone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ phone: normalizePhone(phone), otp }),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
   return res.json()
 }
 
@@ -231,8 +258,6 @@ export async function fetchPlayerHistory(token: string): Promise<BookingDto[]> {
       'Authorization': `Bearer ${token}`
     }
   })
-  if (!res.ok) {
-    throw new Error('Nu am putut incarca istoricul.')
-  }
+  if (!res.ok) throw new Error(await parseError(res) || 'Nu am putut incarca istoricul.')
   return res.json()
 }

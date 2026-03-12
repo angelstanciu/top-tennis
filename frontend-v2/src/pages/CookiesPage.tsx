@@ -15,7 +15,7 @@ export default function CookiesPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           Înapoi
         </button>
-        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Top Tenis</h1>
+        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Star Arena</h1>
         <div className="w-20"></div> {/* Spacer */}
       </div>
 
@@ -31,7 +31,7 @@ export default function CookiesPage() {
 
             <section>
               <h3 className="text-xl font-bold text-slate-800 mb-3">2. Cum folosim Cookie-urile?</h3>
-              <p>Platforma Top Tenis Arena folosește cu precădere cookie-uri și date de LocalStorage de tip <strong>strict necesar / tehnic</strong> pentru buna desfășurare a calendarului (de exemplu: memorarea sportului preferat la redeschiderea paginii sau preferințe de layout). Ocazional, putem apela la Analytics pentru funcționare structurală (pe ce butoane s-a dat click, fără indentificarea utilizatorului specific).</p>
+              <p>Platforma Star Arena folosește cu precădere cookie-uri și date de LocalStorage de tip <strong>strict necesar / tehnic</strong> pentru buna desfășurare a calendarului (de exemplu: memorarea sportului preferat la redeschiderea paginii sau preferințe de layout). Ocazional, putem apela la Analytics pentru funcționare structurală (pe ce butoane s-a dat click, fără indentificarea utilizatorului specific).</p>
             </section>
 
             <section>

@@ -466,9 +466,9 @@ export default function AdminPage() {
             <p className="text-slate-400 text-sm font-bold mb-8 uppercase tracking-widest text-[10px]">Acces Securizat Star-Arena</p>
 
             <form onSubmit={login} className="w-full space-y-5">
-              {error && <div className="p-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-[11px] font-black uppercase text-center">{error}</div>}
+              {error && <div className="p-4 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl text-[11px] font-black uppercase text-center backdrop-blur-sm">{error}</div>}
               
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Utilizator</label>
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -509,12 +509,45 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="rounded-3xl border border-sky-100 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-sky-900/5">
-            <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-sky-100 shadow-xl shadow-sky-900/5 flex items-center gap-5">
+                <div className="bg-emerald-500 text-white p-4 rounded-3xl shadow-lg shadow-emerald-500/20 rotate-3">
+                  <DollarSign className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Încasări Azi</div>
+                  <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-300 italic">RON</span>
+                  </div>
+                  <div className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1">
+                    <TrendingUp className="w-2 h-2" />
+                    + {stats.collectedRevenue.toFixed(0)} colectat
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-sky-100 shadow-xl shadow-sky-900/5 flex items-center gap-5">
+                <div className="bg-sky-500 text-white p-4 rounded-3xl shadow-lg shadow-sky-500/20 -rotate-3">
+                  <Percent className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grad Ocupare</div>
+                  <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                    {stats.occupancyRate}%
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-sky-500 transition-all duration-1000" style={{ width: `${stats.occupancyRate}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-sky-100 bg-white/80 backdrop-blur-md p-6 shadow-xl shadow-sky-900/5">
+              <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1 w-full relative">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sport</div>
                 <select 
-                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 transition-all appearance-none shadow-sm" 
+                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm" 
                   value={sport} 
                   onChange={e => setSport(e.target.value as SportType | '')}
                 >
@@ -530,10 +563,10 @@ export default function AdminPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
               </div>
-              <div className="flex-1 w-full">
+              <div className="flex-1 w-full relative">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Teren</div>
                 <select
-                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 transition-all shadow-sm"
+                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm"
                   value={courtId as any}
                   onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -543,10 +576,13 @@ export default function AdminPage() {
                     return <option key={c.id} value={c.id}>{label}</option>
                   })}
                 </select>
+                <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
               </div>
               <div className="flex-1 w-full">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data</div>
-                <div className="relative flex items-stretch bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden h-11 shadow-sm">
+                <div className="relative flex items-stretch bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden h-11 shadow-sm focus-within:ring-4 focus-within:ring-sky-500/10 focus-within:border-sky-500 transition-all">
                   <button
                     type="button"
                     className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-r border-slate-100 focus:outline-none transition-all"
@@ -556,7 +592,7 @@ export default function AdminPage() {
                   </button>
                   <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
                     <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4">
-                      <div className="text-sm font-black text-slate-700 text-center select-none truncate group-hover:text-sky-600 transition-colors">
+                      <div className="text-sm font-black text-slate-700 text-center select-none truncate group-hover:text-sky-600 transition-colors uppercase tracking-tight">
                         {formatDateDisplay(date)}
                       </div>
                     </div>
@@ -572,32 +608,32 @@ export default function AdminPage() {
               </div>
               <div className="w-full md:w-auto">
                 <button
-                  className="bg-sky-600 hover:bg-sky-500 text-white px-8 w-full md:w-auto h-11 rounded-2xl shadow-lg shadow-sky-600/20 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                  className="bg-slate-800 hover:bg-slate-900 text-white px-8 w-full md:w-auto h-11 rounded-2xl shadow-xl shadow-slate-800/20 font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
                   onClick={reload}
                   disabled={loading}
                 >
-                  {loading ? '...' : 'Încarcă'}
+                  {loading ? '...' : 'ÎNCARCĂ'}
                 </button>
               </div>
             </div>
 
             {/* Sub-bar for Search & View Toggle */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-4 border-t border-slate-100 mt-4">
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="relative w-full sm:max-w-xs group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
                 <input 
                   type="text" 
                   placeholder="Cauta nume sau telefon..." 
-                  className="w-full pl-9 pr-4 py-2.5 border border-slate-100 rounded-2xl bg-slate-50 text-sm focus:ring-2 focus:ring-sky-500 transition-all shadow-inner"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-2xl bg-white text-sm focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-sm"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
                 {searchTerm && (
                   <button 
                     onClick={() => setSearchTerm('')} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
@@ -690,15 +726,15 @@ export default function AdminPage() {
               <div className="hidden md:block overflow-hidden rounded-3xl border border-sky-100 bg-white/90 backdrop-blur-md shadow-2xl">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Sport</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Teren</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Data</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Interval</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Suma</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Client</th>
-                      <th className="text-left px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Stare</th>
-                      <th className="text-center px-5 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] border-b border-slate-100">Actiuni</th>
+                    <tr className="bg-slate-900 text-white">
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10 rounded-tl-2xl">Sport</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Teren</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Data</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Interval</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Suma</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Client</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Stare</th>
+                      <th className="text-center px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10 rounded-tr-2xl">Actiuni</th>
                     </tr>
                   </thead>
                   <tbody>

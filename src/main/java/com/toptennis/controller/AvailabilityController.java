@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@CrossOrigin
 @RequestMapping("/api/availability")
 public class AvailabilityController {
     private final AvailabilityService availabilityService;

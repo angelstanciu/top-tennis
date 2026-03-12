@@ -219,6 +219,43 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
     return map
   }, [ticks])
 
+  const sortedData = useMemo(() => {
+    const now = new Date();
+    const currentISO = todayISO();
+    const curTime = now.toTimeString().slice(0, 5);
+
+    return [...data].sort((a, b) => {
+      // 1. Group by sport type
+      if (a.court.sportType !== b.court.sportType) {
+        return a.court.sportType.localeCompare(b.court.sportType);
+      }
+
+      // 2. Count future bookings (excluding cancelled and past ones)
+      const countA = a.booked.filter(b => {
+        if (b.status === 'CANCELLED') return false;
+        if (date < currentISO) return false;
+        if (date > currentISO) return true;
+        return (b.end === '23:59' || b.end === '24:00' || b.end > curTime);
+      }).length;
+
+      const countB = b.booked.filter(b => {
+        if (b.status === 'CANCELLED') return false;
+        if (date < currentISO) return false;
+        if (date > currentISO) return true;
+        return (b.end === '23:59' || b.end === '24:00' || b.end > curTime);
+      }).length;
+
+      if (countA !== countB) return countA - countB;
+
+      // 3. Numerical order by Name (e.g. Padel 1 < Padel 2)
+      const numA = parseInt(a.court.name.replace(/\D/g, '') || '0', 10);
+      const numB = parseInt(b.court.name.replace(/\D/g, '') || '0', 10);
+      if (numA !== numB) return numA - numB;
+
+      return a.court.name.localeCompare(b.court.name);
+    });
+  }, [data, date]);
+
   // Responsive: use mobile layout under 768px
   const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
   useEffect(() => {
@@ -420,7 +457,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         const next = ticks[i+1]
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         if (isPast) continue
-        for (const row of data) {
+        for (const row of sortedData) {
           const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
           const isWithin = t >= row.court.openTime && next <= closeTime
           if (!isWithin) continue
@@ -468,7 +505,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         }
       }
     }
-  }, [date, data, ticks.length, isMobile])
+  }, [date, sportLabel(data[0]?.court.sportType || ''), ticks.length, isMobile]) // Stabilized dependencies
 
   // Reinforce auto-scroll shortly after layout settles
   useEffect(() => {
@@ -479,7 +516,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
         const next = ticks[i+1]
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         if (isPast) continue
-        for (const row of data) {
+        for (const row of sortedData) {
           const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
           const isWithin = t >= row.court.openTime && next <= closeTime
           if (!isWithin) continue
@@ -527,7 +564,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       }
     }, 80)
     return () => clearTimeout(timer)
-  }, [date, data.length, isMobile, colWidth])
+  }, [date, sportLabel(data[0]?.court.sportType || ''), isMobile, colWidth]) // Stabilized dependencies
 
   const headerRef = useRef<HTMLDivElement>(null)
 
@@ -550,13 +587,18 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           </div>
           <div className="flex">
             <div className="shrink-0" style={{ width: leftColWidth }}>
-              {data.map((row) => (
+              {sortedData.map((row) => (
                 <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-2 py-0.5 text-sm h-[56px] flex flex-col items-start justify-center bg-white">
                   <div className="font-bold text-slate-800 text-xs leading-snug">{sportLabel(row.court.sportType)} {row.court.name}</div>
                   <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${row.court.indoor ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
                       {row.court.indoor ? 'Indoor' : 'Exterior'}
                     </span>
+                    {row.court.indoor && row.court.sportType !== 'TENNIS' && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white shadow-sm ring-1 ring-rose-600/20">
+                        Star Arena 2
+                      </span>
+                    )}
                     {row.court.heated && !row.court.indoor && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Încălzit</span>}
                   </div>
                 </div>
@@ -575,12 +617,12 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                       className="absolute top-0 left-0 bottom-0 pointer-events-none z-20"
                       style={{
                         width: pastWidth,
-                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 8px, transparent 8px, transparent 16px)',
+                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.3) 0, rgba(148,163,184,0.3) 8px, transparent 8px, transparent 16px)',
                       }}
                     />
                   )
                 })()}
-                {data.map((row, rowIndex) => {
+                {sortedData.map((row, rowIndex) => {
                   const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
                   const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex) : []
                   return (
@@ -675,7 +717,8 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
 
   // Mobile layout (transposed): rows = times, columns = courts
   function renderMobile() {
-    const courtCount = data.length
+    const sortedDataList = sortedData
+    const courtCount = sortedDataList.length
     const timeColWidth = 56
     const minCourtWidth = 85 // Prevent squashing
     const rowHeight = 44
@@ -683,7 +726,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
       ? (ticks.length - 1)
       : (date === todayStr ? ticks.slice(0, -1).filter(t => t < nowTime).length : 0)
     const blocksByCourt = SHOW_BOOKING_LABELS
-      ? data.map(row => computeBookingBlocks(row.booked as any, tickIndex))
+      ? sortedDataList.map(row => computeBookingBlocks(row.booked as any, tickIndex))
       : []
 
     return (
@@ -696,14 +739,21 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
               <div className="sticky left-0 z-50 px-2 py-3 text-[10px] font-black bg-white text-slate-400 uppercase tracking-tighter border-r border-slate-200">
                 Ora
               </div>
-              {data.map(row => (
+              {sortedData.map(row => (
                 <div key={`head-${row.court.id}`} 
                      className="px-1 py-1.5 text-[10px] font-bold bg-white border-l border-slate-200 text-center leading-tight flex flex-col items-center justify-center gap-0.5"
                      style={{ minWidth: minCourtWidth }}>
                   <span className="text-slate-950 truncate w-full px-0.5">{row.court.name}</span>
-                  <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase ${row.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
-                    {row.court.indoor ? 'INDOOR' : 'OUTDOOR'}
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase ${row.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
+                      {row.court.indoor ? 'INDOOR' : 'OUTDOOR'}
+                    </span>
+                    {row.court.indoor && row.court.sportType !== 'TENNIS' && (
+                      <span className="text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase bg-rose-500 text-white shadow-sm">
+                        ARENA 2
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -732,7 +782,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                     gridTemplateRows: `repeat(${ticks.length-1}, ${rowHeight}px)`,
                   }}
                 >
-                  {data.map((row, colIndex) => (
+                  {sortedData.map((row, colIndex) => (
                     <React.Fragment key={`label-col-${row.court.id}`}> 
                       {blocksByCourt[colIndex].map((block, blockIndex) => (
                         <BookingLabelBlock
@@ -764,7 +814,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
                       {timeLabel(t)}
                     </div>
                     {/* Cells per court */}
-                    {data.map((row, rowIndex) => {
+                    {sortedData.map((row, rowIndex) => {
                       const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
                       const isBooked = bookedRanges.some(b => !(b.end <= t || b.start >= next))
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')

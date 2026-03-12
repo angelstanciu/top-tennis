@@ -15,7 +15,7 @@ export default function PrivacyPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           Înapoi
         </button>
-        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Top Tenis</h1>
+        <h1 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Star Arena</h1>
         <div className="w-20"></div> {/* Spacer */}
       </div>
 
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
 
             <section>
               <h3 className="text-xl font-bold text-slate-800 mb-3">4. Drepturile Dumneavoastră</h3>
-              <p>Vă puteți exercita în orice moment dreptul la:"Uitare" (stergerea datelor), modificarea acestora, sau restricționarea prelucrării adresându-vă recepției Top Tenis Arena conform datelor publice de contact din homepage.</p>
+              <p>Vă puteți exercita în orice moment dreptul la:"Uitare" (stergerea datelor), modificarea acestora, sau restricționarea prelucrării adresându-vă recepției Star Arena conform datelor publice de contact din homepage.</p>
             </section>
 
             <p className="text-sm text-slate-400 mt-10 pt-6 border-t border-slate-100 italic">Prezenta politică poate suferi modificări, vă recomandăm consultarea ei periodică.</p>

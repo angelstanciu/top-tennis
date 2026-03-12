@@ -21,7 +21,9 @@ public class BookingController {
     }
 
     @PostMapping
-    public BookingDto create(@RequestBody @Valid CreateBookingRequest req) {
+    public BookingDto create(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestBody @Valid CreateBookingRequest req) {
         LocalDate date = LocalDate.parse(req.date);
         LocalTime start = LocalTime.parse(req.startTime);
         LocalTime end;
@@ -30,7 +32,7 @@ public class BookingController {
         } else {
             end = LocalTime.parse(req.endTime);
         }
-        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail);
+        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail, token);
         return BookingMapper.toDto(b);
     }
 

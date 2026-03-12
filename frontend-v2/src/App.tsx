@@ -3,8 +3,9 @@ import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType, CourtDto } from './types'
 import { fetchAvailability, fetchActiveCourts } from './api'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import fastCat from './assets/fast-cat.svg'
+
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -213,32 +214,52 @@ export default function App() {
           return newRow
         })
         
-        // Sort by availability (most free time first)
-        const sorted = [...processed].sort((a, b) => {
-          // Compare percentage of free slots or just total free slots
-          const freeA = a.free.reduce((acc, f) => {
-            const start = timeToMinutes(f.start)
-            const end = timeToMinutes(f.end)
-            return acc + (end - start)
-          }, 0)
-          const freeB = b.free.reduce((acc, f) => {
-            const start = timeToMinutes(f.start)
-            const end = timeToMinutes(f.end)
-            return acc + (end - start)
-          }, 0)
-          
-          if (freeB !== freeA) return freeB - freeA
-          
-          // Secondary sort: Indoor first
-          if (a.court.indoor !== b.court.indoor) return a.court.indoor ? -1 : 1
-          
-          return a.court.id - b.court.id
-        })
-        
-        setData(sorted)
+        setData(processed)
       })
       .finally(() => setLoading(false))
   }, [date, sport])
+
+  const activeData = useMemo(() => {
+    // 1. Filter out fully-blocked seasonal courts from grid
+    const isBeforeApril15 = date < '2026-04-15'
+    const filtered = data.filter(row => {
+      // Scoate din grid ORICE teren complet blocat (BLOCKED 00:00-24:00)
+      const isAllBlocked = row.booked.length === 1 && 
+                           row.booked[0].start === '00:00' && 
+                           row.booked[0].end === '24:00' && 
+                           (row.booked[0] as any).status === 'BLOCKED'
+      return !isAllBlocked
+    })
+
+    // 2. Sort by availability (most free time first)
+    return [...filtered].sort((a, b) => {
+      const freeA = a.free.reduce((acc, f) => {
+        const start = timeToMinutes(f.start)
+        const end = timeToMinutes(f.end)
+        return acc + (end - start)
+      }, 0)
+      const freeB = b.free.reduce((acc, f) => {
+        const start = timeToMinutes(f.start)
+        const end = timeToMinutes(f.end)
+        return acc + (end - start)
+      }, 0)
+      
+      if (freeB !== freeA) return freeB - freeA
+      if (a.court.indoor !== b.court.indoor) return a.court.indoor ? -1 : 1
+      return a.court.id - b.court.id
+    })
+  }, [data, date])
+
+  const hasSeasonalOutdoor = useMemo(() => {
+    const isBeforeApril15 = date < '2026-04-15'
+    return isBeforeApril15 && data.some(row => {
+      const isAllBlocked = row.booked.length === 1 && 
+                           row.booked[0].start === '00:00' && 
+                           row.booked[0].end === '24:00' && 
+                           (row.booked[0] as any).status === 'BLOCKED'
+      return isAllBlocked
+    })
+  }, [data, date])
 
   useEffect(() => {
     fetchActiveCourts()
@@ -459,14 +480,19 @@ export default function App() {
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <span className="font-extrabold text-lg tracking-tighter text-white drop-shadow-md" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <span className="font-extrabold text-base md:text-lg tracking-tighter text-white drop-shadow-md" style={{ fontFamily: 'Outfit, sans-serif' }}>
             STAR<span className="text-emerald-400">ARENA</span>
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block">
+          <div className="hidden md:block">
             <h2 className="text-xs font-bold text-white uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30">
-              {sport.replace('_', ' ')}
+              {sport === 'TENNIS' ? 'Tenis' : 
+               sport === 'PADEL' ? 'Padel' : 
+               sport === 'BEACH_VOLLEY' ? 'Volei' : 
+               sport === 'BASKETBALL' ? 'Baschet' : 
+               sport === 'FOOTVOLLEY' ? 'Fotbal-Tenis' : 
+               sport === 'TABLE_TENNIS' ? 'Tenis de Masă' : 'Sport'}
             </h2>
           </div>
           <button
@@ -592,34 +618,6 @@ export default function App() {
              </div>
           ) : (
             <>
-              {/* Filter out fully-blocked seasonal courts from grid */}
-              {(() => {
-                const isBeforeApril15 = date < '2026-04-15'
-                const activeData = data.filter(row => {
-                  // Scoate din grid ORICE teren complet blocat (BLOCKED 00:00-24:00)
-                  const isAllBlocked = row.booked.length === 1 && row.booked[0].start === '00:00' && row.booked[0].end === '24:00' && (row.booked[0] as any).status === 'BLOCKED'
-                  return !isAllBlocked
-                })
-                const hasSeasonalOutdoor = isBeforeApril15 && data.some(row => {
-                  const isAllBlocked = row.booked.length === 1 && row.booked[0].start === '00:00' && row.booked[0].end === '24:00' && (row.booked[0] as any).status === 'BLOCKED'
-                  return isAllBlocked
-                })
-                const allUnavailable = activeData.length === 0
-
-                if (allUnavailable) {
-                  return (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12">
-                      <div className="text-5xl">🔜</div>
-                      <div className="text-center">
-                        <div className="font-extrabold text-xl text-slate-800 mb-1">Deschidem în Curând</div>
-                        <div className="text-slate-500 text-sm">Acest sport va fi disponibil din <span className="font-bold text-emerald-600">15 Aprilie 2026</span></div>
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <>
                     <div className="-mx-2 flex-1 min-h-0">
                       <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
                     </div>
@@ -632,9 +630,6 @@ export default function App() {
                         </div>
                       </div>
                     )}
-                  </>
-                )
-              })()}
               <div className="flex justify-center mt-1 mb-1">
                 <div className="flex gap-4 items-center opacity-40">
                   <div className="flex items-center gap-1">

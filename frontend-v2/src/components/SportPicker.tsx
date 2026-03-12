@@ -1,6 +1,5 @@
 import React from 'react'
 import { SportType } from '../types'
-
 const sports: { value: SportType, label: string, emoji: string }[] = [
   { value: 'TENNIS', label: 'Tenis', emoji: '🎾' },
   { value: 'PADEL', label: 'Padel', emoji: '🏓' },

@@ -163,17 +163,17 @@ export default function BookingPage() {
         <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 to-teal-400"></div>
         
         {/* Header Compact */}
-        <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-10">
           <button 
             onClick={() => redirectToGrid()} 
-            className="bg-slate-50 hover:bg-slate-100 text-slate-600 p-2 rounded-full transition-all active:scale-95" 
+            className="group bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-2xl transition-all active:scale-90" 
             aria-label="Înapoi la calendar"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div className="text-center">
-            <h1 className="text-lg font-black text-slate-800 tracking-tight leading-tight">Rezervare {court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name || ''}</h1>
-            <p className="text-xs font-bold text-emerald-600">{displayDate} • {startTime} - {endTime}</p>
+            <h1 className="text-xl font-black text-slate-900 tracking-tighter leading-tight">Rezervare {court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name || ''}</h1>
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-0.5">{displayDate} • {startTime} - {endTime}</p>
           </div>
           <div className="w-9"></div>
         </div>
@@ -250,6 +250,9 @@ export default function BookingPage() {
                   placeholder="adresa@exemplu.ro"
                 />
               </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 ml-1 italic">
+                <span className="text-emerald-500">Informație:</span> Recomandăm completarea adresei de email pentru a primi confirmarea oficială a rezervării.
+              </p>
             </div>
           </div>
 
@@ -295,15 +298,25 @@ export default function BookingPage() {
         </div>
       )}
 
+      {/* Success Modal Polish */}
       {successVisible && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-md transition-all">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-emerald-50 px-6 py-6 border-b border-emerald-100 flex flex-col items-center gap-3 text-center relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-400"></div>
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center shadow-inner mb-2 animate-bounce">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-600" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 relative">
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-sky-400"></div>
+            
+            {/* Confetti-like decoration circles */}
+            <div className="absolute top-10 left-10 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-20"></div>
+            <div className="absolute top-20 right-10 w-3 h-3 rounded-full bg-sky-400 animate-pulse opacity-20"></div>
+            <div className="absolute bottom-40 left-5 w-4 h-4 rounded-full bg-teal-400 animate-bounce opacity-10"></div>
+
+            <div className="bg-emerald-50/50 px-6 py-8 flex flex-col items-center gap-4 text-center relative">
+              <div className="w-20 h-20 rounded-[2rem] bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-2 rotate-3 hover:rotate-0 transition-transform duration-500">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
-              <h3 className="text-2xl font-black text-emerald-800 tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Rezervare Confirmata!</h3>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tighter" style={{ fontFamily: 'Outfit, sans-serif' }}>REZERVARE REUȘITĂ</h3>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mt-1">Ești gata pentru meci!</p>
+              </div>
             </div>
             <div className="p-6">
               <div className="text-slate-600 text-sm font-medium leading-relaxed mb-6 text-center space-y-2">

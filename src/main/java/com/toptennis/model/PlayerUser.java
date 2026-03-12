@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class PlayerUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "phone_number", unique = true)
     private String phoneNumber;
@@ -36,6 +36,9 @@ public class PlayerUser {
     @Column(name = "age")
     private Integer age;
 
+    @Column(name = "gender")
+    private String gender;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 
@@ -51,11 +54,11 @@ public class PlayerUser {
     public PlayerUser() {
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -105,6 +108,14 @@ public class PlayerUser {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
     }
 
     public String getAvatarUrl() {

@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="w-full bg-slate-900 text-slate-400 py-10 px-4 mt-auto border-t border-slate-800">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="text-center md:text-left">
-          <p className="text-sm font-semibold text-slate-300">© {new Date().getFullYear()} Top Tenis Arena.</p>
+          <p className="text-sm font-semibold text-slate-300">© {new Date().getFullYear()} Star Arena.</p>
           <p className="text-xs mt-1 max-w-sm">Toate drepturile rezervate. Bază sportivă dedicată tenisului și padelului de performanță și agrement.</p>
         </div>
         

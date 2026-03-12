@@ -28,7 +28,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                              @Param("end") LocalTime end,
                                              @Param("activeStatuses") List<BookingStatus> activeStatuses);
 
-    @Query("select distinct b from Booking b join fetch b.court c where b.bookingDate = :date and (:sportType is null or c.sportType = :sportType)")
+    @Query("select distinct b from Booking b join fetch b.court c left join fetch b.playerUser pu where b.bookingDate = :date and (:sportType is null or c.sportType = :sportType)")
     List<Booking> findByDateAndSportType(@Param("date") LocalDate date, @Param("sportType") SportType sportType);
 
     @Query("select b from Booking b join fetch b.court c where b.bookingDate = :date and b.status = :status and b.startTime between :start and :end")
@@ -39,5 +39,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByCourtIdAndBookingDateOrderByStartTimeAsc(Long courtId, LocalDate date);
 
-    List<Booking> findByPlayerUserIdOrderByBookingDateDesc(Integer playerUserId);
+    List<Booking> findByPlayerUserIdOrderByBookingDateDesc(Long playerUserId);
+
+    List<Booking> findByCustomerPhoneOrderByBookingDateDesc(String customerPhone);
 }

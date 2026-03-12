@@ -85,7 +85,7 @@ public class PlayerAuthController {
         return bookingService.getPlayerHistory(user.getId());
     }
 
-    public record UpdateProfileRequest(String fullName, String email, String preferredSport, Integer age, String avatarUrl) {}
+    public record UpdateProfileRequest(String fullName, String email, String phoneNumber, String preferredSport, Integer age, String gender, String avatarUrl) {}
 
     @PostMapping("/auth/update-profile")
     public PlayerUser updateProfile(
@@ -93,6 +93,47 @@ public class PlayerAuthController {
             @RequestBody UpdateProfileRequest req) {
         PlayerUser user = playerAuthService.getUserByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalid."));
-        return playerAuthService.updateProfile(user.getId(), req.fullName(), req.email(), req.preferredSport(), req.age(), req.avatarUrl());
+        return playerAuthService.updateProfile(user.getId(), req.fullName(), req.email(), req.phoneNumber(), req.preferredSport(), req.age(), req.gender(), req.avatarUrl());
     }
+
+    @PostMapping("/auth/link-phone")
+    public PlayerUser linkPhone(
+            @RequestHeader("Authorization") String token,
+            @RequestBody VerifyRequest req) {
+        PlayerUser user = playerAuthService.getUserByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalid."));
+        try {
+            return playerAuthService.linkPhoneNumber(user.getId(), req.phone(), req.otp());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    public record FacebookRequest(String accessToken) {}
+
+    @PostMapping("/auth/facebook")
+    public TokenResponse loginWithFacebook(@RequestBody FacebookRequest req) {
+        try {
+            String token = playerAuthService.loginOrRegisterWithFacebook(req.accessToken());
+            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token).orElseThrow();
+            return new TokenResponse(token, user);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @PostMapping("/auth/google")
+    public TokenResponse loginWithGoogle(@RequestBody GoogleAuthRequest req) {
+        try {
+            String token = playerAuthService.loginOrRegisterWithGoogle(req.credential());
+            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token).orElseThrow();
+            return new TokenResponse(token, user);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Eroare la comunicarea cu Google.");
+        }
+    }
+
+    public record GoogleAuthRequest(String credential) {}
 }

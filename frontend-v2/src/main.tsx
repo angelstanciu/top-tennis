@@ -22,28 +22,29 @@ import SubscriptionsPage from './pages/SubscriptionsPage'
 import SubscriptionRequestFormPage from './pages/SubscriptionRequestFormPage'
 import AdminSubscriptionRequestsPage from './pages/AdminSubscriptionRequestsPage'
 import { registerSW } from 'virtual:pwa-register'
+import ScrollToTop from './components/ScrollToTop'
 
 registerSW()
 
 const router = createBrowserRouter([
-  { path: '/', element: <HomePageD /> },
-  { path: '/rezerva', element: <App /> },
-  { path: '/cont', element: <PlayerAuthPage /> },
-  { path: '/profile', element: <ProfilePage /> },
-  { path: '/abonamente', element: <SubscriptionsPage /> },
-  { path: '/abonamente/cere-oferta', element: <SubscriptionRequestFormPage /> },
-  { path: '/securitate', element: <SecurityPage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/termeni', element: <TermsPage /> },
-  { path: '/confidentialitate', element: <PrivacyPage /> },
-  { path: '/cookies', element: <CookiesPage /> },
-  { path: '/book/:courtId/:date/:startTime/:endTime', element: <BookingPage /> },
-  { path: '/admin', element: <AdminLanding /> },
-  { path: '/admin/administrare-rezervari', element: <AdminPage /> },
-  { path: '/admin/pozitii-libere', element: <FreePositionsPage /> },
-  { path: '/admin/block-day', element: <AdminBlockDayPage /> },
-  { path: '/admin/weekly', element: <AdminWeeklyBookingPage /> },
-  { path: '/admin/abonamente', element: <AdminSubscriptionRequestsPage /> },
+  { path: '/', element: <><ScrollToTop /><HomePageD /></> },
+  { path: '/rezerva', element: <><ScrollToTop /><App /></> },
+  { path: '/cont', element: <><ScrollToTop /><PlayerAuthPage /></> },
+  { path: '/profile', element: <><ScrollToTop /><ProfilePage /></> },
+  { path: '/abonamente', element: <><ScrollToTop /><SubscriptionsPage /></> },
+  { path: '/abonamente/cere-oferta', element: <><ScrollToTop /><SubscriptionRequestFormPage /></> },
+  { path: '/securitate', element: <><ScrollToTop /><SecurityPage /></> },
+  { path: '/login', element: <><ScrollToTop /><LoginPage /></> },
+  { path: '/termeni', element: <><ScrollToTop /><TermsPage /></> },
+  { path: '/confidentialitate', element: <><ScrollToTop /><PrivacyPage /></> },
+  { path: '/cookies', element: <><ScrollToTop /><CookiesPage /></> },
+  { path: '/book/:courtId/:date/:startTime/:endTime', element: <><ScrollToTop /><BookingPage /></> },
+  { path: '/admin', element: <><ScrollToTop /><AdminLanding /></> },
+  { path: '/admin/administrare-rezervari', element: <><ScrollToTop /><AdminPage /></> },
+  { path: '/admin/pozitii-libere', element: <><ScrollToTop /><FreePositionsPage /></> },
+  { path: '/admin/block-day', element: <><ScrollToTop /><AdminBlockDayPage /></> },
+  { path: '/admin/weekly', element: <><ScrollToTop /><AdminWeeklyBookingPage /></> },
+  { path: '/admin/abonamente', element: <><ScrollToTop /><AdminSubscriptionRequestsPage /></> },
 ])
 
 import { GoogleOAuthProvider } from '@react-oauth/google'

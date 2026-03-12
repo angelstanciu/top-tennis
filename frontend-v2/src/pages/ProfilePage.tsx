@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { 
   Trophy, Settings, LogOut, ChevronRight, Calendar, MapPin, 
   Target, Clock, ArrowLeft, Camera, Edit2, Shield, Save, X, ChevronDown,
-  ArrowRight
+  ArrowRight, Loader2, Star
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchPlayerHistory, updatePlayerProfile } from '../api'
@@ -23,11 +23,20 @@ export default function ProfilePage() {
     email: '',
     preferredSport: '',
     age: 0,
+    gender: '',
+    phoneNumber: '',
     avatarUrl: ''
   })
   const [saving, setSaving] = useState(false)
 
   const token = localStorage.getItem('playerToken')
+
+  // Account Claim State
+  const [showClaimModal, setShowClaimModal] = useState(false)
+  const [claimOtp, setClaimOtp] = useState('')
+  const [claimPhone, setClaimPhone] = useState('')
+  const [claimLoading, setClaimLoading] = useState(false)
+  const [claimError, setClaimError] = useState('')
 
   useEffect(() => {
     if (!token) {
@@ -49,6 +58,8 @@ export default function ProfilePage() {
           email: userData.email || '',
           preferredSport: userData.preferredSport || 'TENNIS',
           age: userData.age || 0,
+          gender: userData.gender || '',
+          phoneNumber: userData.phoneNumber || '',
           avatarUrl: userData.avatarUrl || ''
         })
 
@@ -86,382 +97,509 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!token) return
     setSaving(true)
+    const sanitizedForm = {
+      ...editForm,
+      email: editForm.email?.trim() === '' ? undefined : editForm.email?.trim()
+    }
     try {
-      const updated = await updatePlayerProfile(token, editForm)
+      const updated = await updatePlayerProfile(token, sanitizedForm)
       setPlayer(updated)
       setIsEditing(false)
-    } catch (err) {
-      alert('Eroare la salvarea profilului.')
+      localStorage.setItem('playerData', JSON.stringify(updated))
+      window.dispatchEvent(new Event('auth-change'))
+    } catch (err: any) {
+      if (err.message?.includes('deja folosit')) {
+        setClaimPhone(editForm.phoneNumber)
+        setShowClaimModal(true)
+      } else {
+        alert(err.message || 'Eroare la salvarea profilului.')
+      }
     } finally {
       setSaving(false)
     }
   }
 
+  const handleStartClaim = async () => {
+    setClaimLoading(true)
+    setClaimError('')
+    try {
+      const { requestPlayerOtp } = await import('../api')
+      await requestPlayerOtp(claimPhone)
+    } catch (err: any) {
+      setClaimError(err.message)
+    } finally {
+      setClaimLoading(false)
+    }
+  }
+
+  const handleVerifyClaim = async () => {
+    setClaimLoading(true)
+    setClaimError('')
+    try {
+      const { linkPlayerPhone } = await import('../api')
+      const updated = await linkPlayerPhone(token!, claimPhone, claimOtp)
+      setPlayer(updated)
+      setShowClaimModal(false)
+      setIsEditing(false)
+      localStorage.setItem('playerData', JSON.stringify(updated))
+      window.dispatchEvent(new Event('auth-change'))
+      alert('Telefonul a fost conectat cu succes!')
+    } catch (err: any) {
+      setClaimError(err.message)
+    } finally {
+      setClaimLoading(false)
+    }
+  }
+
   const sports = [
-    { id: 'TENNIS', label: 'Tenis de Câmp', icon: '🎾' },
+    { id: 'TENNIS', label: 'Tenis', icon: '🎾' },
     { id: 'PADEL', label: 'Padel', icon: '🏓' },
     { id: 'FOOTVOLLEY', label: 'Tenis de Picior', icon: '⚽' },
     { id: 'BASKETBALL', label: 'Baschet', icon: '🏀' },
     { id: 'TABLE_TENNIS', label: 'Tenis de Masă', icon: '🏓' },
-    { id: 'BEACH_VOLLEY', label: 'Volei', icon: '🏐' }
+    { id: 'BEACH_VOLLEY', label: 'Volei pe Plajă', icon: '🏐' }
   ]
 
   const displayedHistory = showAllHistory ? history : history.slice(0, 3)
 
+  const getInitials = (name: string) => {
+    if (!name) return 'S'
+    const parts = name.split(' ').filter(p => !!p)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return name.slice(0, 1).toUpperCase()
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const base64 = reader.result as string
+      try {
+        setSaving(true)
+        const updated = await updatePlayerProfile(token!, { ...editForm, avatarUrl: base64 })
+        setPlayer(updated)
+        setEditForm(prev => ({ ...prev, avatarUrl: base64 }))
+      } catch (err) {
+        alert('Eroare la încărcarea pozei.')
+      } finally {
+        setSaving(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-lime-500/20 border-t-lime-500 rounded-full animate-spin"></div>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 gap-6">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-lime-500/20 border-t-lime-500 rounded-full animate-spin"></div>
+        <div className="absolute inset-0 flex items-center justify-center text-lime-500 font-black">S</div>
+      </div>
+      <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizare Profil...</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-lime-500/30 overflow-x-hidden" style={{ fontFamily: 'Outfit, sans-serif' }}>
+    <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-lime-500/30 overflow-x-hidden" style={{ fontFamily: 'Outfit, sans-serif' }}>
       
       {/* Premium Background Layer */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#1e293b,transparent)] opacity-40" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] blend-overlay" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#0f172a,transparent)] opacity-60" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] blend-overlay" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-800/50 to-transparent" />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto px-4 py-8">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-12">
         
-        {/* Header Nav / Branding */}
-        <div className="flex items-center justify-between mb-10">
-          <div 
+        {/* Modern Header */}
+        <div className="flex items-center justify-between mb-12">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
             onClick={() => nav('/')} 
-            className="flex items-center gap-2 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-xl bg-lime-500 flex items-center justify-center shadow-lg shadow-lime-500/20 group-hover:scale-110 transition-transform">
-              <span className="text-black font-black text-xl">S</span>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center shadow-xl shadow-lime-500/20 group-hover:scale-110 transition-all duration-500">
+              <span className="text-black font-black text-xl md:text-2xl italic">S</span>
             </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter text-white leading-none">
+            <div className="hidden sm:block">
+              <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">
                 STAR<span className="text-lime-400">ARENA</span>
               </h1>
-              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Player Profile</p>
+              <p className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Premium Hub</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button 
               onClick={() => nav('/securitate')}
-              className="w-11 h-11 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-slate-400 hover:text-blue-400 shadow-xl"
+              className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-slate-400 hover:text-blue-400 shadow-2xl backdrop-blur-xl"
             >
               <Shield className="w-5 h-5" />
             </button>
             <button 
               onClick={handleLogout}
-              className="w-11 h-11 rounded-2xl bg-rose-500/10 border border-rose-500/10 flex items-center justify-center hover:bg-rose-500/20 transition-all text-rose-500/70 hover:text-rose-400 shadow-xl"
+              className="px-6 h-12 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-2 hover:bg-rose-500/10 transition-all text-rose-500/70 hover:text-rose-400 shadow-2xl backdrop-blur-xl font-bold text-xs uppercase tracking-widest"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Iesire</span>
             </button>
           </div>
         </div>
 
-        {/* Hero Profile Card */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative mb-10"
-        >
-          {/* Animated glow background */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-lime-500/20 via-emerald-500/20 to-sky-500/20 rounded-[3.5rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+        {/* Bento Grid Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
           
-          <div className="relative bg-slate-900/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 md:p-10 overflow-hidden">
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-            
-            <div className="relative z-10 flex flex-col items-center">
-              {/* Avatar with dynamic ring */}
-              <div className="relative mb-8">
-                <div className="absolute -inset-4 bg-gradient-to-tr from-lime-500 to-sky-500 rounded-[2.5rem] opacity-20 blur-xl animate-pulse" />
-                <div className="relative w-36 h-36 rounded-[2.2rem] overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800 p-1">
-                  <img 
-                    src={player?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player?.fullName || 'John'}`}
-                    alt="Avatar" 
-                    className="w-full h-full object-cover rounded-[1.8rem]"
-                  />
-                  {isEditing && (
-                    <button className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+          {/* Main Profile Card (2 cols on md) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="md:col-span-2 relative group"
+          >
+            <div className="relative h-full bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                {/* Avatar Section */}
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-gradient-to-tr from-lime-500/20 to-sky-500/20 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+                  <div className="relative w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] overflow-hidden border-2 border-white/10 shadow-2xl bg-slate-800 p-1 flex items-center justify-center group/avatar">
+                    {player?.avatarUrl ? (
+                      <img 
+                        src={player.avatarUrl}
+                        alt="Avatar" 
+                        className="w-full h-full object-cover rounded-[2.2rem]"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-[2.2rem] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+                        <span className="text-5xl font-black text-white/50 tracking-widest">{getInitials(player?.fullName || '')}</span>
+                      </div>
+                    )}
+                    <label className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
                       <Camera className="w-8 h-8 text-white" />
-                    </button>
-                  )}
-                </div>
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -bottom-2 -right-2 bg-lime-500 text-black p-3 rounded-2xl border-4 border-slate-900 shadow-xl cursor-all-scroll"
-                >
-                  <Trophy className="w-5 h-5" />
-                </motion.div>
-              </div>
-
-              {/* Identity */}
-              {isEditing ? (
-                <div className="w-full max-w-sm space-y-4 mb-8">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nume Complet</label>
-                    <input 
-                      className="w-full bg-slate-950/80 border border-white/10 rounded-2xl px-6 py-4 text-center text-xl font-bold focus:border-lime-500 outline-none transition-all shadow-inner"
-                      value={editForm.fullName}
-                      onChange={e => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
-                    />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                    </label>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Sport Favorit</label>
-                    <div className="relative">
+                </div>
+
+                {/* Identity Info */}
+                <div className="flex-1 text-center md:text-left space-y-4">
+                  {isEditing ? (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                       <input 
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-center md:text-left text-2xl font-black text-white focus:border-lime-500 outline-none transition-all"
+                        value={editForm.fullName}
+                        onChange={e => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
+                        placeholder="Nume Complet"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input 
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all font-mono"
+                          value={editForm.phoneNumber}
+                          onChange={e => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                          placeholder="Telefon"
+                        />
+                        <input 
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                          value={editForm.email}
+                          onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="Email"
+                        />
+                      </div>
+
+                      {/* Added Missing Fields: Age, Gender, Sport */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input 
+                          type="number"
+                          className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                          value={editForm.age || ''}
+                          onChange={e => setEditForm(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
+                          placeholder="Vârstă"
+                        />
+                        <select 
+                          className="bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                          value={editForm.gender}
+                          onChange={e => setEditForm(prev => ({ ...prev, gender: e.target.value }))}
+                        >
+                          <option value="">Alege Sexul</option>
+                          <option value="MALE">Masculin</option>
+                          <option value="FEMALE">Feminin</option>
+                          <option value="OTHER">Altul</option>
+                        </select>
+                      </div>
+
                       <select 
-                        className="w-full bg-slate-950/80 border border-white/10 rounded-2xl px-6 py-4 text-center text-sm font-bold focus:border-lime-400 outline-none appearance-none cursor-pointer hover:bg-slate-900 transition-all shadow-inner"
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
                         value={editForm.preferredSport}
                         onChange={e => setEditForm(prev => ({ ...prev, preferredSport: e.target.value }))}
                       >
+                        <option value="">Alege Sportul Preferat</option>
                         {sports.map(s => (
-                          <option key={s.id} value={s.id} className="bg-slate-900 text-white font-medium py-2">
-                            {s.icon} {s.label}
-                          </option>
+                          <option key={s.id} value={s.id}>{s.label}</option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center mb-8">
-                  <h1 className="text-4xl font-black text-white tracking-tighter mb-2 bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent">
-                    {player?.fullName || 'Jucător Pro'}
-                  </h1>
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/5 rounded-full">
-                      <div className="w-1.5 h-1.5 rounded-full bg-lime-500 shadow-[0_0_8px_rgba(132,204,22,0.8)]" />
-                      <span className="text-xs font-bold text-slate-400 font-mono tracking-wider">{player?.phoneNumber}</span>
-                    </div>
-                    {player?.email && (
-                      <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-xs font-bold text-slate-500 italic">
-                        {player.email}
+
+                      <div className="flex gap-4">
+                        <button 
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                          className="flex-1 bg-lime-500 hover:bg-lime-400 text-black px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          Salveaza
+                        </button>
+                        <button 
+                          onClick={() => setIsEditing(false)}
+                          className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1">
+                        <motion.h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+                          {player?.fullName || 'Jucător Pro'}
+                        </motion.h2>
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 opacity-60">
+                           <span className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">{player?.phoneNumber || 'Fără telefon'}</span>
+                           {player?.email && (
+                             <>
+                               <div className="w-1 h-1 rounded-full bg-slate-700" />
+                               <span className="text-xs font-bold text-slate-400 italic">{player.email}</span>
+                             </>
+                           )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4">
+                        <button 
+                          onClick={() => setIsEditing(true)}
+                          className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-300 hover:bg-white/10 hover:text-white transition-all group/edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 group-hover/edit:rotate-12 transition-transform" />
+                          Editează Profil
+                        </button>
+                        <div className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Jucător Activ</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Matches Stat Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-slate-950/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center group hover:border-sky-500/30 transition-all duration-700 h-full min-h-[300px]"
+          >
+            <div className="w-20 h-20 rounded-3xl bg-sky-500/10 flex items-center justify-center text-sky-400 border border-sky-500/10 mb-6 group-hover:scale-110 group-hover:bg-sky-500/20 transition-all duration-500">
+              <Target className="w-10 h-10" />
+            </div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Meciuri Finalizate</p>
+            <span className="text-7xl font-black text-white tracking-tighter">{matchesPlayed}</span>
+            <div className="mt-6 px-4 py-2 bg-sky-500/5 rounded-xl border border-sky-500/10">
+               <span className="text-[10px] font-bold text-sky-500 uppercase tracking-widest">
+                 {matchesPlayed === 0 ? 'Te așteptăm pe teren' : 'Performanță Excelentă'}
+               </span>
+            </div>
+          </motion.div>
+
+
+          {/* Pro Ranking Progress Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="md:col-span-2 bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group shadow-2xl"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-r ${rankInfo.color} opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700`} />
+            
+            <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+              {/* Circular Premium Progress */}
+              <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90 filter drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                  <circle cx="88" cy="88" r="80" className="fill-none stroke-slate-800/50 stroke-[8]" />
+                  <motion.circle 
+                    cx="88" cy="88" r="80" 
+                    className={`fill-none stroke-[10] stroke-current ${rankInfo.color.split(' ')[1].replace('to-', 'text-')}`}
+                    strokeDasharray={502.6}
+                    initial={{ strokeDashoffset: 502.6 }}
+                    animate={{ strokeDashoffset: 502.6 - (502.6 * progress) / 100 }}
+                    transition={{ duration: 2, ease: "circOut" }}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center group-hover:scale-110 transition-transform duration-700">
+                   <div className="text-6xl mb-1">{rankInfo.icon}</div>
+                   <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Status Curent</div>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full text-center md:text-left">
+                <div className="mb-6">
+                  <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-gradient-to-r ${rankInfo.color} text-white shadow-xl mb-4`}>
+                    <Star className="w-4 h-4 fill-white" />
+                    <span className="text-xs font-black uppercase tracking-widest">NIVEL {rankInfo.label}</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white leading-tight">
+                    {matchesPlayed === 0 ? (
+                      <>
+                        Descoperă pasiunea <br />
+                        <span className="text-lime-400 italic">sportului</span>&nbsp;în arenă.
+                      </>
+                    ) : (
+                      <>
+                        Continuă să-ți scrii <br />
+                        <span className="text-lime-400 italic">istoria</span>&nbsp;în arenă.
+                      </>
                     )}
-                  </div>
+                  </h3>
                 </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-4 w-full max-w-sm">
-                {isEditing ? (
-                  <>
-                    <button 
-                      onClick={handleSaveProfile}
-                      disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 py-4 bg-lime-500 hover:bg-lime-400 text-black rounded-2xl font-black transition-all shadow-lg shadow-lime-500/20 active:scale-95 disabled:opacity-50"
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Meciuri Contorizate</p>
+                      <p className="text-xl font-black text-white">{matchesPlayed} <span className="text-slate-500 text-sm">/ {rankInfo.next || matchesPlayed}</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mastery</p>
+                      <p className="text-xl font-black text-lime-400">{Math.round(progress)}%</p>
+                    </div>
+                  </div>
+                  <div className="h-4 w-full bg-black/40 rounded-full border border-white/5 p-1 relative overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      className={`h-full rounded-full bg-gradient-to-r ${rankInfo.color} relative overflow-hidden`}
                     >
-                      {saving ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
-                      {saving ? 'SE SALVEAZĂ' : 'SALVEAZĂ'}
-                    </button>
-                    <button 
-                      onClick={() => setIsEditing(false)}
-                      className="flex items-center justify-center px-6 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-xl"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </>
-                ) : (
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="w-full flex items-center justify-center gap-3 py-4 bg-white/10 hover:bg-white/15 text-white rounded-[1.5rem] font-black text-sm tracking-widest border border-white/10 transition-all active:scale-95 group/btn shadow-2xl"
-                  >
-                    <Settings className="w-5 h-5 text-lime-400 group-hover/btn:rotate-90 transition-transform duration-500" />
-                    CONFIGUREAZĂ PROFILUL
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Dynamic Stats Section */}
-        <div className="grid grid-cols-2 gap-5 mb-10">
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="group relative bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-7 overflow-hidden shadow-2xl"
-          >
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl group-hover:bg-sky-500/20 transition-all" />
-            <div className="relative z-10">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500/20 to-sky-600/10 flex items-center justify-center text-sky-400 border border-sky-500/20 mb-4 group-hover:scale-110 transition-transform duration-500">
-                <Target className="w-7 h-7" />
-              </div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Meciuri Totale</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-white">{matchesPlayed}</span>
-                <span className="text-xs font-bold text-sky-500/60 uppercase">Activ</span>
+                      <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]" />
+                    </motion.div>
+                  </div>
+                  {rankInfo.next && (
+                    <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2 justify-center md:justify-start">
+                      <ArrowRight className="w-3.5 h-3.5 text-lime-500" />
+                      Mai ai nevoie de <span className="text-white">{rankInfo.next - matchesPlayed}</span> meciuri pentru noul rang
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
 
+          {/* Sport Favorit Detail Card */}
           <motion.div 
-            whileHover={{ y: -5 }}
-            className="group relative bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-7 overflow-hidden shadow-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="group relative bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center overflow-hidden h-full shadow-2xl"
           >
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-all" />
+            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-lime-500/5 rounded-full blur-3xl" />
+            
             <div className="relative z-10">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center text-orange-400 border border-orange-500/20 mb-4 group-hover:scale-110 transition-transform duration-500">
-                <div className="text-2xl">{sports.find(s => s.id === player?.preferredSport)?.icon || '🎾'}</div>
+              <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-lime-500 text-black flex items-center justify-center mb-6 shadow-xl shadow-lime-500/20 group-hover:scale-110 transition-transform duration-500">
+                <div className="text-4xl">{sports.find(s => s.id === player?.preferredSport)?.icon || '🎾'}</div>
               </div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Sport Favorit</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white truncate max-w-[120px]">
-                  {sports.find(s => s.id === player?.preferredSport)?.label?.split(' ')[0] || 'TBD'}
-                </span>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Sport Preferat</p>
+              <h3 className="text-2xl font-black text-white tracking-widest uppercase">
+                {sports.find(s => s.id === player?.preferredSport)?.label || 'Nespecificat'}
+              </h3>
+              <div className="mt-8 flex gap-2">
+                 <div className="flex-1 px-4 py-2 bg-white/5 rounded-xl border border-white/5 text-[9px] font-black text-slate-400">PRO MODE</div>
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Pro Ranking Progress */}
-        <div className="bg-slate-900/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 md:p-10 mb-10 relative overflow-hidden shadow-2xl group">
-          <div className={`absolute inset-0 bg-gradient-to-r ${rankInfo.color} opacity-[0.05] group-hover:opacity-[0.08] transition-opacity duration-700`} />
-          
-          <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
-            {/* Circular Premium Progress */}
-            <div className="relative w-40 h-40 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90 filter drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                <circle cx="80" cy="80" r="72" className="fill-none stroke-slate-800/50 stroke-[8]" />
-                <motion.circle 
-                  cx="80" cy="80" r="72" 
-                  className={`fill-none stroke-[10] stroke-current ${rankInfo.color.split(' ')[1].replace('to-', 'text-')}`}
-                  strokeDasharray={452.4}
-                  initial={{ strokeDashoffset: 452.4 }}
-                  animate={{ strokeDashoffset: 452.4 - (452.4 * progress) / 100 }}
-                  transition={{ duration: 2, ease: "circOut" }}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center group-hover:scale-110 transition-transform duration-700">
-                 <div className="text-5xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{rankInfo.icon}</div>
-                 <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mt-1">Status</div>
-              </div>
+        {/* Modern Activity Feed */}
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="text-3xl font-black text-white tracking-widest uppercase text-center sm:text-left">Istoric Activitate</h3>
+              <p className="text-xs font-bold text-slate-500 mt-1 text-center sm:text-left">Ultimele tale experiențe în arenă</p>
             </div>
-
-            <div className="flex-1 w-full text-center md:text-left">
-              <div className="mb-6">
-                <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-gradient-to-r ${rankInfo.color} text-white shadow-xl shadow-lime-950/20 mb-4`}>
-                  <Shield className="w-4 h-4" />
-                  <span className="text-xs font-black uppercase tracking-widest">NIVEL {rankInfo.label}</span>
-                </div>
-                <h3 className="text-3xl font-black text-white tracking-tighter leading-tight">
-                  Construiește-ți <br />
-                  <span className="text-lime-400 italic">legenda</span> în arenă.
-                </h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progres Curent</p>
-                    <p className="text-lg font-black text-white">{matchesPlayed} <span className="text-slate-500 text-sm">/ {rankInfo.next || matchesPlayed}</span></p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mastery</p>
-                    <p className="text-lg font-black text-lime-400">{Math.round(progress)}%</p>
-                  </div>
-                </div>
-                <div className="h-4 w-full bg-slate-950 rounded-full border border-white/5 p-1 relative shadow-inner overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    className={`h-full rounded-full bg-gradient-to-r ${rankInfo.color} relative overflow-hidden`}
-                  >
-                    <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]" />
-                  </motion.div>
-                </div>
-                {rankInfo.next && (
-                  <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2 justify-center md:justify-start">
-                    <ArrowRight className="w-3 h-3 text-lime-500" />
-                    Mai ai nevoie de <span className="text-white">{rankInfo.next - matchesPlayed}</span> meciuri pentru noul rang
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Reservations Timeline */}
-        <div className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[3.5rem] p-8 md:p-10 mb-24 shadow-2xl">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
-            <h2 className="text-2xl font-black text-white tracking-tighter flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-lime-500/10 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-lime-400" />
-              </div>
-              ISTORIC ACTIVITATE
-            </h2>
             <button 
               onClick={() => setShowAllHistory(!showAllHistory)}
-              className="w-full sm:w-auto text-[10px] font-black text-lime-400 hover:text-black transition-all uppercase tracking-widest px-6 py-3 bg-lime-500/10 hover:bg-lime-500 rounded-2xl border border-lime-500/20 shadow-lg"
+              className="w-full sm:w-auto text-[10px] font-black text-lime-400 hover:text-black transition-all uppercase tracking-widest px-8 py-4 bg-lime-500/10 hover:bg-lime-500 rounded-2xl border border-lime-500/20 shadow-xl backdrop-blur-xl"
             >
               {showAllHistory ? 'RESTRÂNGE LISTA' : 'VEZI TOT ISTORICUL'}
             </button>
           </div>
 
           <div className="space-y-6 relative">
-            {/* Timeline Line */}
-            {displayedHistory.length > 1 && (
-              <div className="absolute left-10 top-5 bottom-5 w-px bg-gradient-to-b from-lime-500/20 via-slate-800 to-transparent hidden md:block" />
-            )}
-
             <AnimatePresence mode="popLayout">
               {displayedHistory.length > 0 ? displayedHistory.map((item, idx) => (
                 <motion.div 
                   key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="relative group cursor-pointer"
+                  className="group relative bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 hover:bg-slate-900/60 transition-all duration-500 hover:border-lime-500/30 shadow-xl"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center gap-6 p-6 bg-slate-950/40 border border-white/5 rounded-[2.5rem] hover:border-lime-500/30 transition-all duration-500 hover:bg-slate-900/60 active:scale-[0.98]">
-                    <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-slate-900 border border-white/5 flex flex-col items-center justify-center text-center shadow-2xl group-hover:scale-105 transition-transform duration-500 shrink-0">
-                      <div className="text-3xl mb-1">
-                        {item.court?.sportType === 'TENNIS' ? '🎾' : item.court?.sportType === 'PADEL' ? '🏓' : item.court?.sportType === 'BASKETBALL' ? '🏀' : '⚽'}
-                      </div>
-                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{item.court?.sportType?.split('_')[0]}</span>
+                  <div className="flex items-center gap-6 flex-1 w-full">
+                    {/* Date Block */}
+                    <div className="w-20 h-20 shrink-0 bg-slate-950 rounded-[1.8rem] border border-white/10 flex flex-col items-center justify-center shadow-inner group-hover:bg-lime-500 transition-colors duration-500 group-hover:border-lime-400">
+                       <span className="text-[10px] font-black text-slate-500 group-hover:text-black/50 uppercase tracking-widest mb-1">
+                         {new Date(item.bookingDate).toLocaleDateString('ro-RO', { month: 'short' })}
+                       </span>
+                       <span className="text-3xl font-black text-white group-hover:text-black leading-none italic">
+                         {new Date(item.bookingDate).getDate()}
+                       </span>
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="text-lg font-black text-white tracking-tight uppercase leading-tight">{item.court?.name} Bascov</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                             <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                               <MapPin className="w-3 h-3 text-lime-500" /> STAR ARENA
-                             </span>
-                             <div className="w-1 h-1 rounded-full bg-slate-700" />
-                             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">FINALIZAT</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-black text-lime-400 font-mono tracking-tighter leading-none mb-1">{item.startTime}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.bookingDate}</p>
-                        </div>
+                    <div className="flex-1 space-y-2 text-center md:text-left">
+                      <div className="flex items-center justify-center md:justify-start gap-2">
+                        <span className="text-xs font-black text-lime-500 uppercase tracking-widest">Confirmat</span>
+                        <div className="w-1 h-1 rounded-full bg-slate-700" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.court?.name}</span>
                       </div>
-                      <div className="flex gap-4 mt-4">
-                        <div className="px-3 py-1.2 rounded-lg bg-white/5 border border-white/5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                          {item.endTime} Final
+                      <h4 className="text-2xl font-black text-white tracking-tight leading-none uppercase">
+                        {item.court?.sportType === 'TENNIS' ? 'Tenis' : item.court?.sportType === 'PADEL' ? 'Padel' : item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 'Fotbal'}
+                      </h4>
+                      <div className="flex items-center justify-center md:justify-start gap-4 text-slate-400 font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-600" />
+                          <span className="text-[11px] font-bold tracking-wider">{item.startTime}</span>
                         </div>
-                        <div className="px-3 py-1.2 rounded-lg bg-lime-500/10 border border-lime-500/10 text-[9px] font-black text-lime-500 uppercase tracking-widest">
-                          {item.price} RON
-                        </div>
+                        <div className="w-1.5 h-1.5 rounded-full border border-slate-800" />
+                        <span className="text-[11px] font-bold tracking-wider">{item.court?.indoor ? 'INDOOR' : 'OUTDOOR'}</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+                    <div className="px-6 py-3 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-center justify-center shrink-0 text-center">
+                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Cost</span>
+                       <span className="text-sm font-black text-white italic">{item.price} RON</span>
+                    </div>
+                    <button className="flex-1 md:w-14 md:h-14 h-12 rounded-2xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-center text-lime-500 hover:bg-lime-500 hover:text-black transition-all group-hover:scale-105 active:scale-95 duration-500 shadow-lg">
+                       <ChevronRight className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  {/* Top-right subtle badge */}
+                  <div className="absolute top-4 right-8 text-[9px] font-black text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                    ID: #{item.id}
                   </div>
                 </motion.div>
               )) : (
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-16"
+                  className="text-center py-20 bg-slate-900/40 rounded-[2.5rem] border border-white/5"
                 >
                   <div className="w-24 h-24 rounded-[2.5rem] bg-slate-900/50 flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-2xl">
                     <Calendar className="w-10 h-10 text-slate-700" />
                   </div>
-                  <h3 className="text-xl font-black text-white tracking-tight mb-2">NICIUN MECI ÎNREGISTRAT</h3>
+                  <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">Niciun meci înregistrat</h3>
                   <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-8 max-w-[200px] mx-auto leading-relaxed">Începe-ți cariera de jucător și ocupă locul în arenă.</p>
                   <button 
                     onClick={() => nav('/rezerva')}
@@ -474,6 +612,87 @@ export default function ProfilePage() {
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Account Claim Modal */}
+        <AnimatePresence>
+          {showClaimModal && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center px-4 backdrop-blur-md bg-black/60"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="w-full max-w-md bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden"
+              >
+                {/* Background Decor */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-lime-500/10 rounded-full blur-3xl" />
+                
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500 mb-6 mx-auto">
+                    <Shield className="w-8 h-8" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-black text-white text-center tracking-tight mb-2 uppercase">Revendică Numărul</h3>
+                  <p className="text-slate-400 text-center text-sm font-medium mb-8 leading-relaxed">
+                    Numărul <span className="text-white font-bold">{claimPhone}</span> este legat de un alt cont. Îl poți transfera pe acest cont verificându-l prin SMS.
+                  </p>
+
+                  <div className="space-y-6">
+                    {!claimOtp ? (
+                      <button 
+                        onClick={handleStartClaim}
+                        disabled={claimLoading}
+                        className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl font-black text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                        {claimLoading ? 'SE TRIMITE...' : 'TRIMITE COD PRIN SMS'}
+                      </button>
+                    ) : null}
+
+                    {(claimOtp || !claimLoading) && (
+                      <div className="space-y-4">
+                        <input 
+                          type="text"
+                          placeholder="Cod OTP din SMS"
+                          className="w-full bg-slate-950 border border-white/10 rounded-2xl px-6 py-4 text-center text-lg font-black tracking-[0.5em] focus:border-lime-500 outline-none transition-all placeholder:tracking-normal placeholder:font-bold placeholder:text-slate-700"
+                          value={claimOtp}
+                          onChange={e => setClaimOtp(e.target.value)}
+                        />
+                        <button 
+                          onClick={handleVerifyClaim}
+                          disabled={claimLoading || claimOtp.length < 4}
+                          className="w-full py-4 bg-lime-500 hover:bg-lime-400 text-black rounded-2xl font-black text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Shield className="w-5 h-5" />}
+                          {claimLoading ? 'SE VERIFICĂ...' : 'VERIFICĂ ȘI REVENDICĂ'}
+                        </button>
+                      </div>
+                    )}
+
+                    {claimError && (
+                      <p className="text-rose-500 text-center text-[10px] font-bold uppercase tracking-widest bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                        {claimError.includes('404') || claimError.toLowerCase().includes('static resource') 
+                          ? 'Serviciul este momentan indisponibil. Reîncearcă în câteva minute.' 
+                          : claimError}
+                      </p>
+                    )}
+
+                    <button 
+                      onClick={() => setShowClaimModal(false)}
+                      className="w-full py-3 text-slate-500 hover:text-white font-bold text-[10px] tracking-widest uppercase transition-colors"
+                    >
+                      ANULEAZĂ
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </div>
       
