@@ -41,7 +41,7 @@ reminder:
 
 google:
   auth:
-    client-id: ${GOOGLE_CLIENT_ID:617835105268-m8h07g94gkvsn669r170n09vrt6688ee.apps.googleusercontent.com}
+    client-id: ${GOOGLE_CLIENT_ID:337840626682-f4c0aj43u6pbiba781bfhqrlfc9q0tde.apps.googleusercontent.com}
 
 server:
   port: 8080
