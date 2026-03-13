@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 public class Booking {
@@ -46,6 +47,7 @@ public class Booking {
     private BigDecimal price;
     private boolean isMidnightBooking;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_user_id")
     private PlayerUser playerUser;
