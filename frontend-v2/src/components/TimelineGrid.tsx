@@ -876,7 +876,7 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
   function renderPopup() {
     if (!popup || typeof document === 'undefined') return null
     const { courtId, rowIndex, startIndex } = popup // ignore left/top; centered via CSS
-    const row = data[rowIndex]
+    const row = sortedData[rowIndex]  // FIX: was data[rowIndex] - must use sortedData to match displayed order
     if (!row || !ticks[startIndex]) return null
     const booked = row.booked.map(b => ({ start: b.start, end: b.end }))
     const startTime = ticks[startIndex]

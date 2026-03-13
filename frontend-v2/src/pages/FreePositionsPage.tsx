@@ -4,6 +4,7 @@ import { AvailabilityDto, CourtDto, SportType } from '../types'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import SportPicker from '../components/SportPicker'
+import TimelineGrid from '../components/TimelineGrid'
 
 function todayISOinTZ(tz: string) {
   try {
@@ -11,6 +12,11 @@ function todayISOinTZ(tz: string) {
   } catch {
     return new Date().toISOString().slice(0, 10)
   }
+}
+
+function formatDateShort(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}`
 }
 
 function fmtHHmm(mins: number) {
@@ -37,6 +43,35 @@ function sportLabelUpper(s: SportType) {
   }
 }
 
+function splitRange(startMins: number, endMins: number) {
+  const out: Array<{ start: number, end: number }> = []
+  let cursor = startMins
+  let remaining = endMins - startMins
+  
+  while (remaining > 240) {
+    out.push({ start: cursor, end: cursor + 120 })
+    cursor += 120
+    remaining -= 120
+  }
+  
+  let chunks: number[] = []
+  switch (remaining) {
+    case 240: chunks = [120, 120]; break
+    case 210: chunks = [120, 90]; break
+    case 180: chunks = [90, 90]; break
+    case 150: chunks = [90, 60]; break
+    case 120: chunks = [120]; break
+    case 90: chunks = [90]; break
+    case 60: chunks = [60]; break
+    default: if (remaining > 0) chunks = [remaining]; break
+  }
+  for (const chunk of chunks) {
+    out.push({ start: cursor, end: cursor + chunk })
+    cursor += chunk
+  }
+  return out
+}
+
 export default function FreePositionsPage() {
   const nav = useNavigate()
   const [sport, setSport] = useState<SportType>('TENNIS')
@@ -46,7 +81,9 @@ export default function FreePositionsPage() {
   const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [courtId, setCourtId] = useState<number | ''>('')
   const [text, setText] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [tableLoading, setTableLoading] = useState(false)
+  const [copiedText, setCopiedText] = useState(false)
+  const [copiedImage, setCopiedImage] = useState(false)
   const [highlightCopy, setHighlightCopy] = useState(false)
   const [highlightCourt, setHighlightCourt] = useState(false)
   const copyTimer = useRef<number | null>(null)
@@ -120,17 +157,29 @@ export default function FreePositionsPage() {
     'TABLE_TENNIS',
   ].filter(s => !activeSports.has(s as SportType)) as SportType[]), [activeSports])
 
-  const courts = useMemo(() => data.map(d => d.court), [data])
+  const filteredData = useMemo(() => {
+    return data.filter(d => {
+      if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
+      // Padel court 4 not open yet
+      if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+      return true
+    })
+  }, [data])
+
+  const courts = useMemo(() => filteredData.map(d => d.court), [filteredData])
   const selectedCourt: CourtDto | null = useMemo(() => {
     if (!courtId) return null
     return courts.find(c => c.id === courtId) || null
   }, [courtId, courts])
 
   function formatHeader(s: SportType, court?: CourtDto | null) {
-    const sport = sportLabelUpper(s)
-    const rawCourt = court?.name ? String(court.name) : ''
+    const sportName = sportLabelUpper(s)
+    if (!court) {
+      return `💙💙 POZITII LIBERE - ${sportName} 💙💙`
+    }
+    const rawCourt = court.name ? String(court.name) : ''
     const courtLabel = rawCourt.replace(/^Teren\s*/i, '')
-    return `💙💙 POZITII LIBERE - ${sport} - TEREN ${courtLabel} 💙💙`
+    return `💙💙 POZITII LIBERE - ${sportName} - TEREN ${courtLabel} 💙💙`
   }
 
   function formatDateLine(iso?: string) {
@@ -179,8 +228,8 @@ export default function FreePositionsPage() {
 
   // Always fetch fresh availability (no cache) before generating
   async function fetchAvailabilityFresh(dateISO: string, s: SportType): Promise<AvailabilityDto[]> {
-    const base = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const url = new URL(`${base}/availability`)
+    const base = import.meta.env.VITE_API_BASE_URL || '/api'
+    const url = new URL(`${window.location.origin}${base}/availability`)
     url.searchParams.set('date', dateISO)
     url.searchParams.set('sportType', s)
     url.searchParams.set('_', String(Date.now()))
@@ -190,72 +239,78 @@ export default function FreePositionsPage() {
   }
 
   async function generate() {
-    if (!courtId) { showMissingCourtToast(); return }
     setLoading(true)
     try {
-      const fresh = await fetchAvailabilityFresh(date, sport)
+      const all = await fetchAvailabilityFresh(date, sport)
+      const fresh = all.filter(d => {
+        if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
+        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+        return true
+      })
       setData(fresh)
-      const row = fresh.find(d => d.court.id === Number(courtId))
-      if (!row) { setText(''); return }
-
-      // Free ranges clipped to [08:00, 24:00)
-      const dayStart = 8 * 60, dayEnd = 24 * 60
-      const raw: Array<{ start: number, end: number }> = []
-      for (const fr of row.free || []) {
-        const s = Math.max(dayStart, parseHHmm(fr.start))
-        const e = Math.min(dayEnd, parseHHmm(fr.end))
-        if (e > s) raw.push({ start: s, end: e })
-      }
-      // Merge overlapping/touching
-      raw.sort((a, b) => a.start - b.start)
-      const merged: typeof raw = []
-      for (const r of raw) {
-        const last = merged[merged.length - 1]
-        if (!last || r.start > last.end) merged.push({ ...r })
-        else last.end = Math.max(last.end, r.end)
-      }
-
-      function splitRange(start: number, end: number) {
-        const out: Array<{ start: number, end: number }> = []
-        let cursor = start
-        let remaining = end - start
-        while (remaining > 240) {
-          out.push({ start: cursor, end: cursor + 120 })
-          cursor += 120
-          remaining -= 120
-        }
-        let chunks: number[] = []
-        switch (remaining) {
-          case 240: chunks = [120, 120]; break
-          case 210: chunks = [120, 90]; break
-          case 180: chunks = [90, 90]; break
-          case 150: chunks = [90, 60]; break
-          case 120: chunks = [120]; break
-          case 90: chunks = [90]; break
-          case 60: chunks = [60]; break
-          default: chunks = remaining > 0 ? [remaining] : []; break
-        }
-        for (const chunk of chunks) {
-          out.push({ start: cursor, end: cursor + chunk })
-          cursor += chunk
-          remaining -= chunk
-        }
-        return out
-      }
-
-      const expanded: Array<{ start: number, end: number }> = []
-      for (const seg of merged) {
-        const endIsEod = seg.end === (23 * 60 + 59)
-        const effectiveEnd = endIsEod ? 24 * 60 : seg.end
-        expanded.push(...splitRange(seg.start, effectiveEnd))
-      }
-
-      const header = formatHeader(sport, row.court)
+      
+      const header = formatHeader(sport, courtId ? fresh.find(d => d.court.id === Number(courtId))?.court : null)
       const dateLine = formatDateLine(date)
-      const body = expanded.map(seg => `💙 ${fmtHHmm(seg.start)}-${fmtHHmm(seg.end)} 💙`).join('\n')
-      setText(`${header}\n\n${dateLine}\n\n${body}`.trim())
+      
+      let body = ''
+      const dayStart = 8 * 60, dayEnd = 24 * 60
+
+      const processRow = (row: AvailabilityDto) => {
+        const raw: Array<{ start: number, end: number }> = []
+        for (const fr of row.free || []) {
+          const s = Math.max(dayStart, parseHHmm(fr.start))
+          const e = Math.min(dayEnd, parseHHmm(fr.end))
+          if (e > s) raw.push({ start: s, end: e })
+        }
+        raw.sort((a, b) => a.start - b.start)
+        const merged: typeof raw = []
+        for (const r of raw) {
+          const last = merged[merged.length - 1]
+          if (!last || r.start > last.end) merged.push({ ...r })
+          else last.end = Math.max(last.end, r.end)
+        }
+        const expanded: Array<{ start: number, end: number }> = []
+        for (const seg of merged) {
+          expanded.push(...splitRange(seg.start, seg.end))
+        }
+        return expanded.map(seg => `✅ *${fmtHHmm(seg.start)} - ${fmtHHmm(seg.end)}*`).join('\n')
+      }
+
+      if (courtId) {
+        const row = fresh.find(d => d.court.id === Number(courtId))
+        if (!row) { setText(''); return }
+        body = processRow(row)
+      } else {
+        // Multi-court
+        const parts: string[] = []
+        for (const row of fresh) {
+          const slotsText = processRow(row)
+          if (slotsText) {
+            parts.push(`🏟️ ${row.court.name}:\n${slotsText}`)
+          }
+        }
+        body = parts.join('\n\n')
+      }
+
+      const footer = `\n\n🚀 Rezervă acum pe site sau în aplicație!`
+      setText(`${header}\n\n${dateLine}\n\n${body}${footer}`.trim())
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleLoadTable() {
+    setTableLoading(true)
+    try {
+      const all = await fetchAvailabilityFresh(date, sport)
+      const fresh = all.filter(d => {
+        if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
+        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+        return true
+      })
+      setData(fresh)
+    } finally {
+      setTableLoading(false)
     }
   }
 
@@ -263,10 +318,173 @@ export default function FreePositionsPage() {
     try {
       if (!text) return
       await navigator.clipboard.writeText(text)
-      setCopied(true)
+      setCopiedText(true)
       if (copyTimer.current) window.clearTimeout(copyTimer.current)
-      copyTimer.current = window.setTimeout(() => setCopied(false), 5000)
+      copyTimer.current = window.setTimeout(() => setCopiedText(false), 3000)
     } catch { }
+  }
+
+  const [imageCopying, setImageCopying] = useState(false)
+  const posterRef = useRef<HTMLDivElement>(null)
+
+  async function copyAsImage() {
+    if (imageCopying) return
+    setImageCopying(true)
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // Square format - fits better on WhatsApp and Instagram
+      const W = 1080, H = 1080
+      canvas.width = W
+      canvas.height = H
+
+      // ----- Background: dark blue-teal gradient -----
+      const grad = ctx.createLinearGradient(0, 0, W, H)
+      grad.addColorStop(0, '#0a2342')   // dark navy
+      grad.addColorStop(0.5, '#0f4c5c') // deep teal
+      grad.addColorStop(1, '#0a2342')   // dark navy
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, W, H)
+
+      // ----- Decorative horizontal stripe -----
+      ctx.strokeStyle = 'rgba(190,242,100,0.2)'
+      ctx.lineWidth = 2
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath()
+        ctx.moveTo(0, 120 + i * 4)
+        ctx.lineTo(W, 120 + i * 4)
+        ctx.stroke()
+      }
+
+      // ----- Logo box -----
+      ctx.fillStyle = '#bef264'
+      ctx.beginPath()
+      ctx.roundRect(W/2 - 52, 40, 104, 104, 28)
+      ctx.fill()
+      ctx.font = '64px serif'
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#0a2342'
+      ctx.fillText('\u{1F3BE}', W/2, 120) // 🎾
+
+      // ----- Title -----
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 58px Outfit, Arial, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('INTERVALE ORARE DISPONIBILE', W/2, 220)
+
+      // Separator line
+      ctx.strokeStyle = '#bef264'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.moveTo(W * 0.2, 245)
+      ctx.lineTo(W * 0.8, 245)
+      ctx.stroke()
+
+      // ----- Date -----
+      const weekdays = ['DUMINICA', 'LUNI', 'MARTI', 'MIERCURI', 'JOI', 'VINERI', 'SAMBATA']
+      const ds = new Date(date)
+      const dayName = weekdays[ds.getDay()]
+      ctx.fillStyle = '#e2e8f0'
+      ctx.font = 'bold 38px Outfit, Arial, sans-serif'
+      ctx.fillText(`${dayName} (${formatDateShort(date)})`, W/2, 310)
+
+      // ----- Court sections -----
+      const dayStart = 8 * 60, dayEnd = 24 * 60
+      const fresh = data.filter(d => {
+        if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
+        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+        return true
+      })
+
+      // Build data for dynamic layout
+      const sections: { label: string; segs: { start: number; end: number }[] }[] = []
+      for (const row of fresh) {
+        const raw: Array<{ start: number, end: number }> = []
+        for (const fr of row.free || []) {
+          const s = Math.max(dayStart, parseHHmm(fr.start))
+          const e = Math.min(dayEnd, parseHHmm(fr.end))
+          if (e > s) raw.push({ start: s, end: e })
+        }
+        raw.sort((a, b) => a.start - b.start)
+        const merged: typeof raw = []
+        for (const r of raw) {
+          const last = merged[merged.length - 1]
+          if (!last || r.start > last.end) merged.push({ ...r })
+          else last.end = Math.max(last.end, r.end)
+        }
+        if (merged.length > 0) {
+          const rawName = String(row.court.name).toUpperCase()
+          sections.push({ label: rawName.startsWith('TEREN') ? rawName : `TEREN ${rawName}`, segs: merged })
+        }
+      }
+
+      // ----- Dynamic layout: side by side if <=3 courts, single column if more -----
+      const isSideBySide = sections.length <= 3
+      const colW = isSideBySide ? Math.floor(W / sections.length) : W
+      const contentStartY = 360
+
+      if (isSideBySide && sections.length > 1) {
+        // Draw court separators
+        for (let i = 1; i < sections.length; i++) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(colW * i, contentStartY - 10)
+          ctx.lineTo(colW * i, H - 80)
+          ctx.stroke()
+        }
+      }
+
+      for (let ci = 0; ci < sections.length; ci++) {
+        const sec = sections[ci]
+        const cx = isSideBySide ? colW * ci + colW / 2 : W / 2
+        let cy = contentStartY
+
+        // Court label
+        ctx.fillStyle = 'rgba(255,255,255,0.75)'
+        ctx.font = `bold ${isSideBySide ? 28 : 32}px Outfit, Arial, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.fillText(sec.label, cx, cy)
+        cy += 50
+
+        // Intervals (merged - no splitting)
+        ctx.fillStyle = '#bef264'
+        ctx.font = `bold ${isSideBySide ? 32 : 36}px Outfit, Arial, sans-serif`
+        for (const seg of sec.segs) {
+          ctx.fillText(`${fmtHHmm(seg.start)} - ${fmtHHmm(seg.end)}`, cx, cy)
+          cy += isSideBySide ? 50 : 55
+        }
+      }
+
+      // ----- Footer -----
+      ctx.fillStyle = '#bef264'
+      ctx.font = 'bold 28px Outfit, Arial, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('STAR ARENA BASCOV', W/2, H - 48)
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      ctx.font = '18px Outfit, Arial, sans-serif'
+      ctx.fillText('stararenabascov.ro', W/2, H - 22)
+
+      canvas.toBlob(blob => {
+        if (!blob) return
+        const item = new ClipboardItem({ 'image/png': blob })
+        navigator.clipboard.write([item]).then(() => {
+          setCopiedImage(true)
+          if (copyTimer.current) window.clearTimeout(copyTimer.current)
+          copyTimer.current = window.setTimeout(() => setCopiedImage(false), 3000)
+        }).catch(() => {})
+        setImageCopying(false)
+      })
+    } catch {
+      setImageCopying(false)
+    }
+  }
+
+  function getCourtLabel(c: CourtDto) {
+    const raw = String(c.name).toUpperCase()
+    return raw.startsWith('TEREN') ? raw : `TEREN ${raw}`
   }
 
   return (
@@ -357,13 +575,121 @@ export default function FreePositionsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-1 gap-2">
-          <button className="btn w-full" onClick={generate} disabled={loading}>Genereaza</button>
-          <button className={`px-3 py-1.5 rounded border w-full ${highlightCopy ? "animate-pulse ring-2 ring-emerald-300" : ""}`} onClick={copy} disabled={!text}>
-            {copied ? 'Copiat' : 'Copiaza pozitiile'}
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button className="btn w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleLoadTable} disabled={tableLoading}>
+            {tableLoading ? 'Se incarcă...' : 'Încarcă Tabel'}
+          </button>
+          <button className="btn w-full bg-sky-600 hover:bg-sky-700 text-white" onClick={generate} disabled={loading}>
+            {loading ? 'Se generează...' : 'Generează Mesaj'}
+          </button>
+          <button className={`px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all sm:col-span-2 ${highlightCopy ? "ring-2 ring-emerald-400" : ""}`} onClick={copy} disabled={!text}>
+            {copiedText ? 'Text Copiat!' : 'Copiaza Text'}
+          </button>
+          <button className={`px-3 py-1.5 rounded border border-lime-300 bg-lime-50 hover:bg-lime-100 text-lime-800 font-bold transition-all sm:col-span-2 ${copiedImage ? "ring-2 ring-lime-400" : ""}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
+            {imageCopying ? 'Se randeaza...' : (copiedImage ? 'Imagine Copiata!' : 'Copiaza Imagine (Poster)')}
           </button>
         </div>
       </div>
+
+      {/* Visual Poster Preview */}
+      {data.length > 0 && (
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Previzualizare Poster</div>
+          <div 
+            ref={posterRef}
+            className="w-full max-w-[480px] rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden relative border-2 border-white/10"
+            style={{ 
+              background: 'linear-gradient(135deg, #0a2342 0%, #0f4c5c 50%, #0a2342 100%)',
+              fontFamily: 'Outfit, sans-serif',
+              aspectRatio: '1 / 1'
+            }}
+          >
+            {/* Logo */}
+            <div className="bg-lime-300 w-14 h-14 rounded-2xl rotate-3 flex items-center justify-center mb-3 shadow-lg flex-shrink-0">
+               <span className="text-2xl">🎾</span>
+            </div>
+
+            <h2 className="text-white font-extrabold text-base tracking-tight leading-tight mb-0.5 uppercase">
+              Intervale Orare Disponibile:
+            </h2>
+
+            {/* Separator */}
+            <div className="w-2/3 border-b-2 border-lime-300/60 mb-2 mt-1"></div>
+
+            <div className="text-slate-300 font-bold text-sm mb-3 tracking-wide">
+              {(() => {
+                const weekdays = ['DUMINICA', 'LUNI', 'MARTI', 'MIERCURI', 'JOI', 'VINERI', 'SAMBATA']
+                const d = new Date(date)
+                return `${weekdays[d.getDay()]} (${formatDateShort(date)})`
+              })()}
+            </div>
+
+            {/* Courts grid - side by side if <= 3 */}
+            <div className={`w-full flex-1 ${filteredData.filter(r => {
+              const segs = (() => {
+                const dayStart = 8*60, dayEnd = 24*60
+                const raw: {start:number,end:number}[] = []
+                for (const fr of r.free||[]) { const s=Math.max(dayStart,parseHHmm(fr.start)),e=Math.min(dayEnd,parseHHmm(fr.end)); if(e>s) raw.push({start:s,end:e}) }
+                return raw
+              })()
+              return segs.length > 0
+            }).length <= 3 ? 'grid grid-cols-' + filteredData.filter(r => {
+              const dayStart = 8*60, dayEnd = 24*60
+              const raw: {start:number,end:number}[] = []
+              for (const fr of r.free||[]) { const s=Math.max(dayStart,parseHHmm(fr.start)),e=Math.min(dayEnd,parseHHmm(fr.end)); if(e>s) raw.push({start:s,end:e}) }
+              return raw.length > 0
+            }).length : 'flex flex-col'} gap-x-2 gap-y-3`}>
+              {filteredData.map(row => {
+                const dayStart = 8 * 60, dayEnd = 24 * 60
+                const raw: Array<{ start: number, end: number }> = []
+                for (const fr of row.free || []) {
+                  const s = Math.max(dayStart, parseHHmm(fr.start))
+                  const e = Math.min(dayEnd, parseHHmm(fr.end))
+                  if (e > s) raw.push({ start: s, end: e })
+                }
+                raw.sort((a, b) => a.start - b.start)
+                const merged: typeof raw = []
+                for (const r of raw) {
+                  const last = merged[merged.length - 1]
+                  if (!last || r.start > last.end) merged.push({ ...r })
+                  else last.end = Math.max(last.end, r.end)
+                }
+
+                if (merged.length === 0) return null
+
+                return (
+                  <div key={row.court.id} className="space-y-0.5">
+                    <div className="text-white/70 font-black text-[10px] uppercase tracking-widest">{getCourtLabel(row.court)}</div>
+                    <div className="flex flex-col gap-0">
+                      {merged.map((seg, i) => (
+                        <div key={i} className="text-lime-300 font-extrabold text-base leading-tight">
+                          {fmtHHmm(seg.start)} - {fmtHHmm(seg.end)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-2 text-lime-300 font-bold text-xs tracking-[0.2em] uppercase">
+              STAR ARENA BASCOV
+            </div>
+          </div>
+        </div>
+      )}
+
+      {data.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+             <h3 className="text-sm font-bold text-slate-800">Vizualizare Grila (Admin)</h3>
+             <span className="text-[10px] text-slate-500 font-medium">Data: {formatDateDisplay(date)}</span>
+          </div>
+          <div className="p-1">
+            <TimelineGrid data={data} date={date} flat />
+          </div>
+        </div>
+      )}
 
       <div className="rounded border border-slate-300 bg-white p-3 shadow">
         <div className="text-xs text-slate-600 mb-1">Previzualizare</div>

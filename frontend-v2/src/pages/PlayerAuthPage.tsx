@@ -58,14 +58,10 @@ export default function PlayerAuthPage() {
       colors: ['#84cc16', '#10b981', '#ffffff']
     });
 
-    // Use location.href for robust mobile redirection to bypass internal router state issues
+    // Always use window.location.href for reliable redirection after login
     setTimeout(() => {
-      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        window.location.href = '/profile';
-      } else {
-        nav('/profile', { replace: true });
-      }
-    }, 1000);
+      window.location.href = '/profile';
+    }, 800);
   };
 
   // Immediate redirect if token exists (Fix for "stuck" after login)
