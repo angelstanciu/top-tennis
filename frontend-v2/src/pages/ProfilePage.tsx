@@ -50,7 +50,10 @@ export default function ProfilePage() {
         const res = await fetch(`${base}/player/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        if (!res.ok) throw new Error()
+        if (!res.ok) {
+           if (res.status === 401 || res.status === 403) throw new Error("UNAUTHORIZED");
+           throw new Error("SERVER_ERROR");
+        }
         const userData = await res.json()
         setPlayer(userData)
         setEditForm({
@@ -65,9 +68,13 @@ export default function ProfilePage() {
 
         const histData = await fetchPlayerHistory(token!)
         setHistory(histData)
-      } catch (err) {
-        localStorage.removeItem('playerToken')
-        nav('/cont')
+      } catch (err: any) {
+        if (err.message === "UNAUTHORIZED" || err.message?.includes("Token invalid") || err.message?.includes("Eroare de comunicare")) {
+           localStorage.removeItem('playerToken')
+           nav('/cont')
+        } else {
+           console.error("Profile load failed:", err)
+        }
       } finally {
         setLoading(false)
       }

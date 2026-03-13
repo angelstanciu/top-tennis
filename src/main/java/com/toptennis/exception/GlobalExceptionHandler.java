@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -45,6 +46,16 @@ public class GlobalExceptionHandler {
         err.message = ex.getMessage();
         err.path = req.getRequestURI();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException ex, HttpServletRequest req) {
+        ApiError err = new ApiError();
+        err.status = ex.getStatusCode().value();
+        err.error = "Eroare HTTP " + err.status;
+        err.message = ex.getReason();
+        err.path = req.getRequestURI();
+        return ResponseEntity.status(ex.getStatusCode()).body(err);
     }
 
     @ExceptionHandler(Exception.class)
