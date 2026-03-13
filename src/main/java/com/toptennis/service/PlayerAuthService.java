@@ -6,6 +6,8 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.toptennis.model.PlayerUser;
 import com.toptennis.repository.PlayerUserRepository;
+import com.toptennis.repository.BookingRepository;
+import com.toptennis.model.Booking;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PlayerAuthService {
 
     private final PlayerUserRepository playerUserRepository;
+    private final BookingRepository bookingRepository;
     private final PasswordEncoder passwordEncoder;
     
     @Value("${google.auth.client-id}")
@@ -33,8 +36,9 @@ public class PlayerAuthService {
     private final Map<String, String> phoneToOtp = new ConcurrentHashMap<>();
     private final Map<String, Long> tokenToPlayerId = new ConcurrentHashMap<>();
 
-    public PlayerAuthService(PlayerUserRepository playerUserRepository, PasswordEncoder passwordEncoder) {
+    public PlayerAuthService(PlayerUserRepository playerUserRepository, BookingRepository bookingRepository, PasswordEncoder passwordEncoder) {
         this.playerUserRepository = playerUserRepository;
+        this.bookingRepository = bookingRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -42,9 +46,7 @@ public class PlayerAuthService {
         String normalized = normalizePhone(phone);
         String otp = "123456"; // Hardcodat pentru ușurința testării frontend / MVP
         phoneToOtp.put(normalized, otp);
-        System.out.println("====== OTP MOCK ======");
-        System.out.println("Pentru telefonul " + normalized + " codul este de test universal: " + otp);
-        System.out.println("======================");
+        // OTP logging removed for privacy/cleanliness in production-like logs
     }
 
     public String verifyOtp(String phone, String otp) {
@@ -266,9 +268,21 @@ public class PlayerAuthService {
         if (existingUser.isPresent()) {
             PlayerUser otherUser = existingUser.get();
             if (!otherUser.getId().equals(currentPlayerId)) {
-                // Transfer number: clear from old user
-                otherUser.setPhoneNumber(null);
-                playerUserRepository.save(otherUser);
+                // Transfer bookings from old ghost account to the current account
+                java.util.List<Booking> oldBookings = bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(otherUser.getId());
+                for (Booking b : oldBookings) {
+                    b.setPlayerUser(currentUser);
+                    bookingRepository.save(b);
+                }
+                bookingRepository.flush();
+                
+                // Soft-Unlink: Instead of deleting (which might fail due to FKs), 
+                // we set a unique dummy phone number or null to free the constraint.
+                // Using a unique "UNLINKED_" prefix to ensure no overlaps even if multiple are unlinked.
+                otherUser.setPhoneNumber("UNLINKED_" + java.util.UUID.randomUUID().toString().substring(0, 8));
+                playerUserRepository.saveAndFlush(otherUser);
+                
+                System.out.println("[CLAIM] Soft-unlinked old user ID " + otherUser.getId() + " and transferred " + oldBookings.size() + " bookings.");
             }
         }
 

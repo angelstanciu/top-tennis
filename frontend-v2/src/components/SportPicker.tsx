@@ -5,7 +5,7 @@ const sports: { value: SportType, label: string, emoji: string }[] = [
   { value: 'PADEL', label: 'Padel', emoji: '🏓' },
   { value: 'BEACH_VOLLEY', label: 'Volei', emoji: '🏐' },
   { value: 'BASKETBALL', label: 'Baschet', emoji: '🏀' },
-  { value: 'FOOTVOLLEY', label: 'Fotbal-Tenis', emoji: '⚽' },
+  { value: 'FOOTVOLLEY', label: 'Tenis de picior', emoji: '⚽' },
   { value: 'TABLE_TENNIS', label: 'Tenis de masă', emoji: '🏓' },
 ]
 

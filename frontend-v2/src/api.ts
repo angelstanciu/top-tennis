@@ -261,3 +261,23 @@ export async function fetchPlayerHistory(token: string): Promise<BookingDto[]> {
   if (!res.ok) throw new Error(await parseError(res) || 'Nu am putut incarca istoricul.')
   return res.json()
 }
+export async function cancelBooking(id: number): Promise<void> {
+  const token = localStorage.getItem('playerToken')
+  if (!token) throw new Error('Trebuie să fii autentificat pentru a anula o rezervare.')
+  
+  const res = await fetch(`${BASE_URL}/bookings/${id}/cancel`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+}
+
+export async function cancelBookingByToken(token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/bookings/cancel-public/${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+}

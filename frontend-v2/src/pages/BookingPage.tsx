@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
-import { CourtDto, calculateGranularPrice } from '../types'
+import { CourtDto, calculateGranularPrice, LOCATION_TAGS } from '../types'
 import fastCat from '../assets/fast-cat.svg'
 
 function formatDateDisplay(iso?: string) {
@@ -149,6 +149,20 @@ export default function BookingPage() {
         customerPhone: phone,
         customerEmail: email || undefined,
       })
+      
+      // Auto-sync profile if logged in to update phone numbers/localStorage
+      const token = localStorage.getItem('playerToken')
+      if (token) {
+        try {
+          const { fetchPlayerMe } = await import('../api')
+          const updated = await fetchPlayerMe(token)
+          localStorage.setItem('playerData', JSON.stringify(updated))
+          window.dispatchEvent(new Event('auth-change'))
+        } catch (syncErr) {
+          console.error("Failed to sync profile after booking:", syncErr)
+        }
+      }
+      
       setSuccessVisible(true)
     } catch (err: any) {
       showUnavailable(err.message || 'Se pare că a apărut o problemă de comunicare cu serverul.')
@@ -330,7 +344,7 @@ export default function BookingPage() {
               
               <div className="flex flex-col gap-3">
                 <a
-                  href={court?.notes?.includes('Locație vizită') || (court?.sportType === 'PADEL' && court?.indoor) ? "https://www.google.com/maps/search/?api=1&query=STAR+ARENA+PADEL" : "https://www.google.com/maps/search/?api=1&query=COSMIN+TOP+TENIS"}
+                  href={court?.notes === LOCATION_TAGS.STAR_ARENA || (court?.sportType === 'PADEL' && court?.indoor) ? "https://www.google.com/maps/search/?api=1&query=STAR+ARENA+PADEL" : "https://www.google.com/maps/search/?api=1&query=COSMIN+TOP+TENIS"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-3.5 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all flex justify-center items-center gap-2"

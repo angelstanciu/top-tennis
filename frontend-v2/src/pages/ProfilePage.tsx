@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { 
   Trophy, Settings, LogOut, ChevronRight, Calendar, MapPin, 
   Target, Clock, ArrowLeft, Camera, Edit2, Shield, Save, X, ChevronDown,
-  ArrowRight, Loader2, Star
+  ArrowRight, Loader2, Star, Zap, Crown, Gem
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { fetchPlayerHistory, updatePlayerProfile } from '../api'
+import { fetchPlayerHistory, updatePlayerProfile, cancelBooking } from '../api'
 import { BookingDto, PlayerUser } from '../types'
 
 export default function ProfilePage() {
@@ -37,6 +37,10 @@ export default function ProfilePage() {
   const [claimPhone, setClaimPhone] = useState('')
   const [claimLoading, setClaimLoading] = useState(false)
   const [claimError, setClaimError] = useState('')
+  const [claimOtpSent, setClaimOtpSent] = useState(false)
+
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [bookingToCancel, setBookingToCancel] = useState<number | null>(null)
 
   useEffect(() => {
     if (!token) {
@@ -85,16 +89,17 @@ export default function ProfilePage() {
   const matchesPlayed = history.length
   
   const rankInfo = useMemo(() => {
-    if (matchesPlayed < 7) return { label: 'Bronze', color: 'from-orange-400 to-orange-700', next: 7, icon: '🥉' }
-    if (matchesPlayed < 20) return { label: 'Silver', color: 'from-slate-300 to-slate-500', next: 20, icon: '🥈' }
-    if (matchesPlayed < 50) return { label: 'Gold', color: 'from-yellow-300 to-yellow-600', next: 50, icon: '🥇' }
-    if (matchesPlayed < 100) return { label: 'Diamond', color: 'from-cyan-300 to-cyan-500', next: 100, icon: '💎' }
-    return { label: 'Platinum', color: 'from-indigo-400 to-purple-600', next: null, icon: '👑' }
+    if (matchesPlayed < 10) return { label: 'Bronze', color: 'from-orange-400 to-orange-700', next: 10, icon: <Shield className="w-16 h-16 text-orange-400 drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]" />, level: 1 }
+    if (matchesPlayed < 25) return { label: 'Silver', color: 'from-slate-300 to-slate-500', next: 25, icon: <Zap className="w-16 h-16 text-slate-300 drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]" />, level: 2 }
+    if (matchesPlayed < 55) return { label: 'Gold', color: 'from-yellow-300 to-yellow-600', next: 55, icon: <Crown className="w-16 h-16 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />, level: 3 }
+    if (matchesPlayed < 105) return { label: 'Diamond', color: 'from-cyan-300 to-cyan-500', next: 105, icon: <Gem className="w-16 h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />, level: 4 }
+    return { label: 'Platinum', color: 'from-indigo-400 to-purple-600', next: null, icon: <Trophy className="w-16 h-16 text-purple-400 drop-shadow-[0_0_15px_rgba(192,132,252,0.5)]" />, level: 5 }
   }, [matchesPlayed])
 
   const progress = rankInfo.next ? (matchesPlayed / rankInfo.next) * 100 : 100
 
   const handleLogout = () => {
+    if (!window.confirm("Sigur vrei să te deconectezi?")) return
     localStorage.removeItem('playerToken')
     localStorage.removeItem('playerData')
     window.dispatchEvent(new Event('auth-change'))
@@ -115,8 +120,11 @@ export default function ProfilePage() {
       localStorage.setItem('playerData', JSON.stringify(updated))
       window.dispatchEvent(new Event('auth-change'))
     } catch (err: any) {
-      if (err.message?.includes('deja folosit')) {
+      if (err.message?.includes('deja folosit') || err.message?.includes('deja asociat')) {
         setClaimPhone(editForm.phoneNumber)
+        setClaimOtp('')
+        setClaimOtpSent(false)
+        setClaimError('')
         setShowClaimModal(true)
       } else {
         alert(err.message || 'Eroare la salvarea profilului.')
@@ -132,6 +140,7 @@ export default function ProfilePage() {
     try {
       const { requestPlayerOtp } = await import('../api')
       await requestPlayerOtp(claimPhone)
+      setClaimOtpSent(true)
     } catch (err: any) {
       setClaimError(err.message)
     } finally {
@@ -143,14 +152,37 @@ export default function ProfilePage() {
     setClaimLoading(true)
     setClaimError('')
     try {
-      const { linkPlayerPhone } = await import('../api')
+      const { linkPlayerPhone, fetchPlayerHistory } = await import('../api')
       const updated = await linkPlayerPhone(token!, claimPhone, claimOtp)
-      setPlayer(updated)
+      
+      // Auto-refresh logic: re-fetch the absolute newest profile and history
+      try {
+        const base = (import.meta as any).env.VITE_API_BASE_URL || '/api'
+        const res = await fetch(`${base}/player/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const freshProfile = await res.json()
+          setPlayer(freshProfile)
+          localStorage.setItem('playerData', JSON.stringify(freshProfile))
+        } else {
+          setPlayer(updated)
+          localStorage.setItem('playerData', JSON.stringify(updated))
+        }
+
+        const freshHistory = await fetchPlayerHistory(token!)
+        setHistory(freshHistory)
+      } catch (err) {
+        // Fallback to the returned user data if fetching fails
+        setPlayer(updated)
+        localStorage.setItem('playerData', JSON.stringify(updated))
+        console.error('Eroare la reîmprospătarea automată după revendicare:', err)
+      }
+
       setShowClaimModal(false)
       setIsEditing(false)
-      localStorage.setItem('playerData', JSON.stringify(updated))
       window.dispatchEvent(new Event('auth-change'))
-      alert('Telefonul a fost conectat cu succes!')
+      alert('Telefonul a fost conectat cu succes! Istoricul tău a fost actualizat.')
     } catch (err: any) {
       setClaimError(err.message)
     } finally {
@@ -161,13 +193,114 @@ export default function ProfilePage() {
   const sports = [
     { id: 'TENNIS', label: 'Tenis', icon: '🎾' },
     { id: 'PADEL', label: 'Padel', icon: '🏓' },
-    { id: 'FOOTVOLLEY', label: 'Tenis de Picior', icon: '⚽' },
+    { id: 'FOOTVOLLEY', label: 'Tenis de picior', icon: '⚽' },
     { id: 'BASKETBALL', label: 'Baschet', icon: '🏀' },
     { id: 'TABLE_TENNIS', label: 'Tenis de Masă', icon: '🏓' },
     { id: 'BEACH_VOLLEY', label: 'Volei pe Plajă', icon: '🏐' }
   ]
 
-  const displayedHistory = showAllHistory ? history : history.slice(0, 3)
+  const { activeBookings, pastBookings } = useMemo(() => {
+    const now = new Date()
+    const active: BookingDto[] = []
+    const past: BookingDto[] = []
+
+    history.forEach(b => {
+      const bDate = new Date(b.bookingDate)
+      const [sh, sm] = b.startTime.split(':').map(Number)
+      bDate.setHours(sh, sm, 0, 0)
+
+      if (bDate > now && b.status !== 'CANCELLED') {
+        active.push(b)
+      } else {
+        past.push(b)
+      }
+    })
+
+    // Sort active ascending (closest to now first)
+    active.sort((a,b) => {
+      const dateA = new Date(a.bookingDate)
+      const [hA, mA] = a.startTime.split(':').map(Number)
+      dateA.setHours(hA, mA)
+      
+      const dateB = new Date(b.bookingDate)
+      const [hB, mB] = b.startTime.split(':').map(Number)
+      dateB.setHours(hB, mB)
+      
+      return dateA.getTime() - dateB.getTime()
+    })
+
+    // Sort past descending (most recent first)
+    past.sort((a,b) => {
+      const dateA = new Date(a.bookingDate)
+      const [hA, mA] = a.startTime.split(':').map(Number)
+      dateA.setHours(hA, mA)
+      
+      const dateB = new Date(b.bookingDate)
+      const [hB, mB] = b.startTime.split(':').map(Number)
+      dateB.setHours(hB, mB)
+      
+      return dateB.getTime() - dateA.getTime()
+    })
+
+    return { activeBookings: active, pastBookings: past }
+  }, [history])
+
+  const handleCancelClick = (id: number) => {
+    setBookingToCancel(id)
+    setShowCancelModal(true)
+  }
+
+  const confirmCancel = async () => {
+    if (!bookingToCancel) return
+    try {
+      setLoading(true)
+      await cancelBooking(bookingToCancel)
+      const histData = await fetchPlayerHistory(token!)
+      setHistory(histData)
+      setShowCancelModal(false)
+      setBookingToCancel(null)
+    } catch (err: any) {
+      alert(err.message || "Eroare la anularea rezervării.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatTime = (time: string) => {
+    if (!time) return ""
+    return time.split(':').slice(0, 2).join(':')
+  }
+
+  const isCancellable = (bookingDate: string, startTime: string) => {
+    try {
+      const now = new Date()
+      // bookingDate is YYYY-MM-DD
+      const [year, month, day] = bookingDate.split('-').map(Number)
+      const [hour, minute] = startTime.split(':').map(Number)
+      const bookingTime = new Date(year, month - 1, day, hour, minute)
+      
+      const diffMs = bookingTime.getTime() - now.getTime()
+      const diffHours = diffMs / (1000 * 60 * 60)
+      
+      return diffHours >= 24
+    } catch {
+      return false
+    }
+  }
+
+  const getLocationLink = (court: any) => {
+    // Star Arena link (correct search URL)
+    const starArena = "https://www.google.com/maps/search/Star+Arena+Bascov+Arges"
+    // Cosmin Top Tenis link
+    const topTenis = "https://www.google.com/maps/search/Cosmin+Top+Tenis+Pitesti+Arges"
+    
+    if (court?.sportType === 'PADEL' && court?.indoor) {
+      return starArena
+    }
+    return topTenis
+  }
+
+  const displayedHistory = showAllHistory ? pastBookings : pastBookings.slice(0, 3)
 
   const getInitials = (name: string) => {
     if (!name) return 'S'
@@ -249,7 +382,7 @@ export default function ProfilePage() {
               className="px-6 h-12 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-2 hover:bg-rose-500/10 transition-all text-rose-500/70 hover:text-rose-400 shadow-2xl backdrop-blur-xl font-bold text-xs uppercase tracking-widest"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Iesire</span>
+              <span className="hidden sm:inline">Deconectare</span>
             </button>
           </div>
         </div>
@@ -299,15 +432,15 @@ export default function ProfilePage() {
                         onChange={e => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
                         placeholder="Nume Complet"
                       />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-4">
                         <input 
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all font-mono"
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all font-mono"
                           value={editForm.phoneNumber}
                           onChange={e => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
                           placeholder="Telefon"
                         />
                         <input 
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
                           value={editForm.email}
                           onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="Email"
@@ -374,7 +507,7 @@ export default function ProfilePage() {
                            {player?.email && (
                              <>
                                <div className="w-1 h-1 rounded-full bg-slate-700" />
-                               <span className="text-xs font-bold text-slate-400 italic">{player.email}</span>
+                               <span className="text-xs font-bold text-slate-400 italic break-all md:break-words line-clamp-1 hover:line-clamp-none transition-all cursor-help">{player.email}</span>
                              </>
                            )}
                         </div>
@@ -387,6 +520,13 @@ export default function ProfilePage() {
                         >
                           <Edit2 className="w-3.5 h-3.5 group-hover/edit:rotate-12 transition-transform" />
                           Editează Profil
+                        </button>
+                        <button 
+                          onClick={() => nav('/rezerva')}
+                          className="flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-400 text-black rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          Rezervă meci
                         </button>
                         <div className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2">
                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
@@ -464,8 +604,8 @@ export default function ProfilePage() {
                       </>
                     ) : (
                       <>
-                        Continuă să-ți scrii <br />
-                        <span className="text-lime-400 italic">istoria</span>&nbsp;în arenă.
+                        Evoluția ta <br />
+                        în&nbsp;<span className="text-lime-400 italic">arenă</span>.
                       </>
                     )}
                   </h3>
@@ -528,17 +668,96 @@ export default function ProfilePage() {
 
         {/* Modern Activity Feed */}
         <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          {activeBookings.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-lime-400" />
+                <h3 className="text-xl font-black text-white tracking-widest uppercase">Rezervări Active</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-6">
+                {activeBookings.map((item, idx) => (
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group relative bg-slate-900/60 backdrop-blur-3xl border border-lime-500/10 rounded-3xl p-5 flex flex-col md:flex-row items-center gap-6 hover:border-lime-500/30 transition-all duration-500 shadow-xl"
+                  >
+                    <div className="flex items-center gap-5 flex-1 w-full">
+                      <div className="w-16 h-16 shrink-0 bg-lime-500 rounded-2xl flex flex-col items-center justify-center shadow-lg">
+                         <span className="text-[9px] font-black text-black/50 uppercase tracking-widest leading-none mb-0.5">
+                           {new Date(item.bookingDate).toLocaleDateString('ro-RO', { month: 'short' })}
+                         </span>
+                         <span className="text-2xl font-black text-black leading-none italic">
+                           {new Date(item.bookingDate).getDate()}
+                         </span>
+                      </div>
+                      <div className="flex-1 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-0.5">
+                          <span className="text-[9px] font-black text-lime-500 uppercase tracking-widest bg-lime-500/10 px-2 py-0.5 rounded-full">Viitor</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            {item.court?.name} {item.court?.indoor ? '• Indoor' : '• Exterior'}
+                          </span>
+                        </div>
+                        <h4 className="text-xl font-black text-white tracking-tight leading-none uppercase">
+                           {item.court?.sportType === 'TENNIS' ? 'Tenis' : 
+                            item.court?.sportType === 'PADEL' ? 'Padel' : 
+                            item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 
+                            (item.court?.sportType as any) === 'FOOTBALL' || item.court?.sportType === 'FOOTVOLLEY' ? 'Tenis de picior' : 'Sport'}
+                         </h4>
+                         <div className="flex items-center justify-center md:justify-start gap-4 text-slate-400 font-mono mt-1.5">
+                           <div className="flex items-center gap-1.5">
+                             <Clock className="w-3 h-3 text-slate-600" />
+                             <span className="text-[10px] font-bold tracking-wider">{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
+                           </div>
+                         </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                      <a 
+                        href={getLocationLink(item.court)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex-1 md:flex-none px-4 py-3 bg-white/5 border border-white/5 text-slate-300 hover:bg-white/10 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                      >
+                         <MapPin className="w-3 h-3" />
+                         Locație
+                      </a>
+                      <button 
+                        onClick={() => {
+                          if (isCancellable(item.bookingDate, item.startTime)) {
+                            handleCancelClick(item.id)
+                          }
+                        }}
+                        disabled={!isCancellable(item.bookingDate, item.startTime)}
+                        className={`flex-1 md:flex-none px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                          isCancellable(item.bookingDate, item.startTime)
+                            ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-95'
+                            : 'bg-slate-800 border border-white/5 text-slate-500 cursor-not-allowed'
+                        }`}
+                        title={!isCancellable(item.bookingDate, item.startTime) ? "Anularea este posibilă cu maxim 24h înainte" : ""}
+                      >
+                         Anulează
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-10">
             <div>
               <h3 className="text-3xl font-black text-white tracking-widest uppercase text-center sm:text-left">Istoric Activitate</h3>
-              <p className="text-xs font-bold text-slate-500 mt-1 text-center sm:text-left">Ultimele tale experiențe în arenă</p>
+              <p className="text-xs font-bold text-slate-500 mt-1 text-center sm:text-left">Meciurile tale trecute</p>
             </div>
-            <button 
-              onClick={() => setShowAllHistory(!showAllHistory)}
-              className="w-full sm:w-auto text-[10px] font-black text-lime-400 hover:text-black transition-all uppercase tracking-widest px-8 py-4 bg-lime-500/10 hover:bg-lime-500 rounded-2xl border border-lime-500/20 shadow-xl backdrop-blur-xl"
-            >
-              {showAllHistory ? 'RESTRÂNGE LISTA' : 'VEZI TOT ISTORICUL'}
-            </button>
+            {pastBookings.length > 3 && (
+              <button 
+                onClick={() => setShowAllHistory(!showAllHistory)}
+                className="w-full sm:w-auto text-[10px] font-black text-lime-400 hover:text-black transition-all uppercase tracking-widest px-8 py-4 bg-lime-500/10 hover:bg-lime-500 rounded-2xl border border-lime-500/20 shadow-xl backdrop-blur-xl"
+              >
+                {showAllHistory ? 'RESTRÂNGE LISTA' : 'VEZI TOT ISTORICUL'}
+              </button>
+            )}
           </div>
 
           <div className="space-y-6 relative">
@@ -551,33 +770,36 @@ export default function ProfilePage() {
                   transition={{ delay: idx * 0.05 }}
                   className="group relative bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 hover:bg-slate-900/60 transition-all duration-500 hover:border-lime-500/30 shadow-xl"
                 >
-                  <div className="flex items-center gap-6 flex-1 w-full">
+                  <div className="flex items-center gap-6 flex-1 w-full opacity-60">
                     {/* Date Block */}
-                    <div className="w-20 h-20 shrink-0 bg-slate-950 rounded-[1.8rem] border border-white/10 flex flex-col items-center justify-center shadow-inner group-hover:bg-lime-500 transition-colors duration-500 group-hover:border-lime-400">
-                       <span className="text-[10px] font-black text-slate-500 group-hover:text-black/50 uppercase tracking-widest mb-1">
+                    <div className="w-20 h-20 shrink-0 bg-slate-950 rounded-[1.8rem] border border-white/10 flex flex-col items-center justify-center shadow-inner group-hover:bg-slate-800 transition-colors duration-500">
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
                          {new Date(item.bookingDate).toLocaleDateString('ro-RO', { month: 'short' })}
                        </span>
-                       <span className="text-3xl font-black text-white group-hover:text-black leading-none italic">
+                       <span className="text-3xl font-black text-slate-400 leading-none italic">
                          {new Date(item.bookingDate).getDate()}
                        </span>
                     </div>
 
                     <div className="flex-1 space-y-2 text-center md:text-left">
                       <div className="flex items-center justify-center md:justify-start gap-2">
-                        <span className="text-xs font-black text-lime-500 uppercase tracking-widest">Confirmat</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${item.status === 'CANCELLED' ? 'text-rose-500 bg-rose-500/10' : 'text-slate-500 bg-slate-500/10'} px-2 py-0.5 rounded-full`}>
+                          {item.status === 'CANCELLED' ? 'Anulată' : 'Finalizată'}
+                        </span>
                         <div className="w-1 h-1 rounded-full bg-slate-700" />
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.court?.name}</span>
                       </div>
-                      <h4 className="text-2xl font-black text-white tracking-tight leading-none uppercase">
-                        {item.court?.sportType === 'TENNIS' ? 'Tenis' : item.court?.sportType === 'PADEL' ? 'Padel' : item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 'Fotbal'}
+                      <h4 className="text-2xl font-black text-slate-400 tracking-tight leading-none uppercase">
+                        {item.court?.sportType === 'TENNIS' ? 'Tenis' : 
+                         item.court?.sportType === 'PADEL' ? 'Padel' : 
+                         item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 
+                         (item.court?.sportType as any) === 'FOOTBALL' || item.court?.sportType === 'FOOTVOLLEY' ? 'Tenis de picior' : 'Sport'}
                       </h4>
-                      <div className="flex items-center justify-center md:justify-start gap-4 text-slate-400 font-mono">
+                      <div className="flex items-center justify-center md:justify-start gap-4 text-slate-500 font-mono">
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-slate-600" />
-                          <span className="text-[11px] font-bold tracking-wider">{item.startTime}</span>
+                          <span className="text-[11px] font-bold tracking-wider">{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
                         </div>
-                        <div className="w-1.5 h-1.5 rounded-full border border-slate-800" />
-                        <span className="text-[11px] font-bold tracking-wider">{item.court?.indoor ? 'INDOOR' : 'OUTDOOR'}</span>
                       </div>
                     </div>
                   </div>
@@ -587,14 +809,6 @@ export default function ProfilePage() {
                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Cost</span>
                        <span className="text-sm font-black text-white italic">{item.price} RON</span>
                     </div>
-                    <button className="flex-1 md:w-14 md:h-14 h-12 rounded-2xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-center text-lime-500 hover:bg-lime-500 hover:text-black transition-all group-hover:scale-105 active:scale-95 duration-500 shadow-lg">
-                       <ChevronRight className="w-6 h-6" />
-                    </button>
-                  </div>
-
-                  {/* Top-right subtle badge */}
-                  <div className="absolute top-4 right-8 text-[9px] font-black text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                    ID: #{item.id}
                   </div>
                 </motion.div>
               )) : (
@@ -619,6 +833,46 @@ export default function ProfilePage() {
             </AnimatePresence>
           </div>
         </div>
+
+        <AnimatePresence>
+          {showCancelModal && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] flex items-center justify-center px-4 backdrop-blur-md bg-black/60"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl text-center"
+              >
+                <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <X className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Anulezi rezervarea?</h3>
+                <p className="text-slate-400 text-sm font-medium mb-8">
+                  Această acțiune este ireversibilă. Poți anula doar cu cel puțin <span className="text-rose-400 font-bold">24 ore</span> înainte. Ești sigur?
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowCancelModal(false)}
+                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
+                  >
+                    Nu, înapoi
+                  </button>
+                  <button 
+                    onClick={confirmCancel}
+                    className="flex-1 py-4 bg-rose-500 hover:bg-rose-400 text-white rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
+                  >
+                    Da, anulează
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Account Claim Modal */}
         <AnimatePresence>
@@ -649,25 +903,35 @@ export default function ProfilePage() {
                   </p>
 
                   <div className="space-y-6">
-                    {!claimOtp ? (
-                      <button 
-                        onClick={handleStartClaim}
-                        disabled={claimLoading}
-                        className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl font-black text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-                        {claimLoading ? 'SE TRIMITE...' : 'TRIMITE COD PRIN SMS'}
-                      </button>
-                    ) : null}
 
-                    {(claimOtp || !claimLoading) && (
+                    {/* Step 1: Send OTP */}
+                    {!claimOtpSent ? (
                       <div className="space-y-4">
+                        <p className="text-slate-500 text-center text-xs font-bold uppercase tracking-widest">
+                          Pasul 1 din 2 — Trimite cod de verificare
+                        </p>
+                        <button 
+                          onClick={handleStartClaim}
+                          disabled={claimLoading}
+                          className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl font-black text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                          {claimLoading ? 'SE TRIMITE...' : 'TRIMITE COD PRIN SMS'}
+                        </button>
+                      </div>
+                    ) : (
+                      /* Step 2: Enter OTP and verify */
+                      <div className="space-y-4">
+                        <p className="text-slate-500 text-center text-xs font-bold uppercase tracking-widest">
+                          Pasul 2 din 2 — Introdu codul primit
+                        </p>
                         <input 
                           type="text"
                           placeholder="Cod OTP din SMS"
                           className="w-full bg-slate-950 border border-white/10 rounded-2xl px-6 py-4 text-center text-lg font-black tracking-[0.5em] focus:border-lime-500 outline-none transition-all placeholder:tracking-normal placeholder:font-bold placeholder:text-slate-700"
                           value={claimOtp}
                           onChange={e => setClaimOtp(e.target.value)}
+                          autoFocus
                         />
                         <button 
                           onClick={handleVerifyClaim}
@@ -676,6 +940,12 @@ export default function ProfilePage() {
                         >
                           {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Shield className="w-5 h-5" />}
                           {claimLoading ? 'SE VERIFICĂ...' : 'VERIFICĂ ȘI REVENDICĂ'}
+                        </button>
+                        <button
+                          onClick={() => { setClaimOtpSent(false); setClaimOtp(''); setClaimError(''); }}
+                          className="w-full py-2 text-slate-600 hover:text-slate-400 font-bold text-[10px] tracking-widest uppercase transition-colors"
+                        >
+                          ← Retrimite cod
                         </button>
                       </div>
                     )}

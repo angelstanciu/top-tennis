@@ -555,7 +555,7 @@ export default function AdminPage() {
                   <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
                   <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
                   <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
-                  <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Fotbal-Tenis</option>
+                  <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Tenis de picior</option>
                   <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
                   <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
                 </select>

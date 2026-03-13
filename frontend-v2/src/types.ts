@@ -1,5 +1,10 @@
 export type SportType = 'TENNIS' | 'PADEL' | 'BEACH_VOLLEY' | 'BASKETBALL' | 'FOOTVOLLEY' | 'TABLE_TENNIS'
 
+export const LOCATION_TAGS = {
+  COSMIN: 'Baza Cosmin Top Tenis',
+  STAR_ARENA: '📍 Star Arena (Locație Nouă)'
+}
+
 export interface CourtDto {
   id: number
   name: string
@@ -56,27 +61,21 @@ export interface PlayerUser {
   matchesPlayed?: number
 }
 
-export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
+export function getPricePerHour(sport: SportType, indoor: boolean, date?: string): number {
   const isOutdoor = !indoor
-  let pricePerHour = 0
+  if (sport === 'TENNIS' && indoor) return 60
+  if (sport === 'TENNIS' && isOutdoor) return 40
+  if (sport === 'FOOTVOLLEY') return 75
+  if (sport === 'PADEL' && isOutdoor) return 80
+  if (sport === 'PADEL' && indoor) return 150
+  if (sport === 'BASKETBALL') return 80
+  if (sport === 'TABLE_TENNIS') return 35
+  if (sport === 'BEACH_VOLLEY') return 100
+  return 0
+}
 
-  if (sport === 'TENNIS' && indoor) {
-    pricePerHour = 60
-  } else if (sport === 'TENNIS' && isOutdoor) {
-    pricePerHour = 40
-  } else if (sport === 'FOOTVOLLEY') {
-    pricePerHour = 75
-  } else if (sport === 'PADEL' && isOutdoor) {
-    pricePerHour = 80
-  } else if (sport === 'PADEL' && indoor) {
-    pricePerHour = 150
-  } else if (sport === 'BASKETBALL') {
-    pricePerHour = 80
-  } else if (sport === 'TABLE_TENNIS') {
-    pricePerHour = 35
-  } else if (sport === 'BEACH_VOLLEY') {
-    pricePerHour = 100
-  }
+export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
+  const pricePerHour = getPricePerHour(sport, indoor, date)
 
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)

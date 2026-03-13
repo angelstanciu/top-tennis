@@ -40,4 +40,16 @@ public class BookingController {
     public BookingDto get(@PathVariable Long id) {
         return BookingMapper.toDto(bookingService.get(id));
     }
+
+    @PatchMapping("/{id}/cancel")
+    public void cancel(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        bookingService.cancelBooking(id, token);
+    }
+
+    @PostMapping("/cancel-public/{token}")
+    public void cancelPublic(@PathVariable String token) {
+        bookingService.cancelByPublicToken(token);
+    }
 }

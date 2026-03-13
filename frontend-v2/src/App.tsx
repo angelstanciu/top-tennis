@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
-import { AvailabilityDto, SportType, CourtDto } from './types'
+import { AvailabilityDto, SportType, CourtDto, getPricePerHour, LOCATION_TAGS } from './types'
 import { fetchAvailability, fetchActiveCourts } from './api'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import fastCat from './assets/fast-cat.svg'
@@ -55,6 +55,15 @@ function timeToMinutes(t: string) {
   if (t === '24:00' || t === '23:59') return 24 * 60
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
+}
+
+function maxDateISO() {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 3)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
 }
 
 function formatDateDisplay(iso?: string) {
@@ -125,10 +134,20 @@ export default function App() {
   }, [activeSports])
 
   useEffect(() => {
-    function syncAuth() {
+    async function syncAuth() {
+      const token = localStorage.getItem('playerToken')
       const data = localStorage.getItem('playerData')
+      
       if (data) {
         try { setPlayer(JSON.parse(data)) } catch { setPlayer(null) }
+      } else if (token) {
+        // Data missing but token exists - fetch it
+        try {
+          const { fetchPlayerMe } = await import('./api')
+          const userData = await fetchPlayerMe(token)
+          setPlayer(userData)
+          localStorage.setItem('playerData', JSON.stringify(userData))
+        } catch { setPlayer(null) }
       } else {
         setPlayer(null)
       }
@@ -167,26 +186,8 @@ export default function App() {
           const isVolley = row.court.sportType === 'BEACH_VOLLEY'
           const isOutdoor = !row.court.indoor
 
-          // Pricing logic from Cosmin (WhatsApp 11.03.2026)
-          // Updated Granular Pricing (Match with TimelineGrid & BookingPage)
-          if (isTennis && row.court.indoor) {
-            newRow.court.pricePerHour = 60 // 60 lei oricând
-          } else if (isTennis && isOutdoor) {
-            newRow.court.pricePerHour = 40 // Day price
-          } else if (isFootVolley) {
-            newRow.court.pricePerHour = 75 // Day price
-          } else if (isPadel && isOutdoor) {
-            newRow.court.pricePerHour = 80 // Day price
-          } else if (isPadel && row.court.indoor) {
-            // After April 1st logic handled in dynamic components
-            newRow.court.pricePerHour = 150 
-          } else if (isBasketball) {
-            newRow.court.pricePerHour = 80
-          } else if (isTableTennis) {
-            newRow.court.pricePerHour = 35
-          } else if (isVolley) {
-            newRow.court.pricePerHour = 100
-          }
+          // Pricing logic from types.ts
+          newRow.court.pricePerHour = getPricePerHour(row.court.sportType, row.court.indoor, date)
 
           // Seasonal unavailability
           let forceUnavailable = false
@@ -202,12 +203,10 @@ export default function App() {
           // PADEL COURTS - Location Tagging
           if (isPadel) {
             const courtName = row.court.name.trim()
-            if (courtName === '5') {
-              newRow.court.notes = 'Baza Cosmin Top Tenis'
-            } else if (courtName === '2' || courtName === '3') {
-              newRow.court.notes = '📍 Star Arena (Altă Locație)'
+            if (courtName === '2' || courtName === '3') {
+              newRow.court.notes = LOCATION_TAGS.STAR_ARENA
             } else {
-              newRow.court.notes = 'Baza Cosmin Top Tenis'
+              newRow.court.notes = LOCATION_TAGS.COSMIN
             }
           }
 
@@ -491,7 +490,7 @@ export default function App() {
                sport === 'PADEL' ? 'Padel' : 
                sport === 'BEACH_VOLLEY' ? 'Volei' : 
                sport === 'BASKETBALL' ? 'Baschet' : 
-               sport === 'FOOTVOLLEY' ? 'Fotbal-Tenis' : 
+               sport === 'FOOTVOLLEY' ? 'Tenis de picior' : 
                sport === 'TABLE_TENNIS' ? 'Tenis de Masă' : 'Sport'}
             </h2>
           </div>
@@ -543,7 +542,7 @@ export default function App() {
                 { value: 'PADEL', label: '🏓 Padel' },
                 { value: 'BEACH_VOLLEY', label: '🏐 Volei' },
                 { value: 'BASKETBALL', label: '🏀 Baschet' },
-                { value: 'FOOTVOLLEY', label: '⚽ Tenis de Picior' },
+                { value: 'FOOTVOLLEY', label: '⚽ Tenis de picior' },
                 { value: 'TABLE_TENNIS', label: '🏓 Tenis de Masă' },
               ] as { value: SportType; label: string }[]).map(({ value, label }) => {
                 const hasActive = activeCourts.some(c => c.sportType === value)
@@ -579,6 +578,8 @@ export default function App() {
                 ref={dateInputRef}
                 className="absolute inset-0 w-full opacity-0 cursor-pointer"
                 type="date"
+                min={todayISO()}
+                max={maxDateISO()}
                 value={date}
                 onChange={e => setDate(e.target.value)}
               />
@@ -619,7 +620,7 @@ export default function App() {
           ) : (
             <>
                     <div className="-mx-2 flex-1 min-h-0">
-                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} />
+                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} player={player} />
                     </div>
                     {hasSeasonalOutdoor && (
                       <div className="mx-1 mt-1.5 px-4 py-2.5 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-2xl flex items-center gap-3">

@@ -32,20 +32,16 @@ export default defineConfig({
         })
     ],
     server: {
-        host: true, // permite acces extern prin IP sau tunnel
+        host: '0.0.0.0', // permite acces extern prin IP sau tunnel
         port: 5174,
+        strictPort: true,
         allowedHosts: true,
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
                 secure: false,
-                rewrite: (path) => path,
-                configure: (proxy, _options) => {
-                    proxy.on('proxyReq', (proxyReq, req, _res) => {
-                        proxyReq.setHeader('Origin', 'http://localhost:5173');
-                    });
-                }
+                rewrite: (path) => path
             }
         }
     },

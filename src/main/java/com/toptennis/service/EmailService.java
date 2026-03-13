@@ -17,6 +17,9 @@ public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
     private static final String FROM_EMAIL = "rezervari@star-arena.ro";
+    
+    @org.springframework.beans.factory.annotation.Value("${app.base-url}")
+    private String baseUrl;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -89,8 +92,13 @@ public class EmailService {
                "        </table>" +
                "      </div>" +
                "      " +
-               "      <div style='text-align: center; margin-bottom: 30px;'>" +
+               "      <div style='text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;'>" +
                "        <a href='" + mapsUrl + "' style='display: inline-block; background-color: #111827; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; transition: background-color 0.2s;'>Vezi locația pe hartă</a>" +
+               "        " +
+               "        <div style='margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e5e7eb; width: 100%;'>" +
+               "          <p style='color: #6b7280; font-size: 13px; margin-bottom: 12px;'>Ai nevoie să anulezi? O poți face cu cel puțin 24h înainte:</p>" +
+               "          <a href='" + baseUrl + "/anulare/" + booking.getCancelToken() + "' style='display: inline-block; color: #ef4444; font-size: 14px; font-weight: 600; text-decoration: underline;'>Anulează rezervarea</a>" +
+               "        </div>" +
                "      </div>" +
                "      " +
                "      <p style='color: #9ca3af; font-size: 14px; text-align: center; margin: 0;'>Te așteptăm cu drag în arenă!</p>" +

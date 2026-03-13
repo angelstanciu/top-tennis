@@ -27,7 +27,8 @@ interface DateSliderProps {
 }
 
 export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
-  const days = generateDays(21)
+  // Show up to 90 days (approx 3 months) in the slider as requested for the horizon
+  const days = generateDays(90)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const scroll = useCallback((dir: 'left' | 'right') => {

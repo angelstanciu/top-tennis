@@ -21,6 +21,7 @@ import SecurityPage from './pages/SecurityPage'
 import SubscriptionsPage from './pages/SubscriptionsPage'
 import SubscriptionRequestFormPage from './pages/SubscriptionRequestFormPage'
 import AdminSubscriptionRequestsPage from './pages/AdminSubscriptionRequestsPage'
+import CancelByTokenPage from './pages/CancelByTokenPage'
 import { registerSW } from 'virtual:pwa-register'
 import ScrollToTop from './components/ScrollToTop'
 
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
   { path: '/admin/block-day', element: <><ScrollToTop /><AdminBlockDayPage /></> },
   { path: '/admin/weekly', element: <><ScrollToTop /><AdminWeeklyBookingPage /></> },
   { path: '/admin/abonamente', element: <><ScrollToTop /><AdminSubscriptionRequestsPage /></> },
+  { path: '/anulare/:token', element: <><ScrollToTop /><CancelByTokenPage /></> },
 ])
 
 import { GoogleOAuthProvider } from '@react-oauth/google'

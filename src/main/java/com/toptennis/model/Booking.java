@@ -45,6 +45,12 @@ public class Booking {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
+    @Column(unique = true)
+    private String cancelToken;
+
+    public String getCancelToken() { return cancelToken; }
+    public void setCancelToken(String cancelToken) { this.cancelToken = cancelToken; }
+
     private boolean isMidnightBooking;
     
     @JsonIgnore

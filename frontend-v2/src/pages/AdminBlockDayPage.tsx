@@ -136,7 +136,7 @@ export default function AdminBlockDayPage() {
                       <option value="TENNIS">Tenis</option>
                       <option value="PADEL">Padel</option>
                       <option value="BASKETBALL">Baschet</option>
-                      <option value="FOOTVOLLEY">Fotbal-Tenis</option>
+                      <option value="FOOTVOLLEY">Tenis de picior</option>
                       <option value="BEACH_VOLLEY">Volei pe Plajă</option>
                       <option value="TABLE_TENNIS">Tenis de Masă</option>
                     </select>

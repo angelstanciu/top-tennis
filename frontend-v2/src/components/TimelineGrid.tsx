@@ -38,7 +38,7 @@ function enumerateSlots(start: string, end: string) {
   return out
 }
 
-type Props = {
+type TimelineGridProps = {
   data: AvailabilityDto[]
   date: string
   onHover?: (msg: string) => void
@@ -48,6 +48,7 @@ type Props = {
   flat?: boolean
   scrollContainerRef?: React.RefObject<HTMLDivElement>
   onAdminClick?: (courtId: number, startTime: string, endTime: string, booking?: any) => void
+  player?: any // ADDED: to know if user is logged in
 }
 
 function sportLabel(s: string) {
@@ -56,7 +57,7 @@ function sportLabel(s: string) {
     case 'PADEL': return 'Padel 🎾'
     case 'BEACH_VOLLEY': return 'Volei'
     case 'BASKETBALL': return 'Baschet'
-    case 'FOOTVOLLEY': return 'Tenis de Picior'
+    case 'FOOTVOLLEY': return 'Tenis de picior'
     case 'TABLE_TENNIS': return 'Tenis de masă'
     default: return s
   }
@@ -207,7 +208,11 @@ function BookingLabelBlock({
   )
 }
 
-export default function TimelineGrid({ data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef, onAdminClick }: Props) {
+export default function TimelineGrid({
+  data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef,
+  onAdminClick,
+  player
+}: TimelineGridProps) {
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
@@ -981,6 +986,13 @@ export default function TimelineGrid({ data, date, onHover, onSelectionChange, o
           </div>
 
           <div className="p-4 flex flex-col gap-3">
+             {!player && !onAdminClick && (
+               <div className="mb-2 bg-lime-50 rounded p-3 text-sm text-lime-900 border border-lime-200 leading-tight">
+                 <span className="font-semibold block mb-0.5">Ai deja un cont sau vrei să îți creezi unul?</span>
+                 <a href="/cont" className="text-lime-700 underline font-semibold mt-0.5 inline-block">Loghează-te</a> pentru a putea să îți anulezi rezervările direct din profilul tău!
+               </div>
+             )}
+
              <div className="bg-emerald-50 text-emerald-700 px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border border-emerald-100/50 mb-1">
                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider opacity-70 leading-tight shrink">
                   {selEnd ? 'Interval selectat' : 'Începere la ora'}

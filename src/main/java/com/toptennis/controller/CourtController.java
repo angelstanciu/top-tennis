@@ -23,10 +23,14 @@ public class CourtController {
         return courtService.listActive(null).stream().map(CourtMapper::toDto).collect(Collectors.toList());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/active")
+    public List<CourtDto> listActive() {
+        return courtService.listActive(null).stream().map(CourtMapper::toDto).collect(Collectors.toList());
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     public CourtDto get(@PathVariable Long id) {
         Court c = courtService.get(id);
         return CourtMapper.toDto(c);
     }
 }
-

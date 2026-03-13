@@ -11,7 +11,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import java.util.Optional;
+
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    Optional<Booking> findByCancelToken(String cancelToken);
 
     @Query("select b from Booking b where b.court.id = :courtId and b.bookingDate = :date and b.status in :activeStatuses and not (b.endTime <= :start or b.startTime >= :end)")
     List<Booking> findOverlapping(@Param("courtId") Long courtId,
@@ -40,6 +44,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByCourtIdAndBookingDateOrderByStartTimeAsc(Long courtId, LocalDate date);
 
     List<Booking> findByPlayerUserIdOrderByBookingDateDesc(Long playerUserId);
+    
+    @Query("select b from Booking b where b.customerPhone = :phone and b.bookingDate = :date and b.status in :activeStatuses and not (b.endTime <= :start or b.startTime >= :end)")
+    List<Booking> findOverlappingByPhone(@Param("phone") String phone,
+                                         @Param("date") LocalDate date,
+                                         @Param("start") LocalTime start,
+                                         @Param("end") LocalTime end,
+                                         @Param("activeStatuses") List<BookingStatus> activeStatuses);
 
     List<Booking> findByCustomerPhoneOrderByBookingDateDesc(String customerPhone);
+
+    List<Booking> findByCustomerEmailOrderByBookingDateDesc(String customerEmail);
+
+    // Counts completed (past, not cancelled) bookings linked to a user – used for matchesPlayed
+    @Query("select count(b) from Booking b where b.playerUser.id = :userId and b.status <> com.toptennis.model.BookingStatus.CANCELLED and (b.bookingDate < :today or (b.bookingDate = :today and b.endTime <= :now))")
+    long countPastNonCancelledByUserId(@Param("userId") Long userId,
+                                       @Param("today") LocalDate today,
+                                       @Param("now") LocalTime now);
 }

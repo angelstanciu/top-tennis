@@ -2,6 +2,7 @@ package com.toptennis.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -56,6 +57,25 @@ public class GlobalExceptionHandler {
         err.message = ex.getReason();
         err.path = req.getRequestURI();
         return ResponseEntity.status(ex.getStatusCode()).body(err);
+    }
+
+    // SQL unique constraint violation – return a clean 409 instead of raw SQL error
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
+        ApiError err = new ApiError();
+        err.status = HttpStatus.CONFLICT.value();
+        err.error = "Conflict";
+        err.path = req.getRequestURI();
+
+        String cause = ex.getMessage() != null ? ex.getMessage().toUpperCase() : "";
+        if (cause.contains("PHONE_NUMBER")) {
+            err.message = "Acest număr de telefon aparține deja unui alt cont. Dacă vă aparține, apăsați pe butonul 'Revendică' pentru a-l transfera prin validare SMS.";
+        } else if (cause.contains("EMAIL")) {
+            err.message = "Această adresă de email este deja asociată altui cont.";
+        } else {
+            err.message = "O constrângere de unicitate a fost violată. Datele introduse există deja.";
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
     }
 
     @ExceptionHandler(Exception.class)

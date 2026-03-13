@@ -1,5 +1,7 @@
 package com.toptennis.controller;
 
+import com.toptennis.dto.BookingDto;
+import com.toptennis.mapper.BookingMapper;
 import com.toptennis.model.Booking;
 import com.toptennis.model.PlayerUser;
 import com.toptennis.service.BookingService;
@@ -74,15 +76,21 @@ public class PlayerAuthController {
 
     @GetMapping("/me")
     public PlayerUser getMe(@RequestHeader("Authorization") String token) {
-        return playerAuthService.getUserByToken(token)
+        PlayerUser user = playerAuthService.getUserByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalid sau expirat."));
+        // Compute matches played dynamically (past, non-cancelled bookings)
+        long matches = bookingService.countMatchesPlayed(user.getId());
+        user.setMatchesPlayed((int) matches);
+        return user;
     }
 
     @GetMapping("/history")
-    public List<Booking> getHistory(@RequestHeader("Authorization") String token) {
+    public List<BookingDto> getHistory(@RequestHeader("Authorization") String token) {
         PlayerUser user = playerAuthService.getUserByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalid."));
-        return bookingService.getPlayerHistory(user.getId());
+        return bookingService.getPlayerHistory(user.getId()).stream()
+                .map(BookingMapper::toDto)
+                .toList();
     }
 
     public record UpdateProfileRequest(String fullName, String email, String phoneNumber, String preferredSport, Integer age, String gender, String avatarUrl) {}

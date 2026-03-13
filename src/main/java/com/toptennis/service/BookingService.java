@@ -42,10 +42,22 @@ public class BookingService {
 
     @Transactional
     public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token) {
-        Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
+        // Task 5: 3 months limit
+        if (date.isAfter(LocalDate.now().plusMonths(3))) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
+        }
+
+        Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);
 
-                List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+
+        // Task 5: Double Booking Prevention (same user/phone, same interval, any court)
+        String normPhone = normalizePhone(phone);
+        if (!bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată în acest interval orar.");
+        }
+
         boolean crossesMidnight = !end.isAfter(start);
         if (!crossesMidnight) {
             if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
@@ -65,20 +77,24 @@ public class BookingService {
             b.setUpdatedAt(LocalDateTime.now());
             b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
             b.setMidnightBooking(false);
+            b.setCancelToken(java.util.UUID.randomUUID().toString());
             
-            String normPhone = normalizePhone(phone);
             PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
             
             if (playerFromToken != null) {
                 b.setPlayerUser(playerFromToken);
-                int current = playerFromToken.getMatchesPlayed() != null ? playerFromToken.getMatchesPlayed() : 0;
-                playerFromToken.setMatchesPlayed(current + 1);
+                
+                // Auto-save phone/email if missing (first booking by OAuth users)
+                if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && phone != null) {
+                    playerFromToken.setPhoneNumber(normalizePhone(phone));
+                }
+                if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
+                    playerFromToken.setEmail(email.trim());
+                }
                 playerUserRepository.save(playerFromToken);
             } else {
                 playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
                     b.setPlayerUser(pu);
-                    int current = pu.getMatchesPlayed() != null ? pu.getMatchesPlayed() : 0;
-                    pu.setMatchesPlayed(current + 1);
                     playerUserRepository.save(pu);
                 });
             }
@@ -127,22 +143,28 @@ public class BookingService {
             b2.setUpdatedAt(LocalDateTime.now());
             b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.of(0,0), end));
             b2.setMidnightBooking(true);
+            
+            String sharedToken = java.util.UUID.randomUUID().toString();
+            b1.setCancelToken(sharedToken);
+            b2.setCancelToken(sharedToken);
 
-            String normPhone = normalizePhone(phone);
             PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
 
             if (playerFromToken != null) {
                 b1.setPlayerUser(playerFromToken);
                 b2.setPlayerUser(playerFromToken);
-                int current = playerFromToken.getMatchesPlayed() != null ? playerFromToken.getMatchesPlayed() : 0;
-                playerFromToken.setMatchesPlayed(current + 1);
+                // Auto-save phone/email if missing (first booking by OAuth users, cross-midnight path)
+                if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && normPhone != null) {
+                    playerFromToken.setPhoneNumber(normPhone);
+                }
+                if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
+                    playerFromToken.setEmail(email.trim());
+                }
                 playerUserRepository.save(playerFromToken);
             } else {
                 playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
                     b1.setPlayerUser(pu);
                     b2.setPlayerUser(pu);
-                    int current = pu.getMatchesPlayed() != null ? pu.getMatchesPlayed() : 0;
-                    pu.setMatchesPlayed(current + 1);
                     playerUserRepository.save(pu);
                 });
             }
@@ -166,29 +188,43 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<Booking> getPlayerHistory(Long userId) {
         PlayerUser user = playerUserRepository.findById(userId).orElse(null);
-        List<Booking> byId = bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId);
-        
-        if (user != null && user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
-            List<Booking> byPhone = bookingRepository.findByCustomerPhoneOrderByBookingDateDesc(user.getPhoneNumber());
-            
-            // Merge and de-duplicate by ID
-            java.util.Set<Long> seenIds = byId.stream().map(Booking::getId).collect(java.util.stream.Collectors.toSet());
-            for (Booking b : byPhone) {
-                if (!seenIds.contains(b.getId())) {
-                    byId.add(b);
-                    seenIds.add(b.getId());
-                }
+        List<Booking> result = new java.util.ArrayList<>(bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId));
+        java.util.Set<Long> seenIds = result.stream().map(Booking::getId).collect(java.util.stream.Collectors.toSet());
+
+        System.out.println("[HISTORY] userId=" + userId + " direct=" + result.size()
+            + " phone=" + (user != null ? user.getPhoneNumber() : "N/A")
+            + " email=" + (user != null ? user.getEmail() : "N/A"));
+
+        if (user != null) {
+            if (user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
+                List<Booking> byPhone = bookingRepository.findByCustomerPhoneOrderByBookingDateDesc(user.getPhoneNumber());
+                System.out.println("[HISTORY] byPhone=" + byPhone.size());
+                byPhone.forEach(b -> { if (seenIds.add(b.getId())) result.add(b); });
             }
-            // Re-sort by date desc
-            byId.sort((a,b) -> b.getBookingDate().compareTo(a.getBookingDate()));
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                List<Booking> byEmail = bookingRepository.findByCustomerEmailOrderByBookingDateDesc(user.getEmail());
+                System.out.println("[HISTORY] byEmail=" + byEmail.size() + " for email=" + user.getEmail());
+                byEmail.forEach(b -> { if (seenIds.add(b.getId())) result.add(b); });
+            }
         }
-        
-        return byId;
+
+        System.out.println("[HISTORY] total=" + result.size());
+        result.sort((a, b) -> {
+            int dateCmp = b.getBookingDate().compareTo(a.getBookingDate());
+            return dateCmp != 0 ? dateCmp : b.getStartTime().compareTo(a.getStartTime());
+        });
+        return result;
     }
 
     @Transactional(readOnly = true)
     public java.util.List<Booking> findByDateAndSport(java.time.LocalDate date, com.toptennis.model.SportType sportType) {
         return bookingRepository.findByDateAndSportType(date, sportType);
+    }
+
+    // Computes matches played dynamically: past, non-cancelled bookings linked to this user
+    @Transactional(readOnly = true)
+    public long countMatchesPlayed(Long userId) {
+        return bookingRepository.countPastNonCancelledByUserId(userId, LocalDate.now(), LocalTime.now());
     }
 
     @Transactional
@@ -273,6 +309,57 @@ public class BookingService {
         validateGaps(court, date, start, end);
     }
 
+    @Transactional
+    public void cancelBooking(Long bookingId, String token) {
+        if (token == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Trebuie să fii autentificat pentru a anula o rezervare.");
+        
+        // Remove "Bearer " if present
+        if (token.startsWith("Bearer ")) token = token.substring(7);
+        
+        PlayerUser player = playerAuthService.getUserByToken("Bearer " + token).orElse(null);
+        if (player == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Sesiune invalidă.");
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Rezervarea nu a fost găsită."));
+
+        if (booking.getPlayerUser() == null || !booking.getPlayerUser().getId().equals(player.getId())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Nu poți anula rezervarea altui utilizator.");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervarea este deja anulată.");
+        }
+
+        // Rule: 24 hours before
+        LocalDateTime startDateTime = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        if (LocalDateTime.now().isAfter(startDateTime.minusHours(24))) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi anulate cu cel puțin 24 ore înainte de începere.");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setUpdatedAt(LocalDateTime.now());
+        bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public void cancelByPublicToken(String token) {
+        Booking booking = bookingRepository.findByCancelToken(token)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Rezervarea nu a fost găsită sau token invalid."));
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervarea este deja anulată.");
+        }
+
+        LocalDateTime startDateTime = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        if (LocalDateTime.now().isAfter(startDateTime.minusHours(24))) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi anulate cu cel puțin 24 ore înainte de începere.");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setUpdatedAt(LocalDateTime.now());
+        bookingRepository.save(booking);
+    }
+
     private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end) {
         List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
@@ -297,25 +384,35 @@ public class BookingService {
         if (hasBookingEnding30MinBefore && !hasBookingAtStart) {
             throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent (ex: de la " + beforeStart + ") sau să lași un gol de cel puțin o oră.");
         }
-
+        
         // Check gap AFTER the new booking
         LocalTime afterEnd = end.plusMinutes(30);
-        // Handle end-of-day special case if needed (23:59 represents 24:00)
-        if (end.getHour() == 23 && end.getMinute() == 59) {
-            // No gap check after midnight for now, as it involves next day
-            return;
-        }
-
         boolean hasBookingAtEnd = false;
         boolean hasBookingStarting30MinAfter = false;
 
-        for (Booking b : active) {
-            if (b.getStartTime().equals(end)) hasBookingAtEnd = true;
-            if (b.getStartTime().equals(afterEnd)) hasBookingStarting30MinAfter = true;
+        // Optimized check: only if not already at the end of the day constant (24:00/23:59)
+        if (!(end.getHour() == 23 && end.getMinute() == 59)) {
+            for (Booking b : active) {
+                if (b.getStartTime().equals(end)) hasBookingAtEnd = true;
+                if (b.getStartTime().equals(afterEnd)) hasBookingStarting30MinAfter = true;
+            }
         }
-
         if (hasBookingStarting30MinAfter && !hasBookingAtEnd) {
             throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent sau să lași un gol de cel puțin o oră.");
+        }
+        
+        // Task: Check gap at midnight transition if applicable
+        if (end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.of(0, 0))) {
+            LocalDate nextDay = date.plusDays(1);
+            List<Booking> nextDayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), nextDay);
+            boolean hasBookingAtStartNextDay = nextDayBookings.stream()
+                    .anyMatch(b -> activeStatuses.contains(b.getStatus()) && b.getStartTime().equals(LocalTime.of(0, 0)));
+            boolean hasBookingAt0030NextDay = nextDayBookings.stream()
+                    .anyMatch(b -> activeStatuses.contains(b.getStatus()) && b.getStartTime().equals(LocalTime.of(0, 30)));
+            
+            if (hasBookingAt0030NextDay && !hasBookingAtStartNextDay) {
+                throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute la miezul nopții pe ziua următoare.");
+            }
         }
     }
 
