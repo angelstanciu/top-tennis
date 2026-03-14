@@ -88,7 +88,11 @@ public class BookingService {
                         playerFromToken.setPhoneNumber(normalizePhone(phone));
                     }
                     if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
-                        playerFromToken.setEmail(email.trim());
+                        String intendedEmail = email.trim();
+                        // Only set the email if no other user is using it
+                        if (playerUserRepository.findByEmail(intendedEmail).isEmpty()) {
+                            playerFromToken.setEmail(intendedEmail);
+                        }
                     }
                     playerUserRepository.save(playerFromToken);
                 } else {
@@ -158,7 +162,11 @@ public class BookingService {
                         playerFromToken.setPhoneNumber(normPhone);
                     }
                     if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
-                        playerFromToken.setEmail(email.trim());
+                        String intendedEmail = email.trim();
+                        // Only set the email if no other user is using it
+                        if (playerUserRepository.findByEmail(intendedEmail).isEmpty()) {
+                            playerFromToken.setEmail(intendedEmail);
+                        }
                     }
                     playerUserRepository.save(playerFromToken);
                 } else {
