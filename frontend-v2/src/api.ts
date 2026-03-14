@@ -281,3 +281,19 @@ export async function cancelBookingByToken(token: string): Promise<void> {
   })
   if (!res.ok) throw new Error(await parseError(res))
 }
+
+export async function approveBooking(id: number, auth: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}/approve`, {
+    method: 'PATCH',
+    headers: { Authorization: `Basic ${auth}` }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+}
+
+export async function rejectBooking(id: number, auth: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}/reject`, {
+    method: 'PATCH',
+    headers: { Authorization: `Basic ${auth}` }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+}

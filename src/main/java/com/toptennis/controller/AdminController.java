@@ -31,6 +31,16 @@ public class AdminController {
                 .toList();
     }
 
+    @PatchMapping("/bookings/{id}/approve")
+    public BookingDto approve(@PathVariable Long id) {
+        return BookingMapper.toDto(bookingService.confirm(id));
+    }
+
+    @PatchMapping("/bookings/{id}/reject")
+    public BookingDto reject(@PathVariable Long id) {
+        return BookingMapper.toDto(bookingService.cancel(id));
+    }
+
     // Confirm endpoint removed: bookings are auto-confirmed on creation
 
     @PatchMapping("/bookings/{id}/cancel")

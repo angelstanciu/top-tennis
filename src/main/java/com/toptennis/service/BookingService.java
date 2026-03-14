@@ -59,125 +59,130 @@ public class BookingService {
         }
 
         boolean crossesMidnight = !end.isAfter(start);
-        if (!crossesMidnight) {
-            if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
-                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existent.");
-            }
+        boolean touchesMidnight = start.equals(LocalTime.MIN) || end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.MIN);
+        BookingStatus initialStatus = (crossesMidnight || touchesMidnight) ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
-            Booking b = new Booking();
-            b.setCourt(court);
-            b.setBookingDate(date);
-            b.setStartTime(start);
-            b.setEndTime(end);
-            b.setCustomerName(name);
-            b.setCustomerPhone(normalizePhone(phone));
-            b.setCustomerEmail(email);
-            b.setStatus(BookingStatus.CONFIRMED);
-            b.setCreatedAt(LocalDateTime.now());
-            b.setUpdatedAt(LocalDateTime.now());
-            b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
-            b.setMidnightBooking(false);
-            b.setCancelToken(java.util.UUID.randomUUID().toString());
-            
-            PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
-            
-            if (playerFromToken != null) {
-                b.setPlayerUser(playerFromToken);
+            if (!crossesMidnight) {
+                if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
+                    throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
+                }
+
+                Booking b = new Booking();
+                b.setCourt(court);
+                b.setBookingDate(date);
+                b.setStartTime(start);
+                b.setEndTime(end);
+                b.setCustomerName(name);
+                b.setCustomerPhone(normalizePhone(phone));
+                b.setCustomerEmail(email);
+                b.setStatus(initialStatus);
+                b.setCreatedAt(LocalDateTime.now());
+                b.setUpdatedAt(LocalDateTime.now());
+                b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
+                b.setMidnightBooking(touchesMidnight);
+                b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
-                // Auto-save phone/email if missing (first booking by OAuth users)
-                if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && phone != null) {
-                    playerFromToken.setPhoneNumber(normalizePhone(phone));
+                PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
+                
+                if (playerFromToken != null) {
+                    b.setPlayerUser(playerFromToken);
+                    if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && phone != null) {
+                        playerFromToken.setPhoneNumber(normalizePhone(phone));
+                    }
+                    if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
+                        playerFromToken.setEmail(email.trim());
+                    }
+                    playerUserRepository.save(playerFromToken);
+                } else {
+                    playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                        b.setPlayerUser(pu);
+                        playerUserRepository.save(pu);
+                    });
                 }
-                if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
-                    playerFromToken.setEmail(email.trim());
+
+                Booking saved = bookingRepository.save(b);
+                if (initialStatus == BookingStatus.CONFIRMED) {
+                    taskExecutor.execute(() -> {
+                        smsService.sendReservationNotifications(saved);
+                        emailService.sendBookingConfirmation(saved);
+                    });
                 }
-                playerUserRepository.save(playerFromToken);
+                return saved;
             } else {
-                playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
-                    b.setPlayerUser(pu);
-                    playerUserRepository.save(pu);
-                });
-            }
+                LocalTime part1End = LocalTime.of(23, 59);
+                LocalDate nextDate = date.plusDays(1);
 
-            Booking saved = bookingRepository.save(b);
-            taskExecutor.execute(() -> {
-                smsService.sendReservationNotifications(saved);
-                emailService.sendBookingConfirmation(saved);
-            });
-            return saved;
-        } else {
-            // Cross-midnight: split into two bookings [start, 24:00) and [00:00, end) on next day
-            LocalTime part1End = LocalTime.of(23, 59); // represent 24:00
-            LocalDate nextDate = date.plusDays(1);
-
-            if (!bookingRepository.findOverlapping(courtId, date, start, part1End, activeStatuses).isEmpty()) {
-                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua curenta).");
-            }
-            if (!bookingRepository.findOverlapping(courtId, nextDate, LocalTime.of(0,0), end, activeStatuses).isEmpty()) {
-                throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua urmatoare).");
-            }
-
-            Booking b1 = new Booking();
-            b1.setCourt(court);
-            b1.setBookingDate(date);
-            b1.setStartTime(start);
-            b1.setEndTime(part1End);
-            b1.setCustomerName(name);
-            b1.setCustomerPhone(normalizePhone(phone));
-            b1.setCustomerEmail(email);
-            b1.setStatus(BookingStatus.CONFIRMED);
-            b1.setCreatedAt(LocalDateTime.now());
-            b1.setUpdatedAt(LocalDateTime.now());
-            b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
-            b1.setMidnightBooking(true);
-            Booking b2 = new Booking();
-            b2.setCourt(court);
-            b2.setBookingDate(nextDate);
-            b2.setStartTime(LocalTime.of(0,0));
-            b2.setEndTime(end);
-            b2.setCustomerName(name);
-            b2.setCustomerPhone(normalizePhone(phone));
-            b2.setCustomerEmail(email);
-            b2.setStatus(BookingStatus.CONFIRMED);
-            b2.setCreatedAt(LocalDateTime.now());
-            b2.setUpdatedAt(LocalDateTime.now());
-            b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.of(0,0), end));
-            b2.setMidnightBooking(true);
-            
-            String sharedToken = java.util.UUID.randomUUID().toString();
-            b1.setCancelToken(sharedToken);
-            b2.setCancelToken(sharedToken);
-
-            PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
-
-            if (playerFromToken != null) {
-                b1.setPlayerUser(playerFromToken);
-                b2.setPlayerUser(playerFromToken);
-                // Auto-save phone/email if missing (first booking by OAuth users, cross-midnight path)
-                if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && normPhone != null) {
-                    playerFromToken.setPhoneNumber(normPhone);
+                if (!bookingRepository.findOverlapping(courtId, date, start, part1End, activeStatuses).isEmpty()) {
+                    throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua curenta).");
                 }
-                if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
-                    playerFromToken.setEmail(email.trim());
+                if (!bookingRepository.findOverlapping(courtId, nextDate, LocalTime.MIN, end, activeStatuses).isEmpty()) {
+                    throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existenta (ziua urmatoare).");
                 }
-                playerUserRepository.save(playerFromToken);
-            } else {
-                playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
-                    b1.setPlayerUser(pu);
-                    b2.setPlayerUser(pu);
-                    playerUserRepository.save(pu);
-                });
+
+                Booking b1 = new Booking();
+                b1.setCourt(court);
+                b1.setBookingDate(date);
+                b1.setStartTime(start);
+                b1.setEndTime(part1End);
+                b1.setCustomerName(name);
+                b1.setCustomerPhone(normalizePhone(phone));
+                b1.setCustomerEmail(email);
+                b1.setStatus(initialStatus);
+                b1.setCreatedAt(LocalDateTime.now());
+                b1.setUpdatedAt(LocalDateTime.now());
+                b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
+                b1.setMidnightBooking(true);
+
+                Booking b2 = new Booking();
+                b2.setCourt(court);
+                b2.setBookingDate(nextDate);
+                b2.setStartTime(LocalTime.MIN);
+                b2.setEndTime(end);
+                b2.setCustomerName(name);
+                b2.setCustomerPhone(normalizePhone(phone));
+                b2.setCustomerEmail(email);
+                b2.setStatus(initialStatus);
+                b2.setCreatedAt(LocalDateTime.now());
+                b2.setUpdatedAt(LocalDateTime.now());
+                b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
+                b2.setMidnightBooking(true);
+                
+                String sharedToken = java.util.UUID.randomUUID().toString();
+                b1.setCancelToken(sharedToken);
+                b2.setCancelToken(sharedToken);
+
+                PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
+
+                if (playerFromToken != null) {
+                    b1.setPlayerUser(playerFromToken);
+                    b2.setPlayerUser(playerFromToken);
+                    if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && normPhone != null) {
+                        playerFromToken.setPhoneNumber(normPhone);
+                    }
+                    if ((playerFromToken.getEmail() == null || playerFromToken.getEmail().trim().isEmpty()) && email != null && !email.trim().isEmpty()) {
+                        playerFromToken.setEmail(email.trim());
+                    }
+                    playerUserRepository.save(playerFromToken);
+                } else {
+                    playerUserRepository.findByPhoneNumber(normPhone).ifPresent(pu -> {
+                        b1.setPlayerUser(pu);
+                        b2.setPlayerUser(pu);
+                        playerUserRepository.save(pu);
+                    });
+                }
+
+                Booking saved1 = bookingRepository.save(b1);
+                Booking saved2 = bookingRepository.save(b2);
+
+                if (initialStatus == BookingStatus.CONFIRMED) {
+                    taskExecutor.execute(() -> {
+                        smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
+                        emailService.sendBookingConfirmation(saved1);
+                    });
+                }
+                return saved1;
             }
-
-            Booking saved1 = bookingRepository.save(b1);
-            Booking saved2 = bookingRepository.save(b2);
-
-            taskExecutor.execute(() -> {
-                smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
-                emailService.sendBookingConfirmation(saved1); // Send confirmation for the main booking
-            });
-            return saved1;
-        }
+    }
     }
 
     @Transactional(readOnly = true)
@@ -230,6 +235,18 @@ public class BookingService {
     @Transactional
     public Booking confirm(Long id) {
         Booking b = get(id);
+        if (b.getStatus() == BookingStatus.PENDING_APPROVAL) {
+            b.setStatus(BookingStatus.CONFIRMED);
+            b.setUpdatedAt(LocalDateTime.now());
+            Booking saved = bookingRepository.save(b);
+            
+            // Trigger notifications upon manual approval
+            taskExecutor.execute(() -> {
+                smsService.sendReservationNotifications(saved);
+                emailService.sendBookingConfirmation(saved);
+            });
+            return saved;
+        }
         b.setStatus(BookingStatus.CONFIRMED);
         b.setUpdatedAt(LocalDateTime.now());
         return bookingRepository.save(b);
@@ -373,58 +390,60 @@ public class BookingService {
     }
 
     private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end) {
-        List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date);
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
-        
-        // Filter only active/blocked ones for gap analysis
-        List<Booking> active = dayBookings.stream()
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
+        List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date).stream()
                 .filter(b -> activeStatuses.contains(b.getStatus()))
                 .toList();
         
-        if (active.isEmpty()) return;
+        // Find the "free block" [blockStart, blockEnd] that contains [start, end]
+        LocalTime blockStart = LocalTime.MIN;
+        LocalTime blockEnd = LocalTime.of(23, 59);
 
-        // Check gap BEFORE the new booking
-        LocalTime beforeStart = start.minusMinutes(30);
-        boolean hasBookingAtStart = false;
-        boolean hasBookingEnding30MinBefore = false;
-
-        for (Booking b : active) {
-            if (b.getEndTime().equals(start)) hasBookingAtStart = true;
-            if (b.getEndTime().equals(beforeStart)) hasBookingEnding30MinBefore = true;
-        }
-
-        if (hasBookingEnding30MinBefore && !hasBookingAtStart) {
-            throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent (ex: de la " + beforeStart + ") sau să lași un gol de cel puțin o oră.");
-        }
-        
-        // Check gap AFTER the new booking
-        LocalTime afterEnd = end.plusMinutes(30);
-        boolean hasBookingAtEnd = false;
-        boolean hasBookingStarting30MinAfter = false;
-
-        // Optimized check: only if not already at the end of the day constant (24:00/23:59)
-        if (!(end.getHour() == 23 && end.getMinute() == 59)) {
-            for (Booking b : active) {
-                if (b.getStartTime().equals(end)) hasBookingAtEnd = true;
-                if (b.getStartTime().equals(afterEnd)) hasBookingStarting30MinAfter = true;
+        for (Booking b : dayBookings) {
+            if (!b.getEndTime().isAfter(start)) {
+                if (b.getEndTime().isAfter(blockStart)) blockStart = b.getEndTime();
+            }
+            if (!b.getStartTime().isBefore(end)) {
+                if (b.getStartTime().isBefore(blockEnd)) blockEnd = b.getStartTime();
             }
         }
-        if (hasBookingStarting30MinAfter && !hasBookingAtEnd) {
-            throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute care nu poate fi vândut. Te rugăm să alegi un interval adiacent sau să lași un gol de cel puțin o oră.");
-        }
+
+        int blockStartMin = minutesSinceMidnight(blockStart);
+        int blockEndMin = minutesSinceMidnight(blockEnd);
+        int bookingStartMin = minutesSinceMidnight(start);
+        int bookingEndMin = minutesSinceMidnight(end);
         
-        // Task: Check gap at midnight transition if applicable
-        if (end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.of(0, 0))) {
-            LocalDate nextDay = date.plusDays(1);
-            List<Booking> nextDayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), nextDay);
-            boolean hasBookingAtStartNextDay = nextDayBookings.stream()
-                    .anyMatch(b -> activeStatuses.contains(b.getStatus()) && b.getStartTime().equals(LocalTime.of(0, 0)));
-            boolean hasBookingAt0030NextDay = nextDayBookings.stream()
-                    .anyMatch(b -> activeStatuses.contains(b.getStatus()) && b.getStartTime().equals(LocalTime.of(0, 30)));
-            
-            if (hasBookingAt0030NextDay && !hasBookingAtStartNextDay) {
-                throw new IllegalArgumentException("Această rezervare lasă un gol de 30 de minute la miezul nopții pe ziua următoare.");
-            }
+        int gapBefore = bookingStartMin - blockStartMin;
+        int gapAfter = blockEndMin - bookingEndMin;
+
+        // --- NEW SNAPPING LOGIC ---
+        
+        // 1. REJECT if fragmented in the middle (30m on both sides)
+        if (gapBefore == 30 && gapAfter == 30) {
+            throw new IllegalArgumentException("Pentru a evita fragmentarea terenului, te rugăm să lipești rezervarea de una dintre rezervările existente.");
+        }
+
+        // 2. REJECT if leaving exactly 30m on one side and >=60m on the other (Force snapping)
+        if (gapBefore == 30 && gapAfter >= 60) {
+            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai devreme pentru a nu lăsa un gol inutil.");
+        }
+        if (gapAfter == 30 && gapBefore >= 60) {
+            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai târziu pentru a nu lăsa un gol inutil.");
+        }
+
+        // 3. ALLOW if snapped to one side (gap == 0), even if the other side is 30m
+        if (gapBefore == 0 || gapAfter == 0) {
+            return; // Valid
+        }
+
+        // 4. ALLOW if gaps on both sides are large enough (>= 60m)
+        if (gapBefore >= 60 && gapAfter >= 60) {
+            return; // Valid
+        }
+
+        // Fallback for edge cases (e.g. gaps of 30 that aren't exactly 30 due to midnight etc)
+        if (gapBefore == 30 || gapAfter == 30) {
+             throw new IllegalArgumentException("Intervalul selectat lasă un gol de 30 de minute. Te rugăm să aliniezi rezervarea.");
         }
     }
 

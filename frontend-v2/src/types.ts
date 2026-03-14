@@ -43,7 +43,7 @@ export interface BookingDto {
   customerName: string
   customerPhone: string
   customerEmail?: string
-  status: 'CONFIRMED' | 'CANCELLED' | 'BLOCKED'
+  status: 'CONFIRMED' | 'CANCELLED' | 'BLOCKED' | 'PENDING_APPROVAL'
   createdAt: string
   updatedAt: string
   price: number

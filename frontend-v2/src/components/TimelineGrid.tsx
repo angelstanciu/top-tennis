@@ -642,9 +642,12 @@ export default function TimelineGrid({
                           
                           let stateClass = ''
                           const isBlocked = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
-                          const unavailable = isPast || isBooked || isBlocked
+                          const isPending = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
+                          const unavailable = isPast || isBooked || isBlocked || isPending
                           if (selected && !unavailable) stateClass = 'bg-emerald-300'
-                          else if (isBooked || isBlocked) stateClass = 'bg-rose-200'
+                          else if (isBlocked) stateClass = 'bg-slate-200'
+                          else if (isPending) stateClass = 'bg-amber-200 animate-pulse'
+                          else if (isBooked) stateClass = 'bg-rose-200'
                           else if (isPast) stateClass = 'bg-slate-100'
                           else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
                           
@@ -690,23 +693,20 @@ export default function TimelineGrid({
                       </div>
                       {SHOW_BOOKING_LABELS && blocks.length > 0 && (
                         <div className="absolute inset-0 pointer-events-none">
-                          {blocks.map((block, blockIndex) => {
-                            const isBlock = block.status === 'BLOCKED'
-                            return (
-                              <BookingLabelBlock
-                                key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                                className={`absolute inset-y-0 flex items-center rounded-sm ${isBlock ? 'bg-slate-700/80 shadow-inner' : 'bg-rose-500/20'}`}
-                                style={{
-                                  width: (block.endIndex - block.startIndex) * colWidth - 2,
-                                  left: block.startIndex * colWidth + 1,
-                                }}
-                                label={block.label}
-                                timeRange={block.timeRange}
-                                isBlocked={isBlock}
-                                playerMatchesCount={block.playerMatchesCount}
-                              />
-                            )
-                          })}
+                          {blocks.map((block, blockIndex) => (
+                            <BookingLabelBlock
+                              key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
+                              className={`absolute inset-y-0 flex items-center rounded-sm ${block.status === 'BLOCKED' ? 'bg-slate-700/80 shadow-inner' : block.status === 'PENDING_APPROVAL' ? 'bg-amber-500/40 border border-amber-600/30' : 'bg-rose-500/20'}`}
+                              style={{
+                                width: (block.endIndex - block.startIndex) * colWidth - 2,
+                                left: block.startIndex * colWidth + 1,
+                              }}
+                              label={block.status === 'PENDING_APPROVAL' ? `⏳ ${block.label}` : block.label}
+                              timeRange={block.timeRange}
+                              isBlocked={block.status === 'BLOCKED'}
+                              playerMatchesCount={block.playerMatchesCount}
+                            />
+                          ))}
                         </div>
                       )}
                     </div>
@@ -823,12 +823,15 @@ export default function TimelineGrid({
                       const bookedRanges = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
                       const isBooked = bookedRanges.some(b => !(b.end <= t || b.start >= next))
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
+                      const isPending = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                      const unavailable = isPastRow || isBooked || isBlocked
+                      const unavailable = isPastRow || isBooked || isBlocked || isPending
                       const clickable = !unavailable
                       let stateClass = ''
                       if (selected && !unavailable) stateClass = 'bg-emerald-300'
-                      else if (isBooked || isBlocked) stateClass = 'bg-rose-200'
+                      else if (isBlocked) stateClass = 'bg-slate-200'
+                      else if (isPending) stateClass = 'bg-amber-100 animate-pulse'
+                      else if (isBooked) stateClass = 'bg-rose-200'
                       else if (isPastRow) stateClass = 'bg-slate-100'
                       else stateClass = 'bg-emerald-50 hover:bg-emerald-100 transition-colors'
                       const disabledClass = unavailable && !onAdminClick ? 'cursor-not-allowed pointer-events-none' : (unavailable ? 'cursor-not-allowed' : 'cursor-pointer')

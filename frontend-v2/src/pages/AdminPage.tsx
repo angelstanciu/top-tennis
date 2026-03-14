@@ -126,6 +126,7 @@ export default function AdminPage() {
       case 'CONFIRMED': return 'Confirmat'
       case 'CANCELLED': return 'Anulat'
       case 'BLOCKED': return 'Blocat'
+      case 'PENDING_APPROVAL': return 'Aprobare'
       default: return s || ''
     }
   }
@@ -140,6 +141,8 @@ export default function AdminPage() {
         return `${base} bg-rose-100 text-rose-800 border-rose-300`
       case 'BLOCKED':
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
+      case 'PENDING_APPROVAL':
+        return `${base} bg-amber-100 text-amber-700 border-amber-300 animate-pulse`
       default:
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
     }
@@ -438,6 +441,36 @@ export default function AdminPage() {
     }
   }
 
+  async function approve(id: number) {
+    if (!auth) return
+    setLoading(true)
+    try {
+      const { approveBooking } = await import('../api')
+      await approveBooking(id, auth)
+      broadcastUpdate()
+      await reload()
+    } catch (e: any) {
+      showUnavailable(e.message || 'Eroare la aprobare')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function reject(id: number) {
+    if (!auth) return
+    setLoading(true)
+    try {
+      const { rejectBooking } = await import('../api')
+      await rejectBooking(id, auth)
+      broadcastUpdate()
+      await reload()
+    } catch (e: any) {
+      showUnavailable(e.message || 'Eroare la respingere')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen relative font-sans text-slate-900 bg-slate-50 selection:bg-sky-100 selection:text-sky-900">
       {/* Persistent Background Layer to fix mobile resizing jump */}
@@ -710,7 +743,13 @@ export default function AdminPage() {
                             Anuleaza
                           </button>
                         )}
-                        {!b.status.includes('CANCELLED') && <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>}
+                         {!b.status.includes('CANCELLED') && b.status !== 'PENDING_APPROVAL' && <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>}
+                        {b.status === 'PENDING_APPROVAL' && (
+                          <div className="flex gap-1">
+                             <button onClick={() => approve(b.id)} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all font-bold">✓</button>
+                             <button onClick={() => reject(b.id)} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-90 transition-all font-bold">✗</button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     </div>
@@ -770,7 +809,7 @@ export default function AdminPage() {
                           <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>
                         </td>
                         <td className="px-5 py-4 border-b border-slate-50">
-                          <div className="flex justify-center">
+                         <div className="flex justify-center gap-2">
                              {b.status === 'CANCELLED' ? (
                                <button
                                  className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
@@ -779,6 +818,11 @@ export default function AdminPage() {
                                >
                                  Restabileste
                                </button>
+                             ) : b.status === 'PENDING_APPROVAL' ? (
+                               <div className="flex gap-2">
+                                 <button onClick={() => approve(b.id)} className="h-9 px-4 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Aprobă</button>
+                                 <button onClick={() => reject(b.id)} className="h-9 px-4 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Respinge</button>
+                               </div>
                              ) : (
                                <button
                                  className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"

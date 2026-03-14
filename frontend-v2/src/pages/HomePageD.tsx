@@ -69,10 +69,10 @@ export default function HomePageD() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Padel Subscription Card */}
-          <div className="glass-dark border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/abonamente')}>
+          <div className="glass-dark border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer shadow-2xl flex flex-col min-h-[400px]" onClick={() => nav('/abonamente')}>
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-6">
+            <div className="relative z-10 flex flex-col flex-1 justify-between h-full">
+              <div className="flex items-center gap-4">
                 <div className="bg-indigo-500/20 p-4 rounded-2xl border border-indigo-500/40">
                   <Trophy className="w-8 h-8 text-indigo-400" />
                 </div>
@@ -82,19 +82,19 @@ export default function HomePageD() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+              <div className="grid grid-cols-2 gap-4 my-8">
+                <div className="bg-slate-950/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Exterior</p>
                     <p className="text-2xl font-black text-white tracking-tighter">80 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
-                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+                <div className="bg-slate-950/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Indoor</p>
                     <p className="text-2xl font-black text-white tracking-tighter">150 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">* Oferte abonamente Early Booking / 3 Luni</span>
+              <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/5">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider max-w-[150px] leading-tight">* Oferte abonamente Early Booking / 3 Luni</span>
                 <button className="whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2.5 rounded-full font-black text-xs transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-indigo-500/20">
                   VEZI OFERTE <ArrowRight className="w-4 h-4" />
                 </button>

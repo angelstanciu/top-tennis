@@ -96,8 +96,7 @@ public class EmailService {
                "        <a href='" + mapsUrl + "' style='display: inline-block; background-color: #111827; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; transition: background-color 0.2s;'>Vezi locația pe hartă</a>" +
                "        " +
                "        <div style='margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e5e7eb; width: 100%;'>" +
-               "          <p style='color: #6b7280; font-size: 13px; margin-bottom: 12px;'>Ai nevoie să anulezi? O poți face cu cel puțin 24h înainte:</p>" +
-               "          <a href='" + baseUrl + "/anulare/" + booking.getCancelToken() + "' style='display: inline-block; color: #ef4444; font-size: 14px; font-weight: 600; text-decoration: underline;'>Anulează rezervarea</a>" +
+               "          <p style='color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0;'>Pentru a gestiona sau anula această rezervare (gratuit, cu până la 24 de ore înainte), vă rugăm să accesați contul dumneavoastră pe <a href='https://star-arena.ro' style='color: #10b981; font-weight: 700; text-decoration: none;'>star-arena.ro</a>.</p>" +
                "        </div>" +
                "      </div>" +
                "      " +
