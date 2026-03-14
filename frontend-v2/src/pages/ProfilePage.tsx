@@ -86,7 +86,17 @@ export default function ProfilePage() {
     loadData()
   }, [token, nav])
 
-  const matchesPlayed = history.length
+  const matchesPlayed = useMemo(() => {
+    const now = new Date()
+    return history.filter(b => {
+      if (b.status !== 'CONFIRMED') return false
+      const bDate = new Date(b.bookingDate)
+      const [sh, sm] = b.startTime.split(':').map(Number)
+      const [eh, em] = b.endTime.split(':').map(Number)
+      bDate.setHours(eh, em, 0, 0)
+      return bDate <= now
+    }).length
+  }, [history])
   
   const rankInfo = useMemo(() => {
     if (matchesPlayed < 10) return { label: 'Bronze', color: 'from-orange-400 to-orange-700', next: 10, icon: <Shield className="w-16 h-16 text-orange-400 drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]" />, level: 1 }
@@ -530,7 +540,7 @@ export default function ProfilePage() {
                         </button>
                         <div className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2">
                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Jucător Activ</span>
+                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Statut: Jucător Activ</span>
                         </div>
                       </div>
                     </>

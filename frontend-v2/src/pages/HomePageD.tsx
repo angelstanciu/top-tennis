@@ -111,7 +111,7 @@ export default function HomePageD() {
                   <CalendarDays className="w-8 h-8 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white">Prețuri Sportive</h3>
+                  <h3 className="text-2xl font-black text-white">Tarife Închiriere Terenuri</h3>
                   <p className="text-emerald-400/80 font-bold text-xs uppercase tracking-widest mt-0.5">Cele mai bune tarife din zonă</p>
                 </div>
               </div>
@@ -119,24 +119,24 @@ export default function HomePageD() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Câmp</span>
-                  <span className="text-white font-black">40 LEI/H</span>
+                  <span className="text-white font-black">de la 40 LEI/H</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Picior</span>
-                  <span className="text-white font-black">75 LEI/H</span>
+                  <span className="text-white font-black">de la 75 LEI/H</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Baschet</span>
-                  <span className="text-emerald-400 font-black">80 LEI/H</span>
+                  <span className="text-emerald-400 font-black">de la 80 LEI/H</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Masă</span>
-                  <span className="text-emerald-400 font-black">35 LEI/H</span>
+                  <span className="text-emerald-400 font-black">de la 35 LEI/H</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">* Nocturnă după ora 19:00</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">* Se aplică un cost suplimentar pentru folosirea instalației de nocturnă (după ora 19:00).</span>
                 <button className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2.5 rounded-full font-black text-xs transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/20">
                   REZERVĂ <ArrowRight className="w-4 h-4" />
                 </button>
@@ -207,8 +207,10 @@ export default function HomePageD() {
               <Phone className="w-8 h-8" />
             </div>
             <h3 className="font-bold text-xl mb-3 text-white">Contact Rezervări</h3>
-            <p className="text-slate-400 text-sm leading-relaxed mb-4">Sună-ne pentru detalii sau asistență cu programările tale.</p>
-            <a href="tel:0742197487" className="text-amber-400 font-black text-xl hover:text-amber-300 transition-colors">0742 197 487</a>
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">Sună-ne pe WhatsApp pentru detalii sau asistență cu programările tale.</p>
+            <div className="text-amber-400 font-black text-xl">
+              <a href="https://wa.me/40742197487" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition-colors">0742 197 487</a>
+            </div>
           </div>
         </div>
       </section>

@@ -322,18 +322,29 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Rezervarea nu a fost găsită."));
 
-        if (booking.getPlayerUser() == null || !booking.getPlayerUser().getId().equals(player.getId())) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Nu poți anula rezervarea altui utilizator.");
+        // TASK 1: Expand permissions to phone/email matches for Guest bookings
+        boolean isOwner = (booking.getPlayerUser() != null && booking.getPlayerUser().getId().equals(player.getId()));
+        boolean phoneMatches = (booking.getCustomerPhone() != null && booking.getCustomerPhone().equals(player.getPhoneNumber()));
+        boolean emailMatches = (booking.getCustomerEmail() != null && player.getEmail() != null && booking.getCustomerEmail().equalsIgnoreCase(player.getEmail()));
+
+        if (!isOwner && !phoneMatches && !emailMatches) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Nu poți anula rezervarea altui jucător!");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervarea este deja anulată.");
         }
 
-        // Rule: 24 hours before
+        // TASK 2: Reformulate error message with 24h threshold
         LocalDateTime startDateTime = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
         if (LocalDateTime.now().isAfter(startDateTime.minusHours(24))) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi anulate cu cel puțin 24 ore înainte de începere.");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, 
+                "Anularea din cont nu mai este posibilă deoarece au rămas mai puțin de 24 ore până la începerea meciului. Pentru modificări urgente, vă rugăm să ne contactați telefonic.");
+        }
+
+        // Bonus: Link guest booking to player account upon cancellation
+        if (booking.getPlayerUser() == null) {
+            booking.setPlayerUser(player);
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -352,7 +363,8 @@ public class BookingService {
 
         LocalDateTime startDateTime = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
         if (LocalDateTime.now().isAfter(startDateTime.minusHours(24))) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi anulate cu cel puțin 24 ore înainte de începere.");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, 
+                "Anularea rezervării nu mai este posibilă online deoarece au rămas mai puțin de 24 ore până la începerea meciului. Pentru modificări urgente, vă rugăm să ne contactați telefonic.");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);

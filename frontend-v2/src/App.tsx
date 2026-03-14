@@ -92,9 +92,17 @@ export default function App() {
   const [searchParams] = useSearchParams()
   const lsSport = (typeof window !== 'undefined' ? (localStorage.getItem('lastSport') as SportType | null) : null)
   const paramDate = searchParams.get('date')
-  const initialSport = lsSport || (searchParams.get('sport') as SportType) || 'TENNIS'
+  const paramSport = searchParams.get('sport') as SportType
+  const initialSport = paramSport || lsSport || 'TENNIS'
   const initialDate = paramDate || todayISO()
   const [sport, setSport] = useState<SportType>(initialSport)
+
+  // React to sport query parameter changes from external navigation (e.g. homepage cards)
+  useEffect(() => {
+    if (paramSport && paramSport !== sport) {
+      setSport(paramSport)
+    }
+  }, [paramSport])
   const [date, setDate] = useState<string>(initialDate)
   const [data, setData] = useState<AvailabilityDto[]>([])
   const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])

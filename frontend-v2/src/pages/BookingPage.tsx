@@ -280,6 +280,7 @@ export default function BookingPage() {
              </button>
              <p className="text-[10px] text-slate-400 font-medium text-center mt-3 px-2 leading-relaxed">
                Apasând pe buton ești de acord cu prelucrarea datelor. Plata se face la locație.
+               <br />* Se aplică un cost suplimentar pentru folosirea instalației de nocturnă (după ora 19:00).
              </p>
           </div>
         </form>
