@@ -538,10 +538,6 @@ export default function ProfilePage() {
                           <Calendar className="w-3.5 h-3.5" />
                           Rezervă meci
                         </button>
-                        <div className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2">
-                           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Statut: Jucător Activ</span>
-                        </div>
                       </div>
                     </>
                   )}
@@ -665,13 +661,9 @@ export default function ProfilePage() {
               <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-lime-500 text-black flex items-center justify-center mb-6 shadow-xl shadow-lime-500/20 group-hover:scale-110 transition-transform duration-500">
                 <div className="text-4xl">{sports.find(s => s.id === player?.preferredSport)?.icon || '🎾'}</div>
               </div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Sport Preferat</p>
-              <h3 className="text-2xl font-black text-white tracking-widest uppercase">
+              <h3 className="text-2xl font-black text-white tracking-widest uppercase mb-4">
                 {sports.find(s => s.id === player?.preferredSport)?.label || 'Nespecificat'}
               </h3>
-              <div className="mt-8 flex gap-2">
-                 <div className="flex-1 px-4 py-2 bg-white/5 rounded-xl border border-white/5 text-[9px] font-black text-slate-400">PRO MODE</div>
-              </div>
             </div>
           </motion.div>
         </div>
@@ -705,7 +697,7 @@ export default function ProfilePage() {
                         <div className="flex items-center justify-center md:justify-start gap-2 mb-0.5">
                           <span className="text-[9px] font-black text-lime-500 uppercase tracking-widest bg-lime-500/10 px-2 py-0.5 rounded-full">Viitor</span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            {item.court?.name} {item.court?.indoor ? '• Indoor' : '• Exterior'}
+                            Teren {item.court?.name} {item.court?.indoor ? '• Indoor' : '• Exterior'}
                           </span>
                         </div>
                         <h4 className="text-xl font-black text-white tracking-tight leading-none uppercase">
@@ -797,7 +789,7 @@ export default function ProfilePage() {
                           {item.status === 'CANCELLED' ? 'Anulată' : 'Finalizată'}
                         </span>
                         <div className="w-1 h-1 rounded-full bg-slate-700" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.court?.name}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Teren {item.court?.name}</span>
                       </div>
                       <h4 className="text-2xl font-black text-slate-400 tracking-tight leading-none uppercase">
                         {item.court?.sportType === 'TENNIS' ? 'Tenis' : 

@@ -201,7 +201,7 @@ export default function BookingPage() {
               </div>
               <div className="flex-1">
                 <p className="text-[12px] font-semibold text-slate-700 leading-relaxed">
-                  💡 Știai că dacă îți <a href="/cont" className="text-emerald-600 font-black underline decoration-emerald-500/30 hover:decoration-emerald-500 transition-all">creezi un cont</a>, data viitoare detaliile tale vor fi completate automat? În plus, poți gestiona și anula rezervările direct din contul tău (gratuit, cu până la 24 de ore înainte de meci).
+                  💡 <a href="/cont" className="text-emerald-600 font-black underline decoration-emerald-500/30 hover:decoration-emerald-500 transition-all">Creează-ți un cont</a> pentru a-ți salva datele automat la următoarele rezervări și pentru a avea control total asupra istoricului tău de meciuri.
                 </p>
               </div>
             </div>
@@ -223,20 +223,6 @@ export default function BookingPage() {
             <div className="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-medium flex gap-2 items-start">
               <span className="shrink-0 leading-tight">⚠️</span>
               <span className="leading-tight">Selectează cel puțin 1 oră (două intervale de 30 min).</span>
-            </div>
-          )}
-
-          {/* Upsell Banner for Guests */}
-          {!isLoggedUser && (
-            <div className="mx-1 p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-500 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <div className="flex-1">
-                <p className="text-[12px] font-semibold text-slate-700 leading-relaxed">
-                  💡 Știai că dacă îți <a href="/cont" className="text-emerald-600 font-black underline decoration-emerald-500/30 hover:decoration-emerald-500 transition-all">creezi un cont</a>, data viitoare detaliile tale vor fi completate automat? În plus, poți gestiona și anula rezervările direct din contul tău (gratuit, cu până la 24 de ore înainte de meci).
-                </p>
-              </div>
             </div>
           )}
 
@@ -317,7 +303,6 @@ export default function BookingPage() {
              </button>
              <p className="text-[10px] text-slate-400 font-medium text-center mt-3 px-2 leading-relaxed">
                Apasând pe buton ești de acord cu prelucrarea datelor. Plata se face la locație.
-               <br />* Se aplică un cost suplimentar pentru folosirea instalației de nocturnă (după ora 19:00).
              </p>
           </div>
         </form>
