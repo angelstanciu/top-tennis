@@ -48,10 +48,48 @@ public class BookingService {
         }
 
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
-        validateTime(court, date, start, end);        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
+        validateTime(court, date, start, end);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
+
+        String normPhone = normalizePhone(phone);
+        String normEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
+
+        // --- NEW AUTHORIZATION & OWNERSHIP LOGIC ---
+        PlayerUser playerFromToken = null;
+        if (token != null && token.startsWith("Bearer ") && !token.equals("Bearer null")) {
+            playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
+            if (playerFromToken == null) {
+                // The token is invalid/expired (e.g. server restarted and memory cache wiped)
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.UNAUTHORIZED, 
+                        "Sesiunea ta a expirat (server restartat). Te rugăm să te loghezi din nou."
+                );
+            }
+        }
+
+        if (playerFromToken == null) {
+            // Guest -> Throw exception if contact belongs to an existing account
+            if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
+                throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
+            }
+            if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
+                throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
+            }
+        } else {
+            // Authenticated -> Throw exception ONLY if contact belongs to a DIFFERENT account
+            java.util.Optional<PlayerUser> existingPhoneUser = playerUserRepository.findByPhoneNumber(normPhone);
+            if (existingPhoneUser.isPresent() && !existingPhoneUser.get().getId().equals(playerFromToken.getId())) {
+                throw new IllegalArgumentException("Acest număr de telefon este deja asociat altui cont.");
+            }
+            if (normEmail != null) {
+                java.util.Optional<PlayerUser> existingEmailUser = playerUserRepository.findByEmail(normEmail);
+                if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(playerFromToken.getId())) {
+                    throw new IllegalArgumentException("Această adresă de email este deja asociată altui cont.");
+                }
+            }
+        }
 
         // Task 5: Double Booking Prevention (same user/phone, same interval, any court)
-        String normPhone = normalizePhone(phone);
         if (!bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată sau în așteptare în acest interval orar.");
         }
@@ -80,8 +118,7 @@ public class BookingService {
                 b.setMidnightBooking(touchesMidnight);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
-                PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
-                
+                // PlayerUser is explicitly resolved at the top of the method
                 if (playerFromToken != null) {
                     b.setPlayerUser(playerFromToken);
                     if ((playerFromToken.getPhoneNumber() == null || playerFromToken.getPhoneNumber().trim().isEmpty()) && phone != null) {
@@ -153,8 +190,7 @@ public class BookingService {
                 b1.setCancelToken(sharedToken);
                 b2.setCancelToken(sharedToken);
 
-                PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
-
+                // PlayerUser is explicitly resolved at the top of the method
                 if (playerFromToken != null) {
                     b1.setPlayerUser(playerFromToken);
                     b2.setPlayerUser(playerFromToken);
