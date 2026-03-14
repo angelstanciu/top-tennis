@@ -48,14 +48,12 @@ public class BookingService {
         }
 
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
-        validateTime(court, date, start, end);
-
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        validateTime(court, date, start, end);        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
 
         // Task 5: Double Booking Prevention (same user/phone, same interval, any court)
         String normPhone = normalizePhone(phone);
         if (!bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată în acest interval orar.");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată sau în așteptare în acest interval orar.");
         }
 
         boolean crossesMidnight = !end.isAfter(start);
@@ -183,7 +181,6 @@ public class BookingService {
                 return saved1;
             }
     }
-    }
 
     @Transactional(readOnly = true)
     public Booking get(Long id) {
@@ -266,7 +263,7 @@ public class BookingService {
         if (b.getStatus() != BookingStatus.CANCELLED) {
             return b;
         }
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         boolean overlaps = !bookingRepository.findOverlappingExcludingId(
                 b.getId(),
                 b.getCourt().getId(),
@@ -287,7 +284,7 @@ public class BookingService {
     public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         validateTime(court, date, start, end);
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
             throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
         }
@@ -395,7 +392,6 @@ public class BookingService {
                 .filter(b -> activeStatuses.contains(b.getStatus()))
                 .toList();
         
-        // Find the "free block" [blockStart, blockEnd] that contains [start, end]
         LocalTime blockStart = LocalTime.MIN;
         LocalTime blockEnd = LocalTime.of(23, 59);
 
@@ -416,32 +412,34 @@ public class BookingService {
         int gapBefore = bookingStartMin - blockStartMin;
         int gapAfter = blockEndMin - bookingEndMin;
 
-        // --- NEW SNAPPING LOGIC ---
-        
-        // 1. REJECT if fragmented in the middle (30m on both sides)
+        System.out.println("[GAP_LOG] court=" + court.getId() + " date=" + date + " start=" + start + " end=" + end);
+        System.out.println("[GAP_LOG] blockStart=" + blockStart + " blockEnd=" + blockEnd);
+        System.out.println("[GAP_LOG] gapBefore=" + gapBefore + " gapAfter=" + gapAfter);
+
+        // --- FINAL REWARD LOGIC ---
+        // CRITICAL: Any booking that "snaps" to an existing one or boundary is VALID.
+        if (gapBefore == 0 || gapAfter == 0) {
+            return; // Perfectly snapped
+        }
+
+        // REJECT if leaving exactly 30m gaps that fragment the court
         if (gapBefore == 30 && gapAfter == 30) {
             throw new IllegalArgumentException("Pentru a evita fragmentarea terenului, te rugăm să lipești rezervarea de una dintre rezervările existente.");
         }
 
-        // 2. REJECT if leaving exactly 30m on one side and >=60m on the other (Force snapping)
         if (gapBefore == 30 && gapAfter >= 60) {
-            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai devreme pentru a nu lăsa un gol inutil.");
+            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai devreme pentru a nu lăsa un gol de 30 minute.");
         }
         if (gapAfter == 30 && gapBefore >= 60) {
-            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai târziu pentru a nu lăsa un gol inutil.");
+            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai târziu pentru a nu lăsa un gol de 30 minute.");
         }
 
-        // 3. ALLOW if snapped to one side (gap == 0), even if the other side is 30m
-        if (gapBefore == 0 || gapAfter == 0) {
-            return; // Valid
-        }
-
-        // 4. ALLOW if gaps on both sides are large enough (>= 60m)
+        // ALLOW if gaps on both sides are large enough (>= 60m)
         if (gapBefore >= 60 && gapAfter >= 60) {
-            return; // Valid
+            return; // Independent block
         }
 
-        // Fallback for edge cases (e.g. gaps of 30 that aren't exactly 30 due to midnight etc)
+        // Emergency fallback - if we still have a 30m gap and we aren't snapped
         if (gapBefore == 30 || gapAfter == 30) {
              throw new IllegalArgumentException("Intervalul selectat lasă un gol de 30 de minute. Te rugăm să aliniezi rezervarea.");
         }
