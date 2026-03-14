@@ -55,17 +55,7 @@ public class BookingService {
         String normEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
 
         // --- NEW AUTHORIZATION & OWNERSHIP LOGIC ---
-        PlayerUser playerFromToken = null;
-        if (token != null && token.startsWith("Bearer ") && !token.equals("Bearer null")) {
-            playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
-            if (playerFromToken == null) {
-                // The token is invalid/expired (e.g. server restarted and memory cache wiped)
-                throw new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.UNAUTHORIZED, 
-                        "Sesiunea ta a expirat (server restartat). Te rugăm să te loghezi din nou."
-                );
-            }
-        }
+        PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
 
         if (playerFromToken == null) {
             // Guest -> Throw exception if contact belongs to an existing account

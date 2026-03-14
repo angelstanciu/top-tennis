@@ -28,15 +28,6 @@ async function parseError(res: Response): Promise<string> {
     }
   }
 }
-export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  const res = await fetch(input, init)
-  if (res.status === 401) {
-    localStorage.removeItem('playerToken')
-    localStorage.removeItem('playerData')
-    window.dispatchEvent(new Event('auth-change'))
-  }
-  return res
-}
 
 export async function fetchAvailability(date: string, sportType?: string): Promise<AvailabilityDto[]> {
   const url = new URL(`${BASE_URL}/availability`, window.location.origin)
@@ -75,7 +66,7 @@ export async function createBooking(payload: {
     customerPhone: normalizePhone(payload.customerPhone)
   }
 
-  const res = await apiFetch(`${BASE_URL}/bookings`, {
+  const res = await fetch(`${BASE_URL}/bookings`, {
     method: 'POST',
     headers,
     body: JSON.stringify(normalizedPayload),
@@ -107,7 +98,7 @@ export async function adminBlockSlot(payload: {
   endTime: string
   note: string
 }, auth: string): Promise<BookingDto> {
-  const res = await apiFetch(`${BASE_URL}/admin/block-slot`, {
+  const res = await fetch(`${BASE_URL}/admin/block-slot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
     body: JSON.stringify(payload),
@@ -157,7 +148,7 @@ export async function createWeeklyUserBooking(payload: {
   customerPhone: string
   weeks: number
 }): Promise<BookingDto> {
-  const res = await apiFetch(`${BASE_URL}/bookings/weekly-user`, {
+  const res = await fetch(`${BASE_URL}/bookings/weekly-user`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -232,7 +223,7 @@ export async function loginWithGoogle(credential: string): Promise<{ token: stri
 }
 
 export async function fetchPlayerMe(token: string): Promise<PlayerUser> {
-  const res = await apiFetch(`${BASE_URL}/player/me`, {
+  const res = await fetch(`${BASE_URL}/player/me`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -242,7 +233,7 @@ export async function fetchPlayerMe(token: string): Promise<PlayerUser> {
 }
 
 export async function updatePlayerProfile(token: string, payload: { fullName?: string, email?: string, phoneNumber?: string, preferredSport?: string, age?: number, gender?: string, avatarUrl?: string }): Promise<PlayerUser> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/update-profile`, {
+  const res = await fetch(`${BASE_URL}/player/auth/update-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify(payload),
@@ -252,7 +243,7 @@ export async function updatePlayerProfile(token: string, payload: { fullName?: s
 }
 
 export async function linkPlayerPhone(token: string, phone: string, otp: string): Promise<PlayerUser> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/link-phone`, {
+  const res = await fetch(`${BASE_URL}/player/auth/link-phone`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ phone: normalizePhone(phone), otp }),
@@ -262,7 +253,7 @@ export async function linkPlayerPhone(token: string, phone: string, otp: string)
 }
 
 export async function fetchPlayerHistory(token: string): Promise<BookingDto[]> {
-  const res = await apiFetch(`${BASE_URL}/player/history`, {
+  const res = await fetch(`${BASE_URL}/player/history`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -274,7 +265,7 @@ export async function cancelBooking(id: number): Promise<void> {
   const token = localStorage.getItem('playerToken')
   if (!token) throw new Error('Trebuie să fii autentificat pentru a anula o rezervare.')
   
-  const res = await apiFetch(`${BASE_URL}/bookings/${id}/cancel`, {
+  const res = await fetch(`${BASE_URL}/bookings/${id}/cancel`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -292,7 +283,7 @@ export async function cancelBookingByToken(token: string): Promise<void> {
 }
 
 export async function approveBooking(id: number, auth: string): Promise<void> {
-  const res = await apiFetch(`${BASE_URL}/admin/bookings/${id}/approve`, {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}/approve`, {
     method: 'PATCH',
     headers: { Authorization: `Basic ${auth}` }
   })
@@ -300,7 +291,7 @@ export async function approveBooking(id: number, auth: string): Promise<void> {
 }
 
 export async function rejectBooking(id: number, auth: string): Promise<void> {
-  const res = await apiFetch(`${BASE_URL}/admin/bookings/${id}/reject`, {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}/reject`, {
     method: 'PATCH',
     headers: { Authorization: `Basic ${auth}` }
   })
