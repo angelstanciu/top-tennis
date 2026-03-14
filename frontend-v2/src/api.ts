@@ -28,7 +28,7 @@ async function parseError(res: Response): Promise<string> {
     }
   }
 }
-async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const res = await fetch(input, init)
   if (res.status === 401) {
     localStorage.removeItem('playerToken')
@@ -42,7 +42,7 @@ export async function fetchAvailability(date: string, sportType?: string): Promi
   const url = new URL(`${BASE_URL}/availability`, window.location.origin)
   url.searchParams.set('date', date)
   if (sportType) url.searchParams.set('sportType', sportType)
-  const res = await apiFetch(url)
+  const res = await fetch(url)
   if (!res.ok) throw new Error(await parseError(res))
   
   const data: AvailabilityDto[] = await res.json()
@@ -85,7 +85,7 @@ export async function createBooking(payload: {
 }
 
 export async function fetchActiveCourts(): Promise<CourtDto[]> {
-  const res = await apiFetch(`${BASE_URL}/courts`)
+  const res = await fetch(`${BASE_URL}/courts`)
   if (!res.ok) throw new Error(await parseError(res))
   
   const courts: CourtDto[] = await res.json()
@@ -169,7 +169,7 @@ export async function createWeeklyUserBooking(payload: {
 // === Player Auth ===
 
 export async function requestPlayerOtp(phone: string): Promise<void> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/request-otp`, {
+  const res = await fetch(`${BASE_URL}/player/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: normalizePhone(phone) }),
@@ -182,7 +182,7 @@ export async function requestPlayerOtp(phone: string): Promise<void> {
 }
 
 export async function verifyPlayerOtp(phone: string, otp: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/verify-otp`, {
+  const res = await fetch(`${BASE_URL}/player/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: normalizePhone(phone), otp }),
@@ -192,7 +192,7 @@ export async function verifyPlayerOtp(phone: string, otp: string): Promise<{ tok
 }
 
 export async function loginPlayer(phone: string, password: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/login`, {
+  const res = await fetch(`${BASE_URL}/player/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: normalizePhone(phone), password }),
@@ -202,7 +202,7 @@ export async function loginPlayer(phone: string, password: string): Promise<{ to
 }
 
 export async function registerPlayer(phone: string, password: string, fullName: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/register`, {
+  const res = await fetch(`${BASE_URL}/player/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: normalizePhone(phone), password, fullName }),
@@ -212,7 +212,7 @@ export async function registerPlayer(phone: string, password: string, fullName: 
 }
 
 export async function loginWithFacebook(accessToken: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/facebook`, {
+  const res = await fetch(`${BASE_URL}/player/auth/facebook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
@@ -222,7 +222,7 @@ export async function loginWithFacebook(accessToken: string): Promise<{ token: s
 }
 
 export async function loginWithGoogle(credential: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await apiFetch(`${BASE_URL}/player/auth/google`, {
+  const res = await fetch(`${BASE_URL}/player/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential }),
@@ -284,7 +284,7 @@ export async function cancelBooking(id: number): Promise<void> {
 }
 
 export async function cancelBookingByToken(token: string): Promise<void> {
-  const res = await apiFetch(`${BASE_URL}/bookings/cancel-public/${token}`, {
+  const res = await fetch(`${BASE_URL}/bookings/cancel-public/${token}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
   })
