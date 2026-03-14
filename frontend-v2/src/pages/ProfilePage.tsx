@@ -661,9 +661,12 @@ export default function ProfilePage() {
               <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-lime-500 text-black flex items-center justify-center mb-6 shadow-xl shadow-lime-500/20 group-hover:scale-110 transition-transform duration-500">
                 <div className="text-4xl">{sports.find(s => s.id === player?.preferredSport)?.icon || '🎾'}</div>
               </div>
-              <h3 className="text-2xl font-black text-white tracking-widest uppercase mb-4">
-                {sports.find(s => s.id === player?.preferredSport)?.label || 'Nespecificat'}
-              </h3>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Sport Favorit</p>
+                <h3 className="text-2xl font-black text-white tracking-widest uppercase">
+                  {sports.find(s => s.id === player?.preferredSport)?.label || 'Nespecificat'}
+                </h3>
+              </div>
             </div>
           </motion.div>
         </div>

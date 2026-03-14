@@ -364,19 +364,41 @@ export default function TimelineGrid({
   function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string) {
     const active = booked.filter(b => b.status !== 'CANCELLED')
     
-    // Check gap BEFORE
-    const gap30Before = sub30(selStart)
-    const hasBookingAtStart = active.some(b => b.end === selStart)
-    const hasBookingEnding30MinBefore = active.some(b => b.end === gap30Before)
-    
-    if (hasBookingEnding30MinBefore && !hasBookingAtStart) return true
-    
-    // Check gap AFTER
-    const gap30After = add30(selEnd)
-    const hasBookingAtEnd = active.some(b => b.start === selEnd)
-    const hasBookingStarting30MinAfter = active.some(b => b.start === gap30After)
-    
-    if (hasBookingStarting30MinAfter && !hasBookingAtEnd) return true
+    const startMin = minutesSinceMidnightStr(selStart)
+    const endMin = minutesSinceMidnightStr(selEnd)
+
+    // Find the free block [blockStart, blockEnd] surrounding our selection
+    let blockStart = 0
+    let blockEnd = 1440
+
+    active.forEach(b => {
+      const bStart = minutesSinceMidnightStr(b.start)
+      const bEnd = minutesSinceMidnightStr(b.end)
+      
+      if (bEnd <= startMin) {
+        if (bEnd > blockStart) blockStart = bEnd
+      }
+      if (bStart >= endMin) {
+        if (bStart < blockEnd) blockEnd = bStart
+      }
+    })
+
+    const gapBefore = startMin - blockStart
+    const gapAfter = blockEnd - endMin
+
+    // Logic aligned with Backend (BookingService.java):
+    // REJECT ONLY IF:
+    // 1. Fragmented in the middle (30m on BOTH sides)
+    if (gapBefore === 30 && gapAfter === 30) return true
+
+    // 2. Fragmented on one side and NOT snapped to the other (Force snapping)
+    // If there's a 30m gap on one side and >= 60m on the other, it should have been snapped.
+    if (gapBefore === 30 && gapAfter >= 60) return true
+    if (gapAfter === 30 && gapBefore >= 60) return true
+
+    // ALLOW ALL OTHER CASES:
+    // - Snapped to either side (gapBefore == 0 or gapAfter == 0)
+    // - Large gaps on both sides (gapBefore >= 60 and gapAfter >= 60)
     
     return false
   }
@@ -990,9 +1012,10 @@ export default function TimelineGrid({
 
           <div className="p-4 flex flex-col gap-3">
              {!player && !onAdminClick && (
-               <div className="mb-2 bg-lime-50 rounded p-3 text-sm text-lime-900 border border-lime-200 leading-tight">
-                 <span className="font-semibold block mb-0.5">Ai deja un cont sau vrei să îți creezi unul?</span>
-                 <a href="/cont" className="text-lime-700 underline font-semibold mt-0.5 inline-block">Loghează-te</a> pentru a putea să îți anulezi rezervările direct din profilul tău!
+               <div className="bg-lime-50 rounded-2xl p-4 border border-lime-100 text-[13px] font-medium text-lime-900 leading-relaxed shadow-sm">
+                 💡 Ai deja un cont? 
+                 <a href="/cont" className="text-lime-700 underline font-black mx-1 hover:text-lime-600 transition-colors">Loghează-te</a> 
+                 pentru a rezerva mai rapid și pentru a-ți urmări progresul în Rank-ul STAR ARENA!
                </div>
              )}
 
