@@ -92,15 +92,16 @@ public class EmailService {
                "        </table>" +
                "      </div>" +
                "      " +
-               "      <div style='text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;'>" +
-               "        <a href='" + mapsUrl + "' style='display: inline-block; background-color: #111827; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; transition: background-color 0.2s;'>Vezi locația pe hartă</a>" +
-               "        " +
-               "        <div style='margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e5e7eb; width: 100%;'>" +
-               "          <p style='color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0;'>Pentru a gestiona sau anula această rezervare (gratuit, cu până la 24 de ore înainte), vă rugăm să accesați contul dumneavoastră pe <a href='https://star-arena.ro' style='color: #10b981; font-weight: 700; text-decoration: none;'>star-arena.ro</a>.</p>" +
-               "        </div>" +
+               "      <div style='text-align: center; margin-bottom: 30px;'>" +
+               "        <a href='" + mapsUrl + "' style='display: inline-block; background-color: #111827; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; text-align: center;'>Vezi locația pe hartă</a>" +
                "      </div>" +
                "      " +
-               "      <p style='color: #9ca3af; font-size: 14px; text-align: center; margin: 0;'>Te așteptăm cu drag în arenă!</p>" +
+               "      <div style='background-color: #ecfdf5; border-radius: 12px; padding: 25px 20px; text-align: center; margin-bottom: 30px; border: 1px solid #d1fae5;'>" +
+               "        <p style='color: #065f46; font-size: 15px; line-height: 1.6; margin: 0 0 15px;'>Pentru a gestiona sau anula această rezervare (gratuit, cu până la 24 de ore înainte), te rugăm să folosești contul tău.</p>" +
+               "        <a href='" + baseUrl + "' style='display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;'>Accesează contul tău</a>" +
+               "      </div>" +
+               "      " +
+               "      <p style='color: #4b5563; font-size: 16px; font-weight: 500; text-align: center; margin: 0;'>Te așteptăm cu drag în arenă!</p>" +
                "    </div>" +
                "    " +
                "    <div style='background-color: #f9fafb; padding: 30px; border-top: 1px solid #f3f4f6; text-align: center; color: #9ca3af; font-size: 12px;'>" +
