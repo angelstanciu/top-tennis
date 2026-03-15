@@ -353,8 +353,23 @@ public class BookingService {
         if (durMin < 60) {
             throw new IllegalArgumentException("Durata minimă a rezervării este de 1 oră.");
         }
+        
+        LocalTime effectiveStart = LocalTime.MIN;
+        if (date.equals(LocalDate.now())) {
+            LocalTime now = LocalTime.now();
+            int minute = now.getMinute();
+            int hour = now.getHour();
+            if (minute > 0 && minute <= 30) {
+                effectiveStart = LocalTime.of(hour, 30);
+            } else if (minute > 30) {
+                effectiveStart = LocalTime.of(hour + 1, 0);
+            } else {
+                effectiveStart = LocalTime.of(hour, 0);
+            }
+        }
+        
         // No opening hours constraint: base is open non-stop
-        validateGaps(court, date, start, end);
+        validateGaps(court, date, start, end, effectiveStart);
     }
 
     @Transactional
@@ -420,13 +435,13 @@ public class BookingService {
         bookingRepository.save(booking);
     }
 
-    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end) {
+    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end, LocalTime effectiveGridStart) {
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date).stream()
                 .filter(b -> activeStatuses.contains(b.getStatus()))
                 .toList();
         
-        LocalTime blockStart = LocalTime.MIN;
+        LocalTime blockStart = effectiveGridStart;
         LocalTime blockEnd = LocalTime.of(23, 59);
 
         for (Booking b : dayBookings) {

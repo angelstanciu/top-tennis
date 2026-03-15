@@ -17,9 +17,6 @@ public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
     private static final String FROM_EMAIL = "rezervari@star-arena.ro";
-    
-    @org.springframework.beans.factory.annotation.Value("${app.base-url}")
-    private String baseUrl;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -98,7 +95,7 @@ public class EmailService {
                "      " +
                "      <div style='background-color: #ecfdf5; border-radius: 12px; padding: 25px 20px; text-align: center; margin-bottom: 30px; border: 1px solid #d1fae5;'>" +
                "        <p style='color: #065f46; font-size: 15px; line-height: 1.6; margin: 0 0 15px;'>Pentru a gestiona sau anula această rezervare (gratuit, cu până la 24 de ore înainte), te rugăm să folosești contul tău.</p>" +
-               "        <a href='" + baseUrl + "/profile' style='display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;'>Accesează contul tău</a>" +
+               "        <a href='https://star-arena.ro/profile' style='display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;'>Accesează contul tău</a>" +
                "      </div>" +
                "      " +
                "      <p style='color: #4b5563; font-size: 16px; font-weight: 500; text-align: center; margin: 0;'>Te așteptăm cu drag în arenă!</p>" +
