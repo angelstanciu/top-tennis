@@ -221,27 +221,62 @@ public class PlayerAuthService {
     }
 
     public String loginOrRegisterWithFacebook(String accessToken) {
-        // In productie aici am apela https://graph.facebook.com/me?fields=id,name,email,picture&access_token=...
-        // Pentru MVP/Demo, simulam succesul daca primim un token ne-vid
         if (accessToken == null || accessToken.isBlank()) {
             throw new IllegalArgumentException("Facebook Access Token invalid.");
         }
 
-        // Mocking Facebook response (In reality, use RestTemplate to fetch user info)
-        String mockEmail = "facebook_user_" + accessToken.substring(0, Math.min(accessToken.length(), 5)) + "@example.com";
-        String mockName = "Utilizator Facebook";
-        String mockPicture = "https://graph.facebook.com/v12.0/me/picture?access_token=" + accessToken;
+        String email = null;
+        String name = "Jucător Facebook";
+        String pictureUrl = null;
+        String fbId = null;
 
-        PlayerUser user = playerUserRepository.findByEmail(mockEmail)
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String url = "https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=" + accessToken;
+            Map<String, Object> userInfo = restTemplate.getForObject(url, Map.class);
+
+            if (userInfo == null || !userInfo.containsKey("id")) {
+                throw new IllegalArgumentException("Facebook Access Token invalid sau expirat.");
+            }
+
+            fbId = (String) userInfo.get("id");
+            if (userInfo.containsKey("name")) name = (String) userInfo.get("name");
+            if (userInfo.containsKey("email")) email = (String) userInfo.get("email");
+            
+            if (userInfo.containsKey("picture")) {
+                Map<String, Object> picObj = (Map<String, Object>) userInfo.get("picture");
+                if (picObj != null && picObj.containsKey("data")) {
+                    Map<String, Object> dataObj = (Map<String, Object>) picObj.get("data");
+                    if (dataObj != null && dataObj.containsKey("url")) {
+                        pictureUrl = (String) dataObj.get("url");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Eroare la comunicarea cu Facebook: " + e.getMessage());
+        }
+        
+        // Daca utilizatorul nu și-a partajat email-ul sau FB nu l-a furnizat, generăm unul fals dar unic
+        final String finalEmail = (email != null && !email.isBlank()) ? email : fbId + "@facebook.star-arena.ro";
+        final String finalName = name;
+        final String finalPictureUrl = pictureUrl;
+
+        PlayerUser user = playerUserRepository.findByEmail(finalEmail)
                 .orElseGet(() -> {
                     PlayerUser newUser = new PlayerUser();
-                    newUser.setEmail(mockEmail);
-                    newUser.setFullName(mockName);
-                    newUser.setAvatarUrl(mockPicture);
+                    newUser.setEmail(finalEmail);
+                    newUser.setFullName(finalName);
+                    newUser.setAvatarUrl(finalPictureUrl);
                     newUser.setCreatedAt(LocalDateTime.now());
                     newUser.setUpdatedAt(LocalDateTime.now());
                     return playerUserRepository.save(newUser);
                 });
+
+        // Update avatar if changed
+        if (finalPictureUrl != null && (user.getAvatarUrl() == null || !user.getAvatarUrl().equals(finalPictureUrl))) {
+            user.setAvatarUrl(finalPictureUrl);
+            playerUserRepository.save(user);
+        }
 
         String token = UUID.randomUUID().toString();
         tokenToPlayerId.put(token, user.getId());
