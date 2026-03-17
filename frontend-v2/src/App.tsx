@@ -580,31 +580,9 @@ export default function App() {
             >
               ‹
             </button>
-            <div className="relative">
-              <div 
-                className="text-sm font-bold text-slate-800 whitespace-nowrap px-1 min-w-[80px] text-center cursor-pointer hover:text-emerald-600 transition-colors"
-                onClick={() => {
-                  const el = dateInputRef.current
-                  if (!el) return
-                  try { if (typeof (el as any).showPicker === 'function') { (el as any).showPicker(); return } } catch {}
-                  try { el.click() } catch {}
-                }}
-              >
-                {displayDate}
-              </div>
-              <input
-                ref={dateInputRef}
-                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                type="date"
-                min={todayISO()}
-                max={maxDateISO()}
-                value={date}
-                onChange={e => setDate(e.target.value)}
-              />
-            </div>
             <button
               type="button"
-              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+              className="relative flex items-center gap-1 px-2 py-1.5 hover:bg-emerald-50 rounded-xl transition-colors group"
               onClick={() => {
                 const el = dateInputRef.current
                 if (!el) return
@@ -612,12 +590,26 @@ export default function App() {
                 try { el.click() } catch {}
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
+              <span className="text-sm font-bold text-slate-800 whitespace-nowrap min-w-[70px] text-center group-hover:text-emerald-600 transition-colors">
+                {displayDate}
+              </span>
+              <div className="text-slate-400 group-hover:text-emerald-500 transition-colors flex items-center justify-center w-6 h-6">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
+              <input
+                ref={dateInputRef}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 opacity-0 pointer-events-none"
+                type="date"
+                min={todayISO()}
+                max={maxDateISO()}
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
             </button>
             <button
               type="button"
