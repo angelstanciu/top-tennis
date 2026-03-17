@@ -202,16 +202,6 @@ export async function registerPlayer(phone: string, password: string, fullName: 
   return res.json()
 }
 
-export async function loginWithFacebook(accessToken: string): Promise<{ token: string, user: PlayerUser }> {
-  const res = await fetch(`${BASE_URL}/player/auth/facebook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accessToken }),
-  })
-  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la autentificare cu Facebook.')
-  return res.json()
-}
-
 export async function loginWithGoogle(credential: string): Promise<{ token: string, user: PlayerUser }> {
   const res = await fetch(`${BASE_URL}/player/auth/google`, {
     method: 'POST',

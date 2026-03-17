@@ -58,6 +58,15 @@ public class BookingService {
         // --- NEW AUTHORIZATION & OWNERSHIP LOGIC ---
         PlayerUser playerFromToken = playerAuthService.getUserByToken(token).orElse(null);
 
+        // If a token was provided but no user was found, the session has expired or is invalid.
+        // We MUST throw 401 Unauthorized so the frontend forces a re-login, instead of treating them as a guest.
+        if (token != null && !token.trim().isEmpty() && playerFromToken == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, 
+                "Sesiunea ta a expirat. Te rugăm să te reautentifici."
+            );
+        }
+
         if (playerFromToken == null) {
             // Guest -> Throw exception if contact belongs to an existing account
             if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {

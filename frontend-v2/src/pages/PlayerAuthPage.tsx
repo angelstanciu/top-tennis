@@ -2,31 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp, loginWithGoogle, loginWithFacebook } from '../api';
+import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp, loginWithGoogle } from '../api';
 import { PlayerUser } from '../types';
 import { GoogleLogin, useGoogleLogin } from '@react-oauth/google';
-import { Chrome, Facebook, Smartphone, Lock, User, ArrowRight, ChevronLeft, Mail, Loader2 } from 'lucide-react';
+import { Chrome, Smartphone, Lock, User, ArrowRight, ChevronLeft, Mail, Loader2 } from 'lucide-react';
 
 export default function PlayerAuthPage() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp'>('login');
   
   useEffect(() => {
-    // Load Facebook SDK
-    (window as any).fbAsyncInit = function() {
-      (window as any).FB.init({
-        appId: import.meta.env.VITE_FACEBOOK_APP_ID || '1234567890',
-        cookie: true,
-        xfbml: true,
-        version: 'v12.0'
-      });
-    };
-    (function(d, s, id) {
-      var js, fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      js = d.createElement(s) as any; js.id = id;
-      js.src = "https://connect.facebook.net/ro_RO/sdk.js";
-      fjs.parentNode?.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
+    // Left empty for future initializations if needed
   }, []);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -320,8 +305,8 @@ export default function PlayerAuthPage() {
                   </p>
                 </div>
 
-                {/* Social Logins */}
-                <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                {/* Social & Alternate Logins */}
+                <div className="flex flex-col gap-3 lg:gap-4">
                   <motion.button 
                     whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
                     whileTap={{ scale: 0.98 }}
@@ -331,45 +316,16 @@ export default function PlayerAuthPage() {
                     transition={{ duration: 3, repeat: Infinity }}
                     onClick={() => googleLogin()}
                     disabled={loading}
-                    className="flex items-center justify-center gap-2 lg:gap-3 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm relative overflow-hidden group shadow-xl"
+                    className="flex flex-1 items-center justify-center gap-2 lg:gap-3 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm relative overflow-hidden group shadow-xl"
                   >
                     <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     {loading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <Chrome className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-400" />}
                     <span>Sign in with Google</span>
                   </motion.button>
-
-                  <motion.button 
-                    whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-                    whileTap={{ scale: 0.98 }}
-                    animate={{ 
-                      boxShadow: ["0px 0px 0px rgba(37, 99, 235, 0)", "0px 0px 15px rgba(37, 99, 235, 0.1)", "0px 0px 0px rgba(37, 99, 235, 0)"] 
-                    }}
-                    transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
-                    onClick={() => {
-                        setLoading(true);
-                        (window as any).FB.login((response: any) => {
-                          if (response.authResponse) {
-                            loginWithFacebook(response.authResponse.accessToken)
-                              .then(res => handleSuccess(res.user, res.token))
-                              .catch(err => setError(err.message))
-                              .finally(() => setLoading(false));
-                          } else {
-                            setLoading(false);
-                            setError('Autentificarea cu Facebook a fost anulată.');
-                          }
-                        }, { scope: 'public_profile,email' });
-                    }}
-                    disabled={loading}
-                    className="flex items-center justify-center gap-2 lg:gap-3 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm relative overflow-hidden group shadow-xl"
-                  >
-                    <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> : <Facebook className="w-4 h-4 lg:w-5 lg:h-5 fill-blue-600 text-blue-600 border-none outline-none" />}
-                    <span>Sign in with Facebook</span>
-                  </motion.button>
                   
                   <button 
                     onClick={() => setAuthMode('otp')}
-                    className="col-span-2 flex items-center justify-center gap-3 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/20 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm text-lime-400 shadow-lg shadow-lime-950/20"
+                    className="flex flex-1 items-center justify-center gap-3 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/20 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm text-lime-400 shadow-lg shadow-lime-950/20"
                   >
                     <Smartphone className="w-4 h-4 lg:w-5 lg:h-5 text-lime-500" />
                     LOGARE RAPIDĂ PRIN SMS (FĂRĂ PAROLĂ)
