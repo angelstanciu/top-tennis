@@ -87,14 +87,16 @@ public class BookingService {
 
         boolean crossesMidnight = !end.isAfter(start);
         boolean touchesMidnight = start.equals(LocalTime.MIN) || end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.MIN);
-        BookingStatus initialStatus = (crossesMidnight || touchesMidnight) ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
+        BookingStatus initialStatus = crossesMidnight ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
         long cancelCount = 0;
-        if (playerFromToken != null) {
-            cancelCount = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
-        } else if (normPhone != null && !normPhone.isBlank()) {
+        if (normPhone != null && !normPhone.isBlank()) {
             cancelCount = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+        }
+        if (playerFromToken != null) {
+            long playerCancelCount = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
+            cancelCount = Math.max(cancelCount, playerCancelCount);
         }
         
         if (cancelCount > 5) {
@@ -495,11 +497,11 @@ public class BookingService {
                 // Allows leaving 30m from the current hatched time
                 // Rest of gapAfter still needs to be validated
             } else if (gapBefore > 0 && gapBefore < 90) {
-                throw new IllegalArgumentException("La tenis nu se permit goluri sub 90 de minute între rezervări. Te rugăm să lipești rezervarea de intervalul alăturat.");
+                throw new IllegalArgumentException("La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).");
             }
             
             if (gapAfter > 0 && gapAfter < 90) {
-                throw new IllegalArgumentException("La tenis nu se permit goluri sub 90 de minute între rezervări. Te rugăm să lipești rezervarea de intervalul alăturat.");
+                throw new IllegalArgumentException("La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).");
             }
             return; // Both gaps are either 0 or >= 90 (or left edge exception)
         }
@@ -510,18 +512,18 @@ public class BookingService {
         // What if they leave 30m gapBefore AND some huge array gapAfter? Then we force snapping.
         
         if (gapBefore == 30 && gapAfter == 30) {
-            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
+            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
         if (gapBefore == 30 && gapAfter >= 60) {
             if (isLeftEdge) {
                 return; // Left edge allows 30m gaps from current time
             }
-            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
+            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
         
         if (gapAfter == 30 && gapBefore >= 60) {
-            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
+            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
         // ALLOW if gaps on both sides are large enough (>= 60m)
@@ -531,7 +533,7 @@ public class BookingService {
 
         // Fallback catch-all for remaining 30m gaps
         if (gapBefore == 30 || gapAfter == 30) {
-             throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
+             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
     }
 

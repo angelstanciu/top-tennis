@@ -939,13 +939,15 @@ export default function TimelineGrid({
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
-      // Check closing time logic first
       const closeTime = row.court.closeTime === '23:59' ? '24:00' : (row.court.closeTime || '24:00')
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
-        // If range crosses midnight conceptually, or extends beyond closing time
-        if (!t || !next || next > closeTime) return false
+        // If range crosses midnight conceptually, optimistically allow (backend handles PENDING)
+        if (!t || !next) return true
+        // Optional rule for closing time within the same day
+        if (next > closeTime && closeTime !== '24:00') return false
+        
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
         if (isPast || isBooked) return false
