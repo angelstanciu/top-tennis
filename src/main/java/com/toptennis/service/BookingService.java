@@ -375,7 +375,15 @@ public class BookingService {
         int startMin = minutesSinceMidnight(start);
         int endMin = minutesSinceMidnight(end);
         int durMin = endMin - startMin;
-        if (durMin <= 0) durMin += 24 * 60;
+        if (end.isBefore(start) && !end.equals(LocalTime.MIN) && !end.equals(LocalTime.of(23, 59))) {
+            // allow cross midnight booking
+            System.out.println("Booking crosses midnight. Allowed.");
+            durMin += 24 * 60; // Add 24 hours for cross-midnight duration calculation
+        }
+        
+        if (durMin <= 0) { // This check is now only for non-midnight bookings or invalid midnight bookings
+            throw new IllegalArgumentException("Durata rezervării trebuie să fie pozitivă.");
+        }
         if (durMin < 60) {
             throw new IllegalArgumentException("Durata minimă a rezervării este de 1 oră.");
         }
@@ -497,9 +505,20 @@ public class BookingService {
         }
 
         // TENNIS EXCEPTION
-        // Nu are voie să aibă gol de 30 sau 60 minute. Trebuie să fie 0 sau >= 90.
         // Regula din stânga conectată de timpul curent (isLeftEdge) rămâne permisivă.
-        boolean isLeftEdge = (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart));
+        boolean isLeftEdge = false;
+        if (date.equals(LocalDate.now())) {
+            // If the booking is made today, and the gap between the present moment and the booking start time
+            // is effectively ~30 minutes (or less, given time passes between reading the grid and clicking),
+            // we consider it a 'Left Edge' meaning they are booking right after the "hashed" out expired time.
+            int nowMin = minutesSinceMidnight(LocalTime.now());
+            if (bookingStartMin - nowMin <= 30 && bookingStartMin >= nowMin) {
+                isLeftEdge = true;
+            }
+        }
+        if (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart)) {
+            isLeftEdge = true;
+        }
         
         if (isTennis) {
             boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && gapBefore == 30);

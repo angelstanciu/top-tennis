@@ -393,13 +393,18 @@ export default function TimelineGrid({
     if (gapBefore === 0 || gapAfter === 0) return false; // perfectly snapped
 
     const isTennis = sportType === 'TENNIS'
-    // Assume left edge is somewhat permissive if we don't have blockStart precisely tracked to grid opening time
-    // For UI simplicity, if the gapBefore is very large, it means it's touching the start of the day grid
-    const isLeftEdge = gapBefore >= 10 * 60; // Just a rough UI proxy, backend has the precise logic.
+    // Calculate precise LeftEdge by matching the exact present time boundary.
+    const nowHHMM = new Date().toTimeString().slice(0,5)
+    let isLeftEdge = gapBefore >= 10 * 60; // fallback UI proxy
+    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 30) {
+       // if the free block essentially starts right around 'now', treat as left edge
+       isLeftEdge = true;
+    }
     
     if (isTennis) {
-        if (isLeftEdge && gapBefore === 30 && isValidationOnly) {
-           // allow UI left edge test for tennis
+        if (isLeftEdge && gapBefore === 30) {
+           // ALLOW left edge 30-min gap for tennis
+           return false;
         } else if (gapBefore > 0 && gapBefore < 90) {
             return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
         }
