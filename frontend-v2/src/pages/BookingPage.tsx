@@ -48,6 +48,7 @@ export default function BookingPage() {
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const [successVisible, setSuccessVisible] = useState(false)
+  const [pendingVisible, setPendingVisible] = useState(false)
   const nav = useNavigate()
   const phoneInputRef = useRef<HTMLInputElement | null>(null)
   const [court, setCourt] = useState<CourtDto | null>(null)
@@ -168,7 +169,7 @@ export default function BookingPage() {
       }
       
       if (bookingResultStatus === 'PENDING_APPROVAL') {
-          showUnavailable('Rezervarea ta a fost înregistrată, dar necesită aprobare manuală deoarece ai depășit limita de anulări permise.')
+          setPendingVisible(true)
       } else {
           setSuccessVisible(true)
       }
@@ -335,6 +336,46 @@ export default function BookingPage() {
                   redirectToGrid()
                 }}
                 className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold text-lg hover:bg-slate-900 active:scale-95 transition-all shadow-lg shadow-slate-900/20"
+              >
+                Înapoi la Calendar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Approval Modal */}
+      {pendingVisible && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-md transition-all">
+          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 relative">
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400"></div>
+            
+            <div className="bg-amber-50/50 px-6 py-8 flex flex-col items-center gap-4 text-center relative">
+              <div className="w-20 h-20 rounded-[2rem] bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20 mb-2 rotate-3 hover:rotate-0 transition-transform duration-500">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tighter" style={{ fontFamily: 'Outfit, sans-serif' }}>ÎN AȘTEPTARE</h3>
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mt-1">Aprobare Necesară</p>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-slate-600 text-sm font-medium leading-relaxed mb-6 text-center space-y-2">
+                <p>Rezervarea ta a fost înregistrată, dar <strong>necesită aprobare manuală</strong> de către recepție deoarece ai depășit limita de anulări permise recent.</p>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-left mt-4">
+                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Teren</span><strong className="text-slate-700">{court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name}</strong></div>
+                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Data</span><strong className="text-slate-700">{displayDate}</strong></div>
+                  <div className="flex justify-between items-center text-xs"><span className="text-slate-400">Interval</span><strong className="text-slate-700">{startTime} - {endTime}</strong></div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setPendingVisible(false)
+                  redirectToGrid()
+                }}
+                className="w-full py-3.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 active:scale-95 transition-all shadow-lg shadow-slate-900/20"
               >
                 Înapoi la Calendar
               </button>
