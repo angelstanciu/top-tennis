@@ -581,7 +581,15 @@ export default function App() {
               ‹
             </button>
             <div className="relative">
-              <div className="text-sm font-bold text-slate-800 whitespace-nowrap px-1 min-w-[80px] text-center">
+              <div 
+                className="text-sm font-bold text-slate-800 whitespace-nowrap px-1 min-w-[80px] text-center cursor-pointer hover:text-emerald-600 transition-colors"
+                onClick={() => {
+                  const el = dateInputRef.current
+                  if (!el) return
+                  try { if (typeof (el as any).showPicker === 'function') { (el as any).showPicker(); return } } catch {}
+                  try { el.click() } catch {}
+                }}
+              >
                 {displayDate}
               </div>
               <input
