@@ -118,6 +118,7 @@ export default function App() {
   const [selGapInvalid, setSelGapInvalid] = useState<boolean>(false)
   const [player, setPlayer] = useState<any>(null)
   const [gapToastVisible, setGapToastVisible] = useState<boolean>(false)
+  const [gapToastMessage, setGapToastMessage] = useState<string>('')
   const [gapToastFading, setGapToastFading] = useState<boolean>(false)
   const gapToastShowTimer = React.useRef<any>(null)
   const gapToastHideTimer = React.useRef<any>(null)
@@ -324,7 +325,7 @@ export default function App() {
     setDate(d.toISOString().slice(0, 10))
   }
 
-  function handleSelectionChange(courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean) {
+  function handleSelectionChange(courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean | string) {
     setSelCourtId(courtId)
     setSelStart(start)
     setSelEnd(end)
@@ -332,6 +333,7 @@ export default function App() {
     const gi = !!gapInvalid
     setSelGapInvalid(gi)
     if (gi) {
+      setGapToastMessage(typeof gapInvalid === 'string' ? gapInvalid : 'Rezervarea curentă lasă o pauză de 30 de minute lângă o altă rezervare pe același teren. Extinde sau mută selecția pentru a elimina golul.')
       setGapToastVisible(true)
       setGapToastFading(false)
       if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current)
@@ -680,7 +682,7 @@ export default function App() {
               <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-4">
                 <span className="text-3xl" aria-hidden>{'\u26A0'}</span>
                 <div className="text-lg sm:text-xl text-rose-900">
-                  Rezervarea curenta lasa o pauza de 30 de minute langa o alta rezervare pe acelasi teren. Extinde sau muta selectia pentru a elimina golul.
+                  {gapToastMessage}
                 </div>
               </div>
             </div>

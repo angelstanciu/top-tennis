@@ -493,17 +493,14 @@ public class BookingService {
         boolean isLeftEdge = (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart));
         
         if (isTennis) {
-            if (isLeftEdge && gapBefore == 30) {
-                // Allows leaving 30m from the current hatched time
-                // Rest of gapAfter still needs to be validated
-            } else if (gapBefore > 0 && gapBefore < 90) {
-                throw new IllegalArgumentException("La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).");
-            }
+            boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && gapBefore == 30);
+            boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90);
             
-            if (gapAfter > 0 && gapAfter < 90) {
+            if (isBeforeValid && isAfterValid) {
+                return; // Valid reservation, terminate early!
+            } else {
                 throw new IllegalArgumentException("La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).");
             }
-            return; // Both gaps are either 0 or >= 90 (or left edge exception)
         }
 
         // PADEL / OTHER SPORTS EXCEPTIONS

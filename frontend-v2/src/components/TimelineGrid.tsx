@@ -42,7 +42,7 @@ type TimelineGridProps = {
   data: AvailabilityDto[]
   date: string
   onHover?: (msg: string) => void
-  onSelectionChange?: (courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean) => void
+  onSelectionChange?: (courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean | string) => void
   onReserve?: () => void
   clearSignal?: number
   flat?: boolean
@@ -332,7 +332,7 @@ export default function TimelineGrid({
       const meets = minutesBetween(selStart, newEnd) >= 60
       const courtRow = data.find(r => r.court.id === courtId)
       const gapInvalid = leavesThirtyMinuteGap(bookedRanges, selStart, newEnd, courtRow?.court.sportType)
-      onSelectionChange?.(courtId, selStart, newEnd, meets && !gapInvalid, gapInvalid)
+      onSelectionChange?.(courtId, selStart, newEnd, meets, gapInvalid)
       return
     }
     if (next === selStart) {
@@ -340,8 +340,9 @@ export default function TimelineGrid({
       setSelStart(newStart)
       const meets = minutesBetween(newStart, selEnd) >= 60
       const courtRow = data.find(r => r.court.id === courtId)
+      if (!courtRow) return
       const gapInvalid = leavesThirtyMinuteGap(bookedRanges, newStart, selEnd, courtRow?.court.sportType)
-      onSelectionChange?.(courtId, newStart, selEnd, meets && !gapInvalid, gapInvalid)
+      onSelectionChange?.(courtId, newStart, selEnd, meets, gapInvalid)
       return
     }
     // If clicked non-contiguous slot, start new selection at this slot
@@ -363,7 +364,7 @@ export default function TimelineGrid({
     return t >= selStart
   }
 
-  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string, sportType?: string, isValidationOnly: boolean = false, clickStartCell?: string) {
+  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string, sportType?: string, isValidationOnly: boolean = false, clickStartCell?: string): string | false {
     const active = booked.filter(b => b.status !== 'CANCELLED')
     
     const startMin = minutesSinceMidnightStr(selStart)
@@ -400,23 +401,25 @@ export default function TimelineGrid({
         if (isLeftEdge && gapBefore === 30 && isValidationOnly) {
            // allow UI left edge test for tennis
         } else if (gapBefore > 0 && gapBefore < 90) {
-            return true;
+            return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
         }
         if (gapAfter > 0 && gapAfter < 90) {
-            return true;
+            return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
         }
         return false;
     }
 
+    const standardErrorMsg = "Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.";
+
     // Logic aligned with Backend (BookingService.java):
     // REJECT ONLY IF:
     // 1. Fragmented in the middle (30m on BOTH sides)
-    if (gapBefore === 30 && gapAfter === 30) return true
+    if (gapBefore === 30 && gapAfter === 30) return standardErrorMsg
 
     // 2. Fragmented on one side and NOT snapped to the other (Force snapping)
     // If there's a 30m gap on one side and >= 60m on the other, it should have been snapped.
-    if (gapBefore === 30 && gapAfter >= 60 && !isLeftEdge) return true
-    if (gapAfter === 30 && gapBefore >= 60) return true
+    if (gapBefore === 30 && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
+    if (gapAfter === 30 && gapBefore >= 60) return standardErrorMsg
 
     // ALLOW ALL OTHER CASES:
     // - Snapped to either side (gapBefore == 0 or gapAfter == 0)
@@ -720,8 +723,7 @@ export default function TimelineGrid({
                                   const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
                                   const free60 = within && !isBooked && !slot2Booked && !isPast && !slot2Past
                                   if (free60) {
-                                    const simpleBooked = booked.map(b => ({ start: b.start, end: b.end }))
-                                    const gapInvalid = leavesThirtyMinuteGap(simpleBooked, t, end60, row.court.sportType)
+                                    const gapInvalid = leavesThirtyMinuteGap(booked, t, end60, row.court.sportType)
                                     if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
                                   }
                                 }
