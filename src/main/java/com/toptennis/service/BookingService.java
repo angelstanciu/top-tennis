@@ -84,7 +84,7 @@ public class BookingService {
             if (normEmail != null) {
                 java.util.Optional<PlayerUser> existingEmailUser = playerUserRepository.findByEmail(normEmail);
                 if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(playerFromToken.getId())) {
-                    throw new IllegalArgumentException("Această adresă de email este deja asociată altui cont.");
+                    throw new IllegalArgumentException("Această adresă de email este deja asociată altui cont (posibil să ai un cont Google/Facebook și unul creat prin număr de telefon). Te rugăm să lași câmpul Email liber sau să folosești adresa aferentă acestui cont.");
                 }
             }
         }
@@ -202,8 +202,8 @@ public class BookingService {
                 b2.setMidnightBooking(true);
                 
                 String sharedToken = java.util.UUID.randomUUID().toString();
-                b1.setCancelToken(sharedToken);
-                b2.setCancelToken(sharedToken);
+                b1.setCancelToken(sharedToken + "-1");
+                b2.setCancelToken(sharedToken + "-2");
 
                 // PlayerUser is explicitly resolved at the top of the method
                 if (playerFromToken != null) {
