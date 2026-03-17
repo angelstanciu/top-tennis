@@ -401,14 +401,20 @@ export default function TimelineGrid({
        isLeftEdge = true;
     }
     
+    // Right Edge calculation (court bounds)
+    const isRightEdge = blockEnd >= 24 * 60 - 2; // ~1438..1440
+    
     if (isTennis) {
         if (isLeftEdge && gapBefore === 30) {
            // ALLOW left edge 30-min gap for tennis
-           return false;
+           // Implicitly continue
         } else if (gapBefore > 0 && gapBefore < 90) {
             return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
         }
-        if (gapAfter > 0 && gapAfter < 90) {
+        
+        if (isRightEdge && (gapAfter === 30 || gapAfter === 60)) {
+           // ALLOW right edge gap for tennis
+        } else if (gapAfter > 0 && gapAfter < 90) {
             return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
         }
         return false;
@@ -422,13 +428,13 @@ export default function TimelineGrid({
     if (gapBefore === 30 && gapAfter === 30) return standardErrorMsg
 
     // 2. Fragmented on one side and NOT snapped to the other (Force snapping)
-    // If there's a 30m gap on one side and >= 60m on the other, it should have been snapped.
     if (gapBefore === 30 && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
-    if (gapAfter === 30 && gapBefore >= 60) return standardErrorMsg
+    if (gapAfter === 30 && gapBefore >= 60 && !isRightEdge) return standardErrorMsg
 
     // ALLOW ALL OTHER CASES:
     // - Snapped to either side (gapBefore == 0 or gapAfter == 0)
     // - Large gaps on both sides (gapBefore >= 60 and gapAfter >= 60)
+    // - 30m gaps on permitted edges
     
     return false
   }

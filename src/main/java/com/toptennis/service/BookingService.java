@@ -520,9 +520,15 @@ public class BookingService {
             isLeftEdge = true;
         }
         
+        // Regula din dreapta conectată de sfârșitul zilei
+        boolean isRightEdge = false;
+        if (blockEndMin >= 23 * 60 + 59) {
+            isRightEdge = true; // Block touches the very end of the court operating hours (e.g. 23:59/24:00)
+        }
+        
         if (isTennis) {
             boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && gapBefore == 30);
-            boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90);
+            boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter == 30 || gapAfter == 60));
             
             if (isBeforeValid && isAfterValid) {
                 return; // Valid reservation, terminate early!
@@ -548,6 +554,9 @@ public class BookingService {
         }
         
         if (gapAfter == 30 && gapBefore >= 60) {
+            if (isRightEdge) {
+                return; // Right edge allows 30m gaps towards the end of the day
+            }
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
@@ -558,7 +567,10 @@ public class BookingService {
 
         // Fallback catch-all for remaining 30m gaps
         if (gapBefore == 30 || gapAfter == 30) {
-             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
+            if ((gapBefore == 30 && isLeftEdge) || (gapAfter == 30 && isRightEdge)) {
+                return; // Allowed due to edge proximity
+            }
+            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
     }
 
