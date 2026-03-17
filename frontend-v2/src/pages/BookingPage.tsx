@@ -138,9 +138,10 @@ export default function BookingPage() {
       return
     }
     setSubmitting(true)
+    let bookingResultStatus = 'CONFIRMED'
     try {
       const normalizedEnd = endTime === '24:00' ? '23:59' : endTime
-      await createBooking({
+      const result = await createBooking({
         courtId: Number(courtId),
         date,
         startTime,
@@ -149,6 +150,9 @@ export default function BookingPage() {
         customerPhone: phone,
         customerEmail: email || undefined,
       })
+      if (result && result.status) {
+          bookingResultStatus = result.status
+      }
       
       // Auto-sync profile if logged in to update phone numbers/localStorage
       const token = localStorage.getItem('playerToken')
@@ -163,7 +167,11 @@ export default function BookingPage() {
         }
       }
       
-      setSuccessVisible(true)
+      if (bookingResultStatus === 'PENDING_APPROVAL') {
+          showUnavailable('Rezervarea ta a fost înregistrată, dar necesită aprobare manuală deoarece ai depășit limita de anulări permise.')
+      } else {
+          setSuccessVisible(true)
+      }
     } catch (err: any) {
       showUnavailable(err.message || 'Se pare că a apărut o problemă de comunicare cu serverul.')
     } finally {

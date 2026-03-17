@@ -61,4 +61,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countPastNonCancelledByUserId(@Param("userId") Long userId,
                                        @Param("today") LocalDate today,
                                        @Param("now") LocalTime now);
+    long countByPlayerUserIdAndStatus(Long playerUserId, BookingStatus status);
+    
+    long countByCustomerPhoneAndStatus(String customerPhone, BookingStatus status);
 }

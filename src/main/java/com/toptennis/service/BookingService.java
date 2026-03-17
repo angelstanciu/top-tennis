@@ -48,7 +48,8 @@ public class BookingService {
         }
 
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
-        validateTime(court, date, start, end);
+        boolean isTennis = court.getSportType() == SportType.TENNIS;
+        validateTime(court, date, start, end, isTennis);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
 
         String normPhone = normalizePhone(phone);
@@ -87,6 +88,19 @@ public class BookingService {
         boolean crossesMidnight = !end.isAfter(start);
         boolean touchesMidnight = start.equals(LocalTime.MIN) || end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.MIN);
         BookingStatus initialStatus = (crossesMidnight || touchesMidnight) ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
+
+        // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
+        long cancelCount = 0;
+        if (playerFromToken != null) {
+            cancelCount = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
+        } else if (normPhone != null && !normPhone.isBlank()) {
+            cancelCount = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+        }
+        
+        if (cancelCount > 5) {
+            initialStatus = BookingStatus.PENDING_APPROVAL;
+            System.out.println("[PENALTY] User/Phone has " + cancelCount + " cancellations. Forcing PENDING_APPROVAL for new booking.");
+        }
 
             if (!crossesMidnight) {
                 if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
@@ -317,7 +331,8 @@ public class BookingService {
     @Transactional
     public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
-        validateTime(court, date, start, end);
+        boolean isTennis = court.getSportType() == SportType.TENNIS;
+        validateTime(court, date, start, end, isTennis);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
             throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
@@ -337,7 +352,7 @@ public class BookingService {
         return bookingRepository.save(b);
     }
 
-    private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end) {
+    private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end, boolean isTennis) {
         if (date == null || start == null || end == null) {
             throw new IllegalArgumentException("Data și intervalul sunt obligatorii.");
         }
@@ -369,7 +384,7 @@ public class BookingService {
         }
         
         // No opening hours constraint: base is open non-stop
-        validateGaps(court, date, start, end, effectiveStart);
+        validateGaps(court, date, start, end, effectiveStart, isTennis);
     }
 
     @Transactional
@@ -435,7 +450,7 @@ public class BookingService {
         bookingRepository.save(booking);
     }
 
-    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end, LocalTime effectiveGridStart) {
+    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end, LocalTime effectiveGridStart, boolean isTennis) {
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date).stream()
                 .filter(b -> activeStatuses.contains(b.getStatus()))
@@ -460,10 +475,9 @@ public class BookingService {
         
         int gapBefore = bookingStartMin - blockStartMin;
         int gapAfter = blockEndMin - bookingEndMin;
+        int bookingDuration = bookingEndMin - bookingStartMin;
 
-        System.out.println("[GAP_LOG] court=" + court.getId() + " date=" + date + " start=" + start + " end=" + end);
-        System.out.println("[GAP_LOG] blockStart=" + blockStart + " blockEnd=" + blockEnd);
-        System.out.println("[GAP_LOG] gapBefore=" + gapBefore + " gapAfter=" + gapAfter);
+        System.out.println("[GAP_LOG] court=" + court.getId() + " isTennis=" + isTennis + " start=" + start + " gapBefore=" + gapBefore + " gapAfter=" + gapAfter);
 
         // --- FINAL REWARD LOGIC ---
         // CRITICAL: Any booking that "snaps" to an existing one or boundary is VALID.
@@ -471,16 +485,43 @@ public class BookingService {
             return; // Perfectly snapped
         }
 
-        // REJECT if leaving exactly 30m gaps that fragment the court
+        // TENNIS EXCEPTION
+        // Nu are voie să aibă gol de 30 sau 60 minute. Trebuie să fie 0 sau >= 90.
+        // Regula din stânga conectată de timpul curent (isLeftEdge) rămâne permisivă.
+        boolean isLeftEdge = (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart));
+        
+        if (isTennis) {
+            if (isLeftEdge && gapBefore == 30) {
+                // Allows leaving 30m from the current hatched time
+                // Rest of gapAfter still needs to be validated
+            } else if (gapBefore > 0 && gapBefore < 90) {
+                throw new IllegalArgumentException("La tenis nu se permit goluri sub 90 de minute între rezervări. Te rugăm să lipești rezervarea de intervalul alăturat.");
+            }
+            
+            if (gapAfter > 0 && gapAfter < 90) {
+                throw new IllegalArgumentException("La tenis nu se permit goluri sub 90 de minute între rezervări. Te rugăm să lipești rezervarea de intervalul alăturat.");
+            }
+            return; // Both gaps are either 0 or >= 90 (or left edge exception)
+        }
+
+        // PADEL / OTHER SPORTS EXCEPTIONS
+        // ALLOW 1.5h Exception: if the space between existing bookings is exactly 90 mins, and we book 60 mins, leaving 30 mins rest.
+        // (gapBefore == 30 && gapAfter == 0) -> this is picked up by "gapAfter == 0 Perfectly snapped" rule above.
+        // What if they leave 30m gapBefore AND some huge array gapAfter? Then we force snapping.
+        
         if (gapBefore == 30 && gapAfter == 30) {
-            throw new IllegalArgumentException("Pentru a evita fragmentarea terenului, te rugăm să lipești rezervarea de una dintre rezervările existente.");
+            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
         }
 
         if (gapBefore == 30 && gapAfter >= 60) {
-            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai devreme pentru a nu lăsa un gol de 30 minute.");
+            if (isLeftEdge) {
+                return; // Left edge allows 30m gaps from current time
+            }
+            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
         }
+        
         if (gapAfter == 30 && gapBefore >= 60) {
-            throw new IllegalArgumentException("Te rugăm să muți rezervarea cu 30 de minute mai târziu pentru a nu lăsa un gol de 30 minute.");
+            throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
         }
 
         // ALLOW if gaps on both sides are large enough (>= 60m)
@@ -488,9 +529,9 @@ public class BookingService {
             return; // Independent block
         }
 
-        // Emergency fallback - if we still have a 30m gap and we aren't snapped
+        // Fallback catch-all for remaining 30m gaps
         if (gapBefore == 30 || gapAfter == 30) {
-             throw new IllegalArgumentException("Intervalul selectat lasă un gol de 30 de minute. Te rugăm să aliniezi rezervarea.");
+             throw new IllegalArgumentException("Pentru a optimiza programul terenurilor, nu putem accepta rezervări care lasă un spațiu liber de doar 30 de minute. Te rugăm să lipești rezervarea de intervalul alăturat.");
         }
     }
 
