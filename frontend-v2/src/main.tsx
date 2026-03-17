@@ -38,6 +38,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <><ScrollToTop /><LoginPage /></> },
   { path: '/termeni', element: <><ScrollToTop /><TermsPage /></> },
   { path: '/confidentialitate', element: <><ScrollToTop /><PrivacyPage /></> },
+  { path: '/privacy', element: <><ScrollToTop /><PrivacyPage /></> },
   { path: '/cookies', element: <><ScrollToTop /><CookiesPage /></> },
   { path: '/book/:courtId/:date/:startTime/:endTime', element: <><ScrollToTop /><BookingPage /></> },
   { path: '/admin', element: <><ScrollToTop /><AdminLanding /></> },
