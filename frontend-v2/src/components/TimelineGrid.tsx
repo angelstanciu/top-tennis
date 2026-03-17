@@ -723,7 +723,7 @@ export default function TimelineGrid({
                                   const free60 = !isBooked && !slot2Booked && !isPast && !slot2Past
                                   if (free60) {
                                     const gapInvalid = leavesThirtyMinuteGap(booked, t, end60, row.court.sportType)
-                                    if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+                                    if (gapInvalid) { onSelectionChange?.(null, null, null, false, gapInvalid); return }
                                   }
                                 }
                                 popupRowIndexRef.current = rowIndex
@@ -904,7 +904,10 @@ export default function TimelineGrid({
                               const free60 = !isBooked && !isPastRow && !slot2Past && !slot2Booked
                               if (free60) {
                                 const gapInvalid = leavesThirtyMinuteGap(bookedRanges, t, end60, row.court.sportType)
-                                if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
+                                if (gapInvalid) { onSelectionChange?.(null, null, null, false, gapInvalid); return }
+                              } else {
+                                onSelectionChange?.(null, null, null, false, "Sunt necesare cel puțin 60 de minute libere consecutive pentru o rezervare."); 
+                                return;
                               }
                             }
                             popupRowIndexRef.current = rowIndex
