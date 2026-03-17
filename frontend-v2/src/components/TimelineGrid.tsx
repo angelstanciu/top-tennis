@@ -718,10 +718,9 @@ export default function TimelineGrid({
                                 }
                                 const end60 = ticks[i+2]
                                 if (end60) {
-                                  const within = t >= row.court.openTime && end60 <= row.court.closeTime
                                   const slot2Booked = booked.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
                                   const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                                  const free60 = within && !isBooked && !slot2Booked && !isPast && !slot2Past
+                                  const free60 = !isBooked && !slot2Booked && !isPast && !slot2Past
                                   if (free60) {
                                     const gapInvalid = leavesThirtyMinuteGap(booked, t, end60, row.court.sportType)
                                     if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
@@ -900,10 +899,9 @@ export default function TimelineGrid({
                             }
                             const end60 = ticks[i+2]
                             if (end60) {
-                              const within = t >= row.court.openTime && end60 <= row.court.closeTime
                               const slot2Booked = bookedRanges.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
                               const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                              const free60 = within && !isBooked && !isPastRow && !slot2Past && !slot2Booked
+                              const free60 = !isBooked && !isPastRow && !slot2Past && !slot2Booked
                               if (free60) {
                                 const gapInvalid = leavesThirtyMinuteGap(bookedRanges, t, end60, row.court.sportType)
                                 if (gapInvalid) { onSelectionChange?.(null, null, null, false, true); return }
@@ -941,14 +939,11 @@ export default function TimelineGrid({
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
-      const closeTime = row.court.closeTime === '23:59' ? '24:00' : (row.court.closeTime || '24:00')
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
         // If range crosses midnight conceptually, optimistically allow (backend handles PENDING)
         if (!t || !next) return true
-        // Optional rule for closing time within the same day
-        if (next > closeTime && closeTime !== '24:00') return false
         
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
