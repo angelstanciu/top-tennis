@@ -891,6 +891,9 @@ export default function AdminPage() {
                       }
                     }
                   }}
+                  onReserve={(cid, s, e) => {
+                    navigate(`/admin/weekly?courtId=${cid}&date=${date}&start=${s}&end=${e}&sport=${sport || ''}&once=true`)
+                  }}
                />
             </div>
           )}

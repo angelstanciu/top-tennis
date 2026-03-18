@@ -43,7 +43,7 @@ type TimelineGridProps = {
   date: string
   onHover?: (msg: string) => void
   onSelectionChange?: (courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean | string) => void
-  onReserve?: () => void
+  onReserve?: (courtId?: number, start?: string, end?: string) => void
   clearSignal?: number
   flat?: boolean
   scrollContainerRef?: React.RefObject<HTMLDivElement>
@@ -1026,7 +1026,7 @@ export default function TimelineGrid({
         reserveWarnHideTimer.current = setTimeout(() => setReserveWarnVisible(false), 4000)
         return
       }
-      onReserve?.()
+      onReserve?.(selCourtId!, selStart!, selEnd!)
     }
     return createPortal((
       <>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CourtDto, SportType } from '../types'
 import { fetchActiveCourts, adminCreateWeeklyBooking } from '../api'
 import AdminHeader from '../components/AdminHeader'
@@ -17,21 +17,24 @@ function generateTimeOptions(isEnd = false) {
 
 export default function AdminWeeklyBookingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [auth, setAuth] = useState<string | null>(null)
   
   const [courts, setCourts] = useState<CourtDto[]>([])
-  const [sport, setSport] = useState<SportType | ''>('')
+  const [sport, setSport] = useState<SportType | ''>((searchParams.get('sport') as SportType) || '')
   
   // payload
-  const [courtId, setCourtId] = useState<number | ''>('')
-  const [startDate, setStartDate] = useState<string>(new Date().toISOString().slice(0, 10))
-  const [startTime, setStartTime] = useState<string>('18:00')
-  const [endTime, setEndTime] = useState<string>('20:00')
+  const initialCourtId = searchParams.get('courtId')
+  const [courtId, setCourtId] = useState<number | ''>(initialCourtId ? Number(initialCourtId) : '')
+  const [startDate, setStartDate] = useState<string>(searchParams.get('date') || new Date().toISOString().slice(0, 10))
+  const [startTime, setStartTime] = useState<string>(searchParams.get('start') || '18:00')
+  const [endTime, setEndTime] = useState<string>(searchParams.get('end') || '20:00')
   const [customerName, setCustomerName] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState<string>('')
   // recurrence: 1=Once, 2=Every 2 days, 3=Every 3 days, 7=Weekly
-  const [frequency, setFrequency] = useState<number>(7)
-  const [count, setCount] = useState<number>(4)
+  const initialFrequency = searchParams.get('once') === 'true' ? 0 : 7
+  const [frequency, setFrequency] = useState<number>(initialFrequency)
+  const [count, setCount] = useState<number>(initialFrequency === 0 ? 1 : 4)
   
   const dateInputRef = React.useRef<HTMLInputElement | null>(null)
 
