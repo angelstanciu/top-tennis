@@ -657,7 +657,7 @@ export default function TimelineGrid({
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${row.court.indoor ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
                       {row.court.indoor ? 'Indoor' : 'Exterior'}
                     </span>
-                    {row.court.indoor && row.court.sportType !== 'TENNIS' && (
+                    {row.court.indoor && row.court.sportType === 'PADEL' && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white shadow-sm ring-1 ring-rose-600/20">
                         Star Arena 2
                       </span>
@@ -809,7 +809,7 @@ export default function TimelineGrid({
                     <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase ${row.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
                       {row.court.indoor ? 'INDOOR' : 'OUTDOOR'}
                     </span>
-                    {row.court.indoor && row.court.sportType !== 'TENNIS' && (
+                    {row.court.indoor && row.court.sportType === 'PADEL' && (
                       <span className="text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase bg-rose-500 text-white shadow-sm">
                         ARENA 2
                       </span>

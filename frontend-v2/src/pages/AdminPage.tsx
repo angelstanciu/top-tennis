@@ -233,6 +233,12 @@ export default function AdminPage() {
       .catch(() => setActiveCourts([]))
   }, [])
 
+  useEffect(() => {
+    if (logged) {
+      reload()
+    }
+  }, [date, sport])
+
   const filteredBookings = useMemo(() => {
     let list = courtId ? bookings.filter(b => b.court?.id === courtId) : bookings
     if (!showCancelled) {
