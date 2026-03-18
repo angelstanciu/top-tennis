@@ -956,8 +956,8 @@ export default function TimelineGrid({
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
-        // If range crosses midnight conceptually, optimistically allow (backend handles PENDING)
-        if (!t || !next) return true
+        // If range exceeds operating hours defined in ticks, it is invalid.
+        if (!t || !next) return false
         
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))

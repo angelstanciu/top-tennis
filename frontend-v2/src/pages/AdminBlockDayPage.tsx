@@ -85,8 +85,12 @@ export default function AdminBlockDayPage() {
         note
       }, auth)
       setSuccess('Terenul a fost blocat cu succes pentru intervalul selectat!')
+      setSport('')
+      setCourtId('')
+      setNote('Blocat de Administrator')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       // Reset after 3s
-      setTimeout(() => setSuccess(null), 3000)
+      setTimeout(() => setSuccess(null), 3500)
     } catch (err: any) {
       let errorMsg = 'A apărut o eroare la blocarea terenului.'
       
