@@ -292,8 +292,9 @@ export default function FreePositionsPage() {
         body = parts.join('\n\n')
       }
 
-      const footer = `\n\n🚀 Rezervă acum pe site sau în aplicație!`
-      setText(`${header}\n\n${dateLine}\n\n${body}${footer}`.trim())
+      const intro = `Salut! 👋\nAcestea sunt pozițiile libere de astăzi pentru ${sportLabelUpper(sport)}.\n`
+      const footer = `\n🎾 Pentru rezervări rapide, accesați: www.star-arena.ro ! Vă așteptăm cu drag! 🚀`
+      setText(`${intro}\n${body}\n${footer}`.trim())
     } finally {
       setLoading(false)
     }
@@ -372,14 +373,18 @@ export default function FreePositionsPage() {
       ctx.fillStyle = '#ffffff'
       ctx.font = 'bold 58px Outfit, Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('INTERVALE ORARE DISPONIBILE', W/2, 220)
+      ctx.fillText('INTERVALE ORARE DISPONIBILE', W/2, 210)
+
+      ctx.fillStyle = '#bef264'
+      ctx.font = 'bold 48px Outfit, Arial, sans-serif'
+      ctx.fillText(sportLabelUpper(sport), W/2, 275)
 
       // Separator line
       ctx.strokeStyle = '#bef264'
       ctx.lineWidth = 3
       ctx.beginPath()
-      ctx.moveTo(W * 0.2, 245)
-      ctx.lineTo(W * 0.8, 245)
+      ctx.moveTo(W * 0.2, 295)
+      ctx.lineTo(W * 0.8, 295)
       ctx.stroke()
 
       // ----- Date -----
@@ -388,7 +393,7 @@ export default function FreePositionsPage() {
       const dayName = weekdays[ds.getDay()]
       ctx.fillStyle = '#e2e8f0'
       ctx.font = 'bold 38px Outfit, Arial, sans-serif'
-      ctx.fillText(`${dayName} (${formatDateShort(date)})`, W/2, 310)
+      ctx.fillText(`${dayName} (${formatDateShort(date)})`, W/2, 350)
 
       // ----- Court sections -----
       const dayStart = 8 * 60, dayEnd = 24 * 60
@@ -423,7 +428,7 @@ export default function FreePositionsPage() {
       // ----- Dynamic layout: side by side if <=3 courts, single column if more -----
       const isSideBySide = sections.length <= 3
       const colW = isSideBySide ? Math.floor(W / sections.length) : W
-      const contentStartY = 360
+      const contentStartY = 410
 
       if (isSideBySide && sections.length > 1) {
         // Draw court separators
@@ -580,20 +585,17 @@ export default function FreePositionsPage() {
             {tableLoading ? 'Se incarcă...' : 'Încarcă Tabel'}
           </button>
           <button className="btn w-full bg-sky-600 hover:bg-sky-700 text-white" onClick={generate} disabled={loading}>
-            {loading ? 'Se generează...' : 'Generează Mesaj'}
-          </button>
-          <button className={`px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all sm:col-span-2 ${highlightCopy ? "ring-2 ring-emerald-400" : ""}`} onClick={copy} disabled={!text}>
-            {copiedText ? 'Text Copiat!' : 'Copiaza Text'}
+            {loading ? 'Se generează...' : 'Generează Mesaje & Poster'}
           </button>
           <button className={`px-3 py-1.5 rounded border border-lime-300 bg-lime-50 hover:bg-lime-100 text-lime-800 font-bold transition-all sm:col-span-2 ${copiedImage ? "ring-2 ring-lime-400" : ""}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
-            {imageCopying ? 'Se randeaza...' : (copiedImage ? 'Imagine Copiata!' : 'Copiaza Imagine (Poster)')}
+            {imageCopying ? 'Se randeaza...' : (copiedImage ? 'Imagine Copiată!' : 'Copiaza Poster (Imagine)')}
           </button>
         </div>
       </div>
 
       {/* Visual Poster Preview */}
       {data.length > 0 && (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 mt-6">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Previzualizare Poster</div>
           <div 
             ref={posterRef}
@@ -612,6 +614,9 @@ export default function FreePositionsPage() {
             <h2 className="text-white font-extrabold text-base tracking-tight leading-tight mb-0.5 uppercase">
               Intervale Orare Disponibile:
             </h2>
+            <div className="text-lime-300 font-black text-lg uppercase tracking-wider mb-2">
+              {sportLabelUpper(sport)}
+            </div>
 
             {/* Separator */}
             <div className="w-2/3 border-b-2 border-lime-300/60 mb-2 mt-1"></div>
@@ -679,22 +684,31 @@ export default function FreePositionsPage() {
         </div>
       )}
 
+      {/* Text Template Section */}
+      <div className="rounded-xl border border-slate-300 bg-white shadow-xl mt-6 overflow-hidden">
+        <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-200">
+           <div className="text-sm text-slate-800 font-bold uppercase tracking-wider">Previzualizare Text (Social Media)</div>
+           <button className={`px-4 py-2 rounded-lg border bg-white font-bold transition-all shadow-sm ${highlightCopy ? "ring-2 ring-emerald-400 border-emerald-400 text-emerald-700" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`} onClick={copy} disabled={!text}>
+             {copiedText ? 'Text Copiat ✅' : 'Copiaza Text'}
+           </button>
+        </div>
+        <div className="p-4 bg-white">
+           <pre className="text-sm whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-2 bg-slate-50 rounded-lg border border-slate-100">{loading ? 'Se incarca…' : (text || 'Alege sportul, terenul si data apoi apasa Genereaza.')}</pre>
+        </div>
+      </div>
+
+      {/* Grid Timeline Section */}
       {data.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden mt-6">
           <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-             <h3 className="text-sm font-bold text-slate-800">Vizualizare Grila (Admin)</h3>
+             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Vizualizare Grila (Terenurile 6 & 7)</h3>
              <span className="text-[10px] text-slate-500 font-medium">Data: {formatDateDisplay(date)}</span>
           </div>
           <div className="p-1">
-            <TimelineGrid data={data} date={date} flat />
+            <TimelineGrid data={data.filter(d => String(d.court.name).includes('6') || String(d.court.name).includes('7'))} date={date} flat />
           </div>
         </div>
       )}
-
-      <div className="rounded border border-slate-300 bg-white p-3 shadow">
-        <div className="text-xs text-slate-600 mb-1">Previzualizare</div>
-        <pre className="text-sm whitespace-pre-wrap font-mono min-h-[120px]">{loading ? 'Se incarca…' : (text || 'Alege sportul, terenul si data apoi apasa Genereaza.')}</pre>
-      </div>
 
       {missingToastVisible && (
         <div className="fixed inset-x-0 bottom-0 z-[20000] pointer-events-none">
