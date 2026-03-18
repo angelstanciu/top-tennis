@@ -26,5 +26,7 @@ public class CreateBookingRequest {
 
     @Email
     public String customerEmail;
+
+    public Boolean bypassDoubleBooking;
 }
 

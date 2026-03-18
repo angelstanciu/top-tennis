@@ -41,7 +41,7 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token) {
+    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking) {
         // Task 5: 3 months limit
         if (date.isAfter(LocalDate.now().plusMonths(3))) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
@@ -91,12 +91,19 @@ public class BookingService {
 
         // Task 5: Double Booking Prevention (same user/phone, same interval, any court)
         if (!bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată sau în așteptare în acest interval orar.");
+            if (Boolean.TRUE.equals(bypassDoubleBooking)) {
+                System.out.println("[BYPASS] User bypassed double booking check. Forcing PENDING_APPROVAL.");
+            } else {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată sau în așteptare în acest interval orar.");
+            }
         }
 
         boolean crossesMidnight = !end.isAfter(start);
         boolean touchesMidnight = start.equals(LocalTime.MIN) || end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.MIN);
         BookingStatus initialStatus = crossesMidnight ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
+        if (Boolean.TRUE.equals(bypassDoubleBooking)) {
+            initialStatus = BookingStatus.PENDING_APPROVAL;
+        }
 
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
         long cancelCount = 0;

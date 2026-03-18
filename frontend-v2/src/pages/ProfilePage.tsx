@@ -128,7 +128,8 @@ export default function ProfilePage() {
     setSaving(true)
     const sanitizedForm = {
       ...editForm,
-      email: editForm.email?.trim() === '' ? undefined : editForm.email?.trim()
+      email: editForm.email?.trim() === '' ? undefined : editForm.email?.trim(),
+      phoneNumber: editForm.phoneNumber?.trim() === '' ? undefined : editForm.phoneNumber?.trim()
     }
     try {
       const updated = await updatePlayerProfile(token, sanitizedForm)
@@ -138,7 +139,7 @@ export default function ProfilePage() {
       window.dispatchEvent(new Event('auth-change'))
       toast.success('Profilul a fost actualizat cu succes!')
     } catch (err: any) {
-      if (err.message?.includes('deja folosit') || err.message?.includes('deja asociat')) {
+      if (err.message?.toLowerCase().includes('deja')) {
         setClaimPhone(editForm.phoneNumber)
         setClaimOtp('')
         setClaimOtpSent(false)
@@ -146,7 +147,8 @@ export default function ProfilePage() {
         setIsVerificationOnly(false)
         setShowClaimModal(true)
       } else {
-        toast.error(err.message || 'Eroare la salvarea profilului.')
+        const errorMsg = err.details ? `${err.message}: ${err.details.join(', ')}` : err.message;
+        toast.error(errorMsg || 'Eroare la salvarea profilului.')
       }
     } finally {
       setSaving(false)
@@ -430,22 +432,31 @@ export default function ProfilePage() {
                 <Shield className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <h3 className="text-sm md:text-base font-black text-amber-500 uppercase tracking-widest">Protejează-ți contul: Verifică telefonul</h3>
-                <p className="text-xs text-amber-500/70 mt-0.5 font-bold">Vei primi un cod prin SMS pentru confirmare.</p>
+                <h3 className="text-sm md:text-base font-black text-amber-500 uppercase tracking-widest">
+                  {player.phoneNumber ? "Protejează-ți contul: Verifică telefonul" : "Securitate Cont: Adaugă un Telefon"}
+                </h3>
+                <p className="text-xs text-amber-500/70 mt-0.5 font-bold">
+                  {player.phoneNumber ? "Vei primi un cod prin SMS pentru confirmare." : "Pentru a efectua rezervări, adaugă un număr valid."}
+                </p>
               </div>
             </div>
             <button 
               onClick={() => {
-                setClaimPhone(player.phoneNumber || '')
-                setClaimOtp('')
-                setClaimOtpSent(false)
-                setClaimError('')
-                setIsVerificationOnly(true)
-                setShowClaimModal(true)
+                if (!player.phoneNumber) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                  setIsEditing(true)
+                } else {
+                  setClaimPhone(player.phoneNumber)
+                  setClaimOtp('')
+                  setClaimOtpSent(false)
+                  setClaimError('')
+                  setIsVerificationOnly(true)
+                  setShowClaimModal(true)
+                }
               }}
               className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap shadow-xl"
             >
-              Verifică Acum
+              {player.phoneNumber ? "Verifică Acum" : "Adaugă Acum"}
             </button>
           </motion.div>
         )}
@@ -879,7 +890,7 @@ export default function ProfilePage() {
                     <Calendar className="w-10 h-10 text-slate-700" />
                   </div>
                   <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">Niciun meci înregistrat</h3>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-8 max-w-[200px] mx-auto leading-relaxed">Începe-ți cariera de jucător și ocupă locul în arenă.</p>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-8 max-w-[200px] mx-auto leading-relaxed">Începe activitatea sportivă și rezervă primul tău meci.</p>
                   <button 
                     onClick={() => nav('/rezerva')}
                     className="px-10 py-4 bg-lime-500 hover:bg-lime-400 text-black font-black rounded-2xl transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-xs tracking-widest"

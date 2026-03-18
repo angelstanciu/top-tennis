@@ -38,7 +38,14 @@ export async function fetchAvailability(date: string, sportType?: string): Promi
   const url = new URL(`${BASE_URL}/availability`, window.location.origin)
   url.searchParams.set('date', date)
   if (sportType) url.searchParams.set('sportType', sportType)
-  const res = await fetch(url)
+  
+  const token = localStorage.getItem('playerToken')
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(await parseError(res))
   
   const data: AvailabilityDto[] = await res.json()
@@ -61,6 +68,7 @@ export async function createBooking(payload: {
   customerName: string
   customerPhone: string
   customerEmail?: string
+  bypassDoubleBooking?: boolean
 }): Promise<BookingDto> {
   const token = localStorage.getItem('playerToken')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }

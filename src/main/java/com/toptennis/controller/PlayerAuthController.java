@@ -61,7 +61,7 @@ public class PlayerAuthController {
     public record RegisterRequest(
             @NotBlank @Size(max=20) @Pattern(regexp = "^\\+?[0-9\\s]{9,15}$") String phone, 
             @NotBlank String password, 
-            @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ\\s\\-']+$", message="Numele conține caractere invalide") String fullName, 
+            @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[^<>%$]+$", message="Numele conține caractere invalide") String fullName, 
             @Email String email) {}
 
     @PostMapping("/auth/register")
@@ -144,7 +144,7 @@ public class PlayerAuthController {
     }
 
     public record UpdateProfileRequest(
-            @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ\\s\\-']+$", message="Nume invalid") String fullName, 
+            @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[^<>%$]+$", message="Nume invalid") String fullName, 
             @Email String email, 
             @Pattern(regexp = "^\\+?[0-9\\s]{9,15}$") String phoneNumber, 
             String preferredSport, Integer age, String gender, String avatarUrl) {}
