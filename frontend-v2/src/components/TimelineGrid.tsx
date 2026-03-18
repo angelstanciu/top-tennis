@@ -368,15 +368,18 @@ export default function TimelineGrid({
     const active = booked.filter(b => b.status !== 'CANCELLED')
     
     const startMin = minutesSinceMidnightStr(selStart)
-    const endMin = minutesSinceMidnightStr(selEnd)
+    let endMin = minutesSinceMidnightStr(selEnd)
+    if (endMin < startMin) endMin += 24 * 60
 
     // Find the free block [blockStart, blockEnd] surrounding our selection
     let blockStart = 0 // represents grid start time in reality, approximated as 0 here
-    let blockEnd = 1440
+    let blockEnd = endMin > 1440 ? 1440 + 24 * 60 : 1440
 
     active.forEach(b => {
-      const bStart = minutesSinceMidnightStr(b.start)
-      const bEnd = minutesSinceMidnightStr(b.end)
+      let bStart = minutesSinceMidnightStr(b.start)
+      let bEnd = minutesSinceMidnightStr(b.end)
+      if (bEnd < bStart) bEnd += 24 * 60
+      if (bStart < startMin && bStart < 1440 && endMin > 1440) bStart += 24 * 60 // Normalize next day blocks if needed
       
       if (bEnd <= startMin) {
         if (bEnd > blockStart) blockStart = bEnd
@@ -956,9 +959,8 @@ export default function TimelineGrid({
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
-        // If range exceeds operating hours defined in ticks, it is invalid...
-        // EXCEPT if the user is an Admin! Admins have supreme rights to book past operating hours/midnight.
-        if (!t || !next) return !!onAdminClick
+        // If range crosses midnight conceptually, optimistically allow (backend handles PENDING)
+        if (!t || !next) return true
         
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
