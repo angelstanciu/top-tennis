@@ -185,13 +185,33 @@ export default function FreePositionsPage() {
       for (const row of data) {
         const slotsText = processRow(row)
         if (slotsText) {
-          parts.push(`🏟️ ${row.court.name}:\n${slotsText}`)
+          const rawName = String(row.court.name)
+          const label = rawName.toUpperCase().startsWith('TEREN') ? rawName : `Teren ${rawName}`
+          parts.push(`🏟️ ${label}:\n${slotsText}`)
         }
       }
       body = parts.join('\n\n')
     }
 
-    const intro = `Salut! 👋\nAcestea sunt pozițiile libere de astăzi pentru ${sportLabelUpper(sport)}.\n`
+    const formatIntroDate = (isoStart: string) => {
+      try {
+        const tz = 'Europe/Bucharest'
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+        const tDate = new Date()
+        tDate.setDate(tDate.getDate() + 1)
+        const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(tDate)
+        
+        if (isoStart === todayStr) return 'de astăzi'
+        if (isoStart === tomorrowStr) return 'de mâine'
+        
+        const [y, m, d] = isoStart.split('-')
+        return `pentru ${d}.${m}.${y}`
+      } catch {
+        return `pentru ${isoStart}`
+      }
+    }
+
+    const intro = `Salut! 👋\nAcestea sunt pozițiile libere ${formatIntroDate(date)} la ${sportLabelUpper(sport)}.\n`
     const footer = `\n🎾 Pentru rezervări rapide, accesați: www.star-arena.ro ! Vă așteptăm cu drag! 🚀`
     setText(`${intro}\n${body}\n${footer}`.trim())
   }, [data, courtId, sport, date])
