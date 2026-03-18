@@ -112,10 +112,7 @@ export default function SubscriptionRequestFormPage() {
                       onChange={e => setFormData({...formData, sportType: e.target.value})}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-lime-500/50 transition-colors"
                     >
-                      <option value="TENNIS">Tenis</option>
                       <option value="PADEL">Padel</option>
-                      <option value="FOOTVOLLEY">Tenis de Picior</option>
-                      <option value="BASKETBALL">Baschet</option>
                     </select>
                  </div>
                  <div>

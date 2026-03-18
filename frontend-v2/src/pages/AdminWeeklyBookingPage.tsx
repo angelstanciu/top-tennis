@@ -120,7 +120,12 @@ export default function AdminWeeklyBookingPage() {
         }).then(async r => {
           if (!r.ok) {
             const txt = await r.text()
-            throw new Error(`Data ${iterDateStr}: ${txt}`)
+            let msg = txt
+            try {
+               const j = JSON.parse(txt)
+               if (j.message) msg = j.message
+            } catch (ignore) {}
+            throw new Error(`Data ${formatDateDisplay(iterDateStr)}: ${msg}`)
           }
           return r.json()
         }))

@@ -79,7 +79,7 @@ export default function AdminSubscriptionRequestsPage() {
       })
       if (res.ok) {
         setRequests(prev => prev.map(r => r.id === approveId ? { ...r, status: 'APPROVED' } : r))
-        if (navAway) navigate('/admin');
+        if (navAway) navigate('/admin/weekly');
       }
     } catch (err) {
       console.error(err)
@@ -104,6 +104,9 @@ export default function AdminSubscriptionRequestsPage() {
       })
       if (res.ok) {
         setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+        if (status === 'CONTACTED') {
+           setFilter('CONTACTED');
+        }
       }
     } catch (err) {
       console.error(err)
