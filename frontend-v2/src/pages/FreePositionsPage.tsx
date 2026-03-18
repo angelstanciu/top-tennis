@@ -686,18 +686,7 @@ export default function FreePositionsPage() {
         </div>
       </div>
 
-      {/* Grid Timeline Section */}
-      {data.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden mt-6">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Vizualizare Grila (Terenurile 6 & 7)</h3>
-             <span className="text-[10px] text-slate-500 font-medium">Data: {formatDateDisplay(date)}</span>
-          </div>
-          <div className="p-1">
-            <TimelineGrid data={data.filter(d => String(d.court.name).includes('6') || String(d.court.name).includes('7'))} date={date} flat />
-          </div>
-        </div>
-      )}
+
 
       {missingToastVisible && (
         <div className="fixed inset-x-0 bottom-0 z-[20000] pointer-events-none">

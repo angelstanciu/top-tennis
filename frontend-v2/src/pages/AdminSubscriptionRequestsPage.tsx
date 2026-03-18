@@ -56,8 +56,9 @@ export default function AdminSubscriptionRequestsPage() {
           'Authorization': `Basic ${auth}`
         }
       })
-      if (res.ok) {
+      if (res.ok || res.status === 404) {
         setRequests(prev => prev.filter(r => r.id !== deleteId))
+        setFilter('ALL')
       }
     } catch (err) {
       console.error(err)
@@ -113,7 +114,9 @@ export default function AdminSubscriptionRequestsPage() {
     }
   }
 
-  const filteredRequests = requests.filter(r => filter === 'ALL' || r.status === filter)
+  const filteredRequests = requests
+    .filter(r => filter === 'ALL' || r.status === filter)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -245,23 +248,31 @@ export default function AdminSubscriptionRequestsPage() {
         )}
       </main>
 
-      {deleteId !== null && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
-                <Trash2 className="w-8 h-8" />
+      {deleteId !== null && (() => {
+        const req = requests.find(r => r.id === deleteId)
+        const isApproved = req?.status === 'APPROVED'
+        return (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
+                  <Trash2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-black text-slate-800 mb-2">Confirmare Ștergere</h3>
+                <p className="text-sm text-slate-500 font-medium">
+                  {isApproved 
+                    ? `Ești sigur că a expirat abonamentul rezervat de ${req?.player?.fullName}?` 
+                    : 'Ești sigur că vrei să ștergi această cerere? Această acțiune este ireversibilă.'}
+                </p>
               </div>
-              <h3 className="text-xl font-black text-slate-800 mb-2">Confirmare Ștergere</h3>
-              <p className="text-sm text-slate-500 font-medium">Ești sigur că vrei să ștergi această cerere? Această acțiune este ireversibilă.</p>
-            </div>
-            <div className="flex bg-slate-50 p-4 gap-3 border-t border-slate-100">
-               <button onClick={() => setDeleteId(null)} className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Anulează</button>
-               <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-bold bg-rose-500 text-white shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 text-sm">Șterge Cererea</button>
+              <div className="flex bg-slate-50 p-4 gap-3 border-t border-slate-100">
+                 <button onClick={() => setDeleteId(null)} className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Anulează</button>
+                 <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-bold bg-rose-500 text-white shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 text-sm">Șterge</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {approveId !== null && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
