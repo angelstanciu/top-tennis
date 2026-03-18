@@ -8,6 +8,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchPlayerHistory, updatePlayerProfile, cancelBooking } from '../api'
 import { BookingDto, PlayerUser } from '../types'
+import { toast } from 'sonner'
+import { ConfirmModal } from '../components/ui/confirm-modal'
 
 export default function ProfilePage() {
   const nav = useNavigate()
@@ -16,6 +18,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showAllHistory, setShowAllHistory] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   
   // Edit State
   const [editForm, setEditForm] = useState({
@@ -38,6 +41,7 @@ export default function ProfilePage() {
   const [claimLoading, setClaimLoading] = useState(false)
   const [claimError, setClaimError] = useState('')
   const [claimOtpSent, setClaimOtpSent] = useState(false)
+  const [isVerificationOnly, setIsVerificationOnly] = useState(false)
 
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null)
@@ -108,12 +112,15 @@ export default function ProfilePage() {
 
   const progress = rankInfo.next ? (matchesPlayed / rankInfo.next) * 100 : 100
 
-  const handleLogout = () => {
-    if (!window.confirm("Sigur vrei să te deconectezi?")) return
+  const executeLogout = () => {
     localStorage.removeItem('playerToken')
     localStorage.removeItem('playerData')
     window.dispatchEvent(new Event('auth-change'))
     nav('/')
+  }
+
+  const handleLogout = () => {
+    setShowLogoutConfirm(true)
   }
 
   const handleSaveProfile = async () => {
@@ -129,15 +136,17 @@ export default function ProfilePage() {
       setIsEditing(false)
       localStorage.setItem('playerData', JSON.stringify(updated))
       window.dispatchEvent(new Event('auth-change'))
+      toast.success('Profilul a fost actualizat cu succes!')
     } catch (err: any) {
       if (err.message?.includes('deja folosit') || err.message?.includes('deja asociat')) {
         setClaimPhone(editForm.phoneNumber)
         setClaimOtp('')
         setClaimOtpSent(false)
         setClaimError('')
+        setIsVerificationOnly(false)
         setShowClaimModal(true)
       } else {
-        alert(err.message || 'Eroare la salvarea profilului.')
+        toast.error(err.message || 'Eroare la salvarea profilului.')
       }
     } finally {
       setSaving(false)
@@ -162,8 +171,14 @@ export default function ProfilePage() {
     setClaimLoading(true)
     setClaimError('')
     try {
-      const { linkPlayerPhone, fetchPlayerHistory } = await import('../api')
-      const updated = await linkPlayerPhone(token!, claimPhone, claimOtp)
+      let updatedUser: PlayerUser;
+      if (isVerificationOnly) {
+         const { verifyUserPhone } = await import('../api')
+         updatedUser = await verifyUserPhone(token!, claimOtp)
+      } else {
+         const { linkPlayerPhone } = await import('../api')
+         updatedUser = await linkPlayerPhone(token!, claimPhone, claimOtp)
+      }
       
       // Auto-refresh logic: re-fetch the absolute newest profile and history
       try {
@@ -176,23 +191,28 @@ export default function ProfilePage() {
           setPlayer(freshProfile)
           localStorage.setItem('playerData', JSON.stringify(freshProfile))
         } else {
-          setPlayer(updated)
-          localStorage.setItem('playerData', JSON.stringify(updated))
+          setPlayer(updatedUser)
+          localStorage.setItem('playerData', JSON.stringify(updatedUser))
         }
 
         const freshHistory = await fetchPlayerHistory(token!)
         setHistory(freshHistory)
       } catch (err) {
         // Fallback to the returned user data if fetching fails
-        setPlayer(updated)
-        localStorage.setItem('playerData', JSON.stringify(updated))
+        setPlayer(updatedUser)
+        localStorage.setItem('playerData', JSON.stringify(updatedUser))
         console.error('Eroare la reîmprospătarea automată după revendicare:', err)
       }
 
       setShowClaimModal(false)
-      setIsEditing(false)
-      window.dispatchEvent(new Event('auth-change'))
-      alert('Telefonul a fost conectat cu succes! Istoricul tău a fost actualizat.')
+      setIsVerificationOnly(false)
+      setPlayer(updatedUser)
+      setIsVerificationOnly(false)
+      setShowClaimModal(false)
+      toast.success(isVerificationOnly ? 'Numărul de telefon a fost verificat cu succes!' : 'Telefonul a fost conectat cu succes! Istoricul tău a fost actualizat.')
+      // optionally trigger re-fetch of history
+      const data = await fetchPlayerHistory(token!)
+      setHistory(data)
     } catch (err: any) {
       setClaimError(err.message)
     } finally {
@@ -265,12 +285,12 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       await cancelBooking(bookingToCancel)
-      const histData = await fetchPlayerHistory(token!)
-      setHistory(histData)
+      setHistory(prev => prev.filter(b => b.id !== bookingToCancel))
       setShowCancelModal(false)
       setBookingToCancel(null)
+      toast.success('Rezervarea a fost anulată cu succes!')
     } catch (err: any) {
-      alert(err.message || "Eroare la anularea rezervării.")
+      toast.error(err.message || "Eroare la anularea rezervării.")
     } finally {
       setLoading(false)
     }
@@ -330,8 +350,9 @@ export default function ProfilePage() {
         const updated = await updatePlayerProfile(token!, { ...editForm, avatarUrl: base64 })
         setPlayer(updated)
         setEditForm(prev => ({ ...prev, avatarUrl: base64 }))
+        toast.success('Poza de profil a fost actualizată!')
       } catch (err) {
-        alert('Eroare la încărcarea pozei.')
+        toast.error('Eroare la încărcarea pozei.')
       } finally {
         setSaving(false)
       }
@@ -396,6 +417,38 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+
+        {/* Verification Banner */}
+        {player && player.phoneVerified === false && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 md:p-6 bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Shield className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="text-sm md:text-base font-black text-amber-500 uppercase tracking-widest">Protejează-ți contul: Verifică telefonul</h3>
+                <p className="text-xs text-amber-500/70 mt-0.5 font-bold">Vei primi un cod prin SMS pentru confirmare.</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                setClaimPhone(player.phoneNumber || '')
+                setClaimOtp('')
+                setClaimOtpSent(false)
+                setClaimError('')
+                setIsVerificationOnly(true)
+                setShowClaimModal(true)
+              }}
+              className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap shadow-xl"
+            >
+              Verifică Acum
+            </button>
+          </motion.div>
+        )}
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
@@ -902,9 +955,13 @@ export default function ProfilePage() {
                     <Shield className="w-8 h-8" />
                   </div>
                   
-                  <h3 className="text-2xl font-black text-white text-center tracking-tight mb-2 uppercase">Revendică Numărul</h3>
+                  <h3 className="text-2xl font-black text-white text-center tracking-tight mb-2 uppercase">
+                    {isVerificationOnly ? 'Verifică Numărul' : 'Revendică Numărul'}
+                  </h3>
                   <p className="text-slate-400 text-center text-sm font-medium mb-8 leading-relaxed">
-                    Numărul <span className="text-white font-bold">{claimPhone}</span> este legat de un alt cont. Îl poți transfera pe acest cont verificându-l prin SMS.
+                    {isVerificationOnly ? 
+                      <>Îți vom trimite un cod prin SMS la numărul <span className="text-white font-bold">{claimPhone}</span> pentru a-l verifica.</> : 
+                      <>Numărul <span className="text-white font-bold">{claimPhone}</span> este legat de un alt cont. Îl poți transfera pe acest cont verificându-l prin SMS.</>}
                   </p>
 
                   <div className="space-y-6">
@@ -944,7 +1001,7 @@ export default function ProfilePage() {
                           className="w-full py-4 bg-lime-500 hover:bg-lime-400 text-black rounded-2xl font-black text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           {claimLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Shield className="w-5 h-5" />}
-                          {claimLoading ? 'SE VERIFICĂ...' : 'VERIFICĂ ȘI REVENDICĂ'}
+                          {claimLoading ? 'SE VERIFICĂ...' : (isVerificationOnly ? 'VERIFICĂ NUMĂRUL' : 'VERIFICĂ ȘI REVENDICĂ')}
                         </button>
                         <button
                           onClick={() => { setClaimOtpSent(false); setClaimOtp(''); setClaimError(''); }}
@@ -976,6 +1033,15 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
+        <ConfirmModal
+          isOpen={showLogoutConfirm}
+          title="Deconectare cont"
+          description="Ești sigur(ă) că vrei să părăsești contul tău?"
+          confirmText="Deconectare"
+          cancelText="Rămâi aici"
+          onConfirm={executeLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
       </div>
       
       {/* Animations Style */}

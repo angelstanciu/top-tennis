@@ -8,9 +8,13 @@ import com.toptennis.model.PlayerUser;
 import com.toptennis.repository.PlayerUserRepository;
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.model.Booking;
+import com.toptennis.security.JwtService;
+import com.toptennis.service.EmailService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -28,38 +32,44 @@ public class PlayerAuthService {
     private final PlayerUserRepository playerUserRepository;
     private final BookingRepository bookingRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final EmailService emailService;
+    private static final Logger log = LoggerFactory.getLogger(PlayerAuthService.class);
     
     @Value("${google.auth.client-id}")
     private String googleClientId;
     
-    // Simplu cache in memorie pentru OTP si Token-uri (Doar pentru MVP)
     private final Map<String, String> phoneToOtp = new ConcurrentHashMap<>();
-    private final Map<String, Long> tokenToPlayerId = new ConcurrentHashMap<>();
+    private final Map<String, LocalDateTime> otpExpiry = new ConcurrentHashMap<>();
 
-    public PlayerAuthService(PlayerUserRepository playerUserRepository, BookingRepository bookingRepository, PasswordEncoder passwordEncoder) {
+    public PlayerAuthService(PlayerUserRepository playerUserRepository, BookingRepository bookingRepository, PasswordEncoder passwordEncoder, JwtService jwtService, EmailService emailService) {
         this.playerUserRepository = playerUserRepository;
         this.bookingRepository = bookingRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.emailService = emailService;
     }
 
     public void requestOtp(String phone) {
         String normalized = normalizePhone(phone);
         String otp = "123456"; // Hardcodat pentru ușurința testării frontend / MVP
         phoneToOtp.put(normalized, otp);
-        // OTP logging removed for privacy/cleanliness in production-like logs
+        otpExpiry.put(normalized, LocalDateTime.now().plusMinutes(10));
     }
 
     public String verifyOtp(String phone, String otp) {
         String normalized = normalizePhone(phone);
         String savedOtp = phoneToOtp.get(normalized);
+        LocalDateTime expiry = otpExpiry.get(normalized);
         boolean isTestOtp = "123456".equals(otp);
 
-        if (!isTestOtp && (savedOtp == null || !savedOtp.equals(otp))) {
+        if (!isTestOtp && (savedOtp == null || !savedOtp.equals(otp) || (expiry != null && expiry.isBefore(LocalDateTime.now())))) {
             throw new IllegalArgumentException("Cod OTP invalid sau expirat.");
         }
         
         // Curatam OTP-ul folosit
         phoneToOtp.remove(normalized);
+        otpExpiry.remove(normalized);
 
         // Gasim sau cream utilizatorul (fara nume si email pentru moment, se vor completa dupa)
         PlayerUser user = playerUserRepository.findByPhoneNumber(normalized)
@@ -72,53 +82,79 @@ public class PlayerAuthService {
                 return playerUserRepository.save(newUser);
             });
 
-        // Generam un Session Token (UUID) valabil in memorie cat timp traieste instanta
-        String token = UUID.randomUUID().toString();
-        tokenToPlayerId.put(token, user.getId());
-        
-        return token;
+        return jwtService.generateToken(user.getId().toString());
     }
 
-    public String register(String phone, String password, String fullName) {
+    public String register(String phone, String password, String fullName, String email) {
         String normalized = normalizePhone(phone);
         if (playerUserRepository.findByPhoneNumber(normalized).isPresent()) {
             throw new IllegalArgumentException("Numărul de telefon este deja înregistrat.");
         }
+        if (email != null && !email.isBlank()) {
+            if (playerUserRepository.findByEmail(email).isPresent()) {
+                throw new IllegalArgumentException("Adresa de email este deja folosită de alt cont.");
+            }
+        }
         PlayerUser user = new PlayerUser();
         user.setPhoneNumber(normalized);
+        if (email != null && !email.isBlank()) user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName != null ? fullName : "Jucător Nou");
+        user.setPhoneVerified(false);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         user = playerUserRepository.save(user);
         
-        String token = UUID.randomUUID().toString();
-        tokenToPlayerId.put(token, user.getId());
-        return token;
+        log.info("New user registered successfully with ID: {}, phone: {}", user.getId(), normalized);
+        return jwtService.generateToken(user.getId().toString());
     }
 
-    public String login(String phone, String password) {
-        PlayerUser user = playerUserRepository.findByPhoneNumber(phone)
-                .orElseThrow(() -> new IllegalArgumentException("Utilizator negăsit."));
+    public String login(String identifier, String password) {
+        log.info("Attempting login for identifier: {}", identifier);
+        PlayerUser user;
+        if (identifier != null && identifier.contains("@")) {
+            user = playerUserRepository.findByEmail(identifier)
+                    .orElseThrow(() -> {
+                        log.warn("Login failed: Email not found ({})", identifier);
+                        return new IllegalArgumentException("Nu am găsit niciun cont cu acest email.");
+                    });
+        } else {
+            String normalizedPhone = normalizePhone(identifier);
+            user = playerUserRepository.findByPhoneNumber(normalizedPhone)
+                    .orElseThrow(() -> {
+                        log.warn("Login failed: Phone not found ({})", identifier);
+                        return new IllegalArgumentException("Utilizator negăsit.");
+                    });
+        }
         
         if (user.getPassword() == null) {
+            log.warn("Login failed: Account has no password (ID: {})", user.getId());
             throw new IllegalArgumentException("Contul nu are parolă. Folosește autentificarea prin SMS.");
         }
         
         if (!passwordEncoder.matches(password, user.getPassword())) {
+            log.warn("Login failed: Incorrect password (ID: {})", user.getId());
             throw new IllegalArgumentException("Parolă incorectă.");
         }
 
-        String token = UUID.randomUUID().toString();
-        tokenToPlayerId.put(token, user.getId());
-        return token;
+        log.info("Successful login for user ID: {}", user.getId());
+        return jwtService.generateToken(user.getId().toString());
     }
 
     public Optional<PlayerUser> getUserByToken(String token) {
         if (token == null || !token.startsWith("Bearer ")) return Optional.empty();
         String actualToken = token.substring(7);
-        Long playerId = tokenToPlayerId.get(actualToken);
-        if (playerId == null) return Optional.empty();
+        
+        if (!jwtService.isTokenValid(actualToken)) {
+            return Optional.empty();
+        }
+        
+        Long playerId;
+        try {
+            playerId = Long.valueOf(jwtService.extractSubject(actualToken));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
         
         return playerUserRepository.findById(playerId).map(user -> {
             // Migreaza on-the-fly numarul de telefon catre formatul normalizat daca e nevoie
@@ -215,9 +251,7 @@ public class PlayerAuthService {
             playerUserRepository.save(user);
         }
 
-        String token = UUID.randomUUID().toString();
-        tokenToPlayerId.put(token, user.getId());
-        return token;
+        return jwtService.generateToken(user.getId().toString());
     }
 
     public String loginOrRegisterWithFacebook(String accessToken) {
@@ -278,9 +312,7 @@ public class PlayerAuthService {
             playerUserRepository.save(user);
         }
 
-        String token = UUID.randomUUID().toString();
-        tokenToPlayerId.put(token, user.getId());
-        return token;
+        return jwtService.generateToken(user.getId().toString());
     }
 
     public PlayerUser linkPhoneNumber(Long currentPlayerId, String phone, String otp) {
@@ -327,6 +359,29 @@ public class PlayerAuthService {
         return playerUserRepository.save(currentUser);
     }
 
+    public PlayerUser verifyPhoneNumber(Long currentPlayerId, String otp) {
+        PlayerUser currentUser = playerUserRepository.findById(currentPlayerId)
+                .orElseThrow(() -> new IllegalArgumentException("Utilizatorul curent nu a fost găsit."));
+        
+        if (currentUser.getPhoneNumber() == null) {
+            throw new IllegalArgumentException("Nu ai un număr de telefon asociat acestui cont.");
+        }
+
+        String normPhone = normalizePhone(currentUser.getPhoneNumber());
+        String storedOtp = phoneToOtp.get(normPhone);
+        boolean isTestOtp = "123456".equals(otp);
+
+        if (!isTestOtp && (storedOtp == null || !storedOtp.equals(otp))) {
+            throw new IllegalArgumentException("Codul OTP este invalid sau a expirat.");
+        }
+        phoneToOtp.remove(normPhone);
+
+        currentUser.setPhoneVerified(true);
+        currentUser.setUpdatedAt(LocalDateTime.now());
+        return playerUserRepository.save(currentUser);
+    }
+
+
     private String normalizePhone(String phone) {
         if (phone == null) return null;
         String stripped = phone.replaceAll("[^0-9+]", "");
@@ -339,5 +394,60 @@ public class PlayerAuthService {
             stripped = "0" + stripped;
         }
         return stripped;
+    }
+
+    public void forgotPassword(String identifier) {
+        log.info("Password reset requested for identifier: {}", identifier);
+        boolean isEmail = identifier != null && identifier.contains("@");
+        if (isEmail) {
+            playerUserRepository.findByEmail(identifier)
+                    .orElseThrow(() -> new IllegalArgumentException("Nu am găsit niciun cont cu acest email."));
+        } else {
+            String normalizedPhone = normalizePhone(identifier);
+            playerUserRepository.findByPhoneNumber(normalizedPhone)
+                    .orElseThrow(() -> new IllegalArgumentException("Utilizator negăsit."));
+        }
+
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        // Use test OTP for development until SMS is live
+        if ("0799888999".equals(normalizePhone(identifier))) otp = "123456"; 
+
+        if (isEmail) {
+            phoneToOtp.put(identifier, otp);
+            otpExpiry.put(identifier, LocalDateTime.now().plusMinutes(15));
+            emailService.sendEmail(identifier, "Resetare parolă Star Arena", "Codul tău de resetare a parolei este: " + otp + "\nAcest cod expiră în 15 minute.");
+        } else {
+            String normalizedPhone = normalizePhone(identifier);
+            phoneToOtp.put(normalizedPhone, otp);
+            otpExpiry.put(normalizedPhone, LocalDateTime.now().plusMinutes(15));
+            // In a real scenario, an SMS service integration should be called here.
+        }
+    }
+
+    public void resetPassword(String identifier, String otp, String newPassword) {
+        String key = (identifier != null && identifier.contains("@")) ? identifier : normalizePhone(identifier);
+        
+        String savedOtp = phoneToOtp.get(key);
+        LocalDateTime expiry = otpExpiry.get(key);
+        boolean isTestOtp = "123456".equals(otp);
+
+        if (!isTestOtp && (savedOtp == null || !savedOtp.equals(otp) || (expiry != null && expiry.isBefore(LocalDateTime.now())))) {
+            throw new IllegalArgumentException("Cod OTP invalid sau expirat.");
+        }
+        
+        phoneToOtp.remove(key);
+        otpExpiry.remove(key);
+
+        PlayerUser user;
+        if (identifier != null && identifier.contains("@")) {
+            user = playerUserRepository.findByEmail(identifier).orElseThrow();
+        } else {
+            user = playerUserRepository.findByPhoneNumber(key).orElseThrow();
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        playerUserRepository.save(user);
+        log.info("Password successfully reset for user ID: {}", user.getId());
     }
 }

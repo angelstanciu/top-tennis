@@ -9,11 +9,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
@@ -80,10 +84,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
+        log.error("Unhandled Exception (500) caught globally for URI {}: ", req.getRequestURI(), ex);
         ApiError err = new ApiError();
         err.status = HttpStatus.INTERNAL_SERVER_ERROR.value();
         err.error = HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase();
-        err.message = ex.getMessage();
+        err.message = "A apărut o eroare internă pe server. Te rugăm să încerci mai târziu.";
         err.path = req.getRequestURI();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
     }

@@ -15,9 +15,11 @@ import java.time.LocalTime;
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService bookingService;
+    private final com.toptennis.service.PlayerAuthService playerAuthService;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, com.toptennis.service.PlayerAuthService playerAuthService) {
         this.bookingService = bookingService;
+        this.playerAuthService = playerAuthService;
     }
 
     @PostMapping
@@ -37,8 +39,32 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    public BookingDto get(@PathVariable Long id) {
-        return BookingMapper.toDto(bookingService.get(id));
+    public BookingDto get(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Long id) {
+        Booking b = bookingService.get(id);
+        BookingDto dto = BookingMapper.toDto(b);
+
+        boolean isAdmin = false;
+        com.toptennis.model.PlayerUser currentUser = null;
+        try {
+            if (token != null && token.startsWith("Bearer ")) {
+                currentUser = playerAuthService.getUserByToken(token).orElse(null);
+            }
+            org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                isAdmin = true;
+            }
+        } catch (Exception e) {}
+
+        boolean isOwner = currentUser != null && b.getPlayerUser() != null && b.getPlayerUser().getId().equals(currentUser.getId());
+        if (!isAdmin && !isOwner) {
+            dto.customerName = "Ocupat";
+            dto.customerPhone = null;
+            dto.customerEmail = null;
+        }
+
+        return dto;
     }
 
     @PatchMapping("/{id}/cancel")

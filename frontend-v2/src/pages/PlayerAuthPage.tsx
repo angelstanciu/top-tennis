@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp, loginWithGoogle } from '../api';
+import { loginPlayer, registerPlayer, requestPlayerOtp, verifyPlayerOtp, loginWithGoogle, forgotPassword, resetPassword } from '../api';
 import { PlayerUser } from '../types';
 import { GoogleLogin, useGoogleLogin } from '@react-oauth/google';
 import { Chrome, Smartphone, Lock, User, ArrowRight, ChevronLeft, Mail, Loader2 } from 'lucide-react';
 
 export default function PlayerAuthPage() {
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp' | 'forgot' | 'reset'>('login');
   
   useEffect(() => {
     // Left empty for future initializations if needed
   }, []);
   const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [otp, setOtp] = useState('');
@@ -29,7 +31,7 @@ export default function PlayerAuthPage() {
   useEffect(() => {
     setError(null);
     setErrorDetails(null);
-  }, [authMode, phone, password, fullName, otp]);
+  }, [authMode, phone, identifier, email, password, fullName, otp]);
 
   const handleSuccess = (user: PlayerUser, token: string) => {
     localStorage.setItem('playerToken', token);
@@ -59,10 +61,10 @@ export default function PlayerAuthPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone || !password) return;
+    if (!identifier || !password) return;
     try {
       setLoading(true);
-      const res = await loginPlayer(phone, password);
+      const res = await loginPlayer(identifier, password);
       handleSuccess(res.user, res.token);
     } catch (err: any) {
       const msg = err.message || '';
@@ -81,7 +83,7 @@ export default function PlayerAuthPage() {
     if (!phone || !password || !fullName) return;
     try {
       setLoading(true);
-      const res = await registerPlayer(phone, password, fullName);
+      const res = await registerPlayer(phone, password, fullName, email || undefined);
       handleSuccess(res.user, res.token);
     } catch (err: any) {
       setError(err.message);
@@ -113,6 +115,44 @@ export default function PlayerAuthPage() {
       setLoading(true);
       const res = await verifyPlayerOtp(phone, otp);
       handleSuccess(res.user, res.token);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!identifier) {
+      setError('Te rugăm să introduci emailul sau numărul de telefon de conectare.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await forgotPassword(identifier);
+      setAuthMode('reset');
+      setOtp('');
+      setPassword('');
+      setError('Codul de resetare a fost trimis. Verifică-ți mailul sau SMS-ul.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!identifier || !otp || !password) return;
+    try {
+      setLoading(true);
+      await resetPassword(identifier, otp, password);
+      setAuthMode('login');
+      setOtp('');
+      setPassword('');
+      setErrorDetails(null);
+      setError('Parola a fost schimbată cu succes. Te poți loga cu noua parolă.');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -296,47 +336,55 @@ export default function PlayerAuthPage() {
               >
                 <div className="space-y-2">
                   <h3 className="text-3xl font-black tracking-tighter">
-                    {authMode === 'login' ? 'Conectare' : 'Salutare!'}
+                    {authMode === 'login' ? 'Conectare' : authMode === 'forgot' ? 'Recuperare Parolă' : authMode === 'reset' ? 'Schimbare Parolă' : 'Salutare!'}
                   </h3>
                   <p className="text-slate-400 text-sm">
                     {authMode === 'login' 
                        ? 'Bucuros să te revedem. Intră în contul tău.' 
+                       : authMode === 'forgot'
+                       ? 'Introdu contul tău pentru a primi codul de recuperare.'
+                       : authMode === 'reset'
+                       ? 'Te rugăm să introduci codul primit și noua parolă.'
                        : 'Creează un cont rapid pentru a rezerva instant.'}
                   </p>
                 </div>
 
                 {/* Social & Alternate Logins */}
-                <div className="flex flex-col gap-3 lg:gap-4">
-                  <motion.button 
-                    whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-                    whileTap={{ scale: 0.98 }}
-                    animate={{ 
-                      boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 15px rgba(16, 185, 129, 0.1)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
-                    }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    onClick={() => googleLogin()}
-                    disabled={loading}
-                    className="flex flex-1 items-center justify-center gap-2 lg:gap-3 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm relative overflow-hidden group shadow-xl"
-                  >
-                    <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <Chrome className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-400" />}
-                    <span>Sign in with Google</span>
-                  </motion.button>
-                  
-                  <button 
-                    onClick={() => setAuthMode('otp')}
-                    className="flex flex-1 items-center justify-center gap-3 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/20 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm text-lime-400 shadow-lg shadow-lime-950/20"
-                  >
-                    <Smartphone className="w-4 h-4 lg:w-5 lg:h-5 text-lime-500" />
-                    LOGARE RAPIDĂ PRIN SMS (FĂRĂ PAROLĂ)
-                  </button>
-                </div>
+                {(authMode === 'login' || authMode === 'signup') && (
+                  <>
+                    <div className="flex flex-col gap-3 lg:gap-4">
+                      <motion.button 
+                        whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+                        whileTap={{ scale: 0.98 }}
+                        animate={{ 
+                          boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 15px rgba(16, 185, 129, 0.1)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
+                        }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                        onClick={() => googleLogin()}
+                        disabled={loading}
+                        className="flex flex-1 items-center justify-center gap-2 lg:gap-3 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm relative overflow-hidden group shadow-xl"
+                      >
+                        <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <Chrome className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-400" />}
+                        <span>Sign in with Google</span>
+                      </motion.button>
+                      
+                      <button 
+                        onClick={() => setAuthMode('otp')}
+                        className="flex flex-1 items-center justify-center gap-3 bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/20 rounded-xl lg:rounded-2xl py-3.5 lg:py-4 transition-all font-black text-xs lg:text-sm text-lime-400 shadow-lg shadow-lime-950/20"
+                      >
+                        <Smartphone className="w-4 h-4 lg:w-5 lg:h-5 text-lime-500" />
+                        LOGARE RAPIDĂ PRIN SMS (FĂRĂ PAROLĂ)
+                      </button>
+                    </div>
 
-                <div className="flex items-center gap-4 py-1">
-                  <div className="flex-grow border-t border-white/5"></div>
-                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">sau cu telefon</span>
-                  <div className="flex-grow border-t border-white/5"></div>
-                </div>
+                    <div className="flex items-center gap-4 py-1">
+                      <div className="flex-grow border-t border-white/5"></div>
+                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">sau cu telefon</span>
+                      <div className="flex-grow border-t border-white/5"></div>
+                    </div>
+                  </>
+                )}
 
                 {errorDetails ? (
                   <motion.div 
@@ -408,81 +456,151 @@ export default function PlayerAuthPage() {
                 ) : null}
 
                 {/* Standard Form */}
-                <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-3 lg:space-y-4">
+                <form onSubmit={authMode === 'login' ? handleLogin : authMode === 'forgot' ? handleForgotPassword : authMode === 'reset' ? handleResetPassword : handleRegister} className="space-y-3 lg:space-y-4">
                    {authMode === 'signup' && (
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nume Complet</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
                           <input 
-                            type="text"
-                            placeholder="Alex Ionescu"
-                            className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            required
+                             type="text"
+                             placeholder="Alex Ionescu"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
+                             value={fullName}
+                             onChange={e => setFullName(e.target.value)}
+                             required
                           />
                         </div>
                       </div>
                    )}
 
-                   <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Număr Telefon</label>
-                      <div className="relative">
-                        <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
-                        <input 
-                           type="tel"
-                           placeholder="07XX XXX XXX"
-                           className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all font-mono tracking-wider"
-                           value={phone}
-                           onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                           required
-                        />
+                   {authMode === 'signup' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Email (Opțional)</label>
+                        <div className="relative">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                          <input 
+                             type="email"
+                             placeholder="alex@exemplu.ro"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
+                             value={email}
+                             onChange={e => setEmail(e.target.value)}
+                          />
+                        </div>
                       </div>
-                   </div>
+                   )}
 
-                   <div className="space-y-1.5">
-                      <div className="flex justify-between items-center ml-1">
-                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Parolă</label>
-                        {authMode === 'login' && (
-                           <button type="button" onClick={() => setAuthMode('otp')} className="text-[9px] font-bold text-lime-500 hover:text-white transition-colors uppercase tracking-widest">Ai uitat-o?</button>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
-                        <input 
-                           type="password"
-                           placeholder="••••••••"
-                           className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
-                           value={password}
-                           onChange={e => setPassword(e.target.value)}
-                           required
-                        />
-                      </div>
-                   </div>
+                   {(authMode === 'login' || authMode === 'forgot' || authMode === 'reset') && (
+                     <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Telefon sau Email</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                          <input 
+                             type="text"
+                             placeholder="07XX XXX XXX sau adresa de email"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all disabled:opacity-50"
+                             value={identifier}
+                             onChange={e => setIdentifier(e.target.value)}
+                             required
+                             disabled={authMode === 'reset'}
+                          />
+                        </div>
+                     </div>
+                   )}
+
+                   {authMode === 'signup' && (
+                     <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Număr Telefon</label>
+                        <div className="relative">
+                          <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                          <input 
+                             type="tel"
+                             placeholder="07XX XXX XXX"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all font-mono tracking-wider"
+                             value={phone}
+                             onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                             required
+                          />
+                        </div>
+                     </div>
+                   )}
+
+                   {authMode === 'reset' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex justify-between">Cod Resetare Primit <span className="text-lime-500/60 lowercase italic tracking-normal">Test: 123456</span></label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                          <input 
+                             type="text"
+                             placeholder="Cod din 6 cifre"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm tracking-widest font-mono focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
+                             value={otp}
+                             onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                             required
+                          />
+                        </div>
+                     </div>
+                   )}
+
+                   {authMode !== 'forgot' && (
+                     <div className="space-y-1.5">
+                        <div className="flex justify-between items-center ml-1">
+                          <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{authMode === 'reset' ? 'Noua Parolă' : 'Parolă'}</label>
+                          {authMode === 'login' && (
+                             <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-bold text-lime-500 hover:text-white transition-colors uppercase tracking-widest">Ai uitat-o?</button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                          <input 
+                             type="password"
+                             placeholder="••••••••"
+                             className="w-full bg-slate-900 border border-white/5 rounded-xl lg:rounded-2xl py-3.5 pl-11 pr-5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-lime-500/50 transition-all"
+                             value={password}
+                             onChange={e => setPassword(e.target.value)}
+                             required
+                             minLength={authMode === 'signup' || authMode === 'reset' ? 6 : 1}
+                          />
+                        </div>
+                     </div>
+                   )}
 
                    <button 
                       type="submit" 
-                      disabled={loading || phone.length < 10 || password.length < 4}
+                      disabled={loading || (authMode !== 'forgot' && password.length < 4) || ((authMode === 'login' || authMode === 'forgot' || authMode === 'reset') ? !identifier : phone.length < 10) || (authMode === 'reset' && otp.length < 6)}
                       className="w-full bg-lime-500 hover:bg-lime-400 text-black font-black py-4 rounded-xl lg:rounded-2xl transition-all shadow-lg shadow-lime-500/10 disabled:opacity-50 mt-2 flex items-center justify-center gap-2 group"
                     >
-                      {loading ? 'Se încarcă...' : (authMode === 'login' ? 'Intră în Cont' : 'Creează Cont')}
+                      {loading ? 'Se încarcă...' : (authMode === 'login' ? 'Intră în Cont' : authMode === 'forgot' ? 'Trimite Cod Reset' : authMode === 'reset' ? 'Schimbă Parola' : 'Creează Cont')}
                       {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> }
                    </button>
                 </form>
 
                 {/* Footer Switch */}
-                <div className="pt-2 lg:pt-4 border-t border-white/5 text-center">
-                   <p className="text-xs lg:text-sm text-slate-500">
-                      {authMode === 'login' ? "Nu ai cont?" : "Ai deja cont?"} 
+                {(authMode === 'forgot' || authMode === 'reset') ? (
+                  <div className="pt-2 lg:pt-4 border-t border-white/5 text-center">
+                    <p className="text-xs lg:text-sm text-slate-500">
+                      Ți-ai amintit parola?
                       <button 
-                        onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                        onClick={() => setAuthMode('login')}
                         className="ml-2 text-lime-500 font-bold hover:text-white transition-colors underline decoration-lime-500/30 underline-offset-4"
                       >
-                         {authMode === 'login' ? "Înregistrare" : "Autentificare"}
+                         Autentificare
                       </button>
-                   </p>
-                 </div>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="pt-2 lg:pt-4 border-t border-white/5 text-center">
+                     <p className="text-xs lg:text-sm text-slate-500">
+                        {authMode === 'login' ? "Nu ai cont?" : "Ai deja cont?"} 
+                        <button 
+                          onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                          className="ml-2 text-lime-500 font-bold hover:text-white transition-colors underline decoration-lime-500/30 underline-offset-4"
+                        >
+                           {authMode === 'login' ? "Înregistrare" : "Autentificare"}
+                        </button>
+                     </p>
+                   </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

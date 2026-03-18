@@ -45,6 +45,12 @@ public class PlayerUser {
     @Column(name = "matches_played")
     private Integer matchesPlayed = 0;
 
+    @Column(name = "phone_verified")
+    private Boolean phoneVerified = false;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -132,6 +138,22 @@ public class PlayerUser {
 
     public void setMatchesPlayed(Integer matchesPlayed) {
         this.matchesPlayed = matchesPlayed;
+    }
+
+    public Boolean getPhoneVerified() {
+        return phoneVerified;
+    }
+
+    public void setPhoneVerified(Boolean phoneVerified) {
+        this.phoneVerified = phoneVerified;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public LocalDateTime getCreatedAt() {

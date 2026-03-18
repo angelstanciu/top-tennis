@@ -46,6 +46,19 @@ public class EmailService {
         }
     }
 
+    public void sendEmail(String to, String subject, String text) {
+        try {
+            org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+            message.setFrom(FROM_EMAIL);
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(text);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send email to " + to + ". Check SMTP config: " + e.getMessage());
+        }
+    }
+
     private String buildBookingHtml(Booking booking) {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         String dateStr = booking.getBookingDate().format(dateFormatter);

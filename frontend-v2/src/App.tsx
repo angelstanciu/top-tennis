@@ -4,6 +4,7 @@ import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType, CourtDto, getPricePerHour, LOCATION_TAGS } from './types'
 import { fetchAvailability, fetchActiveCourts } from './api'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import fastCat from './assets/fast-cat.svg'
 
 
@@ -721,6 +722,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <Toaster richColors theme="dark" position="top-center" />
     </div>
     </div>
   )

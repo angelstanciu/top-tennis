@@ -24,7 +24,7 @@ spring:
     host: smtp.zoho.eu
     port: 465
     username: rezervari@star-arena.ro
-    password: qWiZF33Br1rc
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -54,8 +54,13 @@ google:
   auth:
     client-id: ${GOOGLE_CLIENT_ID:337840626682-f4c0aj43u6pbiba781bfhqrlfc9q0tde.apps.googleusercontent.com}
 
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:604800000}
+
 server:
   port: 8080
+  forward-headers-strategy: framework
   servlet:
     encoding:
       charset: UTF-8

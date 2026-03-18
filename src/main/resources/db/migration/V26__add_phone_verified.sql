@@ -1,0 +1,1 @@
+ALTER TABLE player_users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE;

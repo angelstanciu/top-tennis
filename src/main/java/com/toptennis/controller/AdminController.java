@@ -5,6 +5,8 @@ import com.toptennis.mapper.BookingMapper;
 import com.toptennis.model.SportType;
 import com.toptennis.service.BookingService;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -61,10 +63,10 @@ public class AdminController {
                                @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
                                @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime endTime,
-                               String note) {}
+                               @Size(max=255) String note) {}
 
     @PostMapping("/block-slot")
-    public BookingDto block(@RequestBody BlockRequest req) {
+    public BookingDto block(@RequestBody @Valid BlockRequest req) {
         return BookingMapper.toDto(bookingService.block(req.courtId, req.date, req.startTime, req.endTime, req.note));
     }
 

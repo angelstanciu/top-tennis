@@ -16,11 +16,12 @@ public class CreateBookingRequest {
     public String endTime; // HH:mm
 
     @NotBlank
-    @Size(min = 2, max = 100)
+    @Size(min = 2, max = 50)
+    @Pattern(regexp="^[^<>%$]+$", message="Numele conține caractere invalide")
     public String customerName;
 
     @NotBlank
-    @Size(min = 6, max = 30)
+    @Pattern(regexp="^\\+?[0-9\\s]{9,15}$", message="Număr de telefon invalid")
     public String customerPhone;
 
     @Email

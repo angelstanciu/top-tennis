@@ -17,6 +17,11 @@ function normalizePhone(phone: string): string {
 }
 
 async function parseError(res: Response): Promise<string> {
+  if (res.status === 401) {
+    localStorage.removeItem('playerToken')
+    localStorage.removeItem('playerUser')
+    window.location.href = '/player-auth'
+  }
   try {
     const data = await res.json();
     return data.message || 'Eroare necunoscută.';
@@ -182,24 +187,42 @@ export async function verifyPlayerOtp(phone: string, otp: string): Promise<{ tok
   return res.json()
 }
 
-export async function loginPlayer(phone: string, password: string): Promise<{ token: string, user: PlayerUser }> {
+export async function loginPlayer(identifier: string, password: string): Promise<{ token: string, user: PlayerUser }> {
   const res = await fetch(`${BASE_URL}/player/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: normalizePhone(phone), password }),
+    body: JSON.stringify({ identifier, password }),
   })
   if (!res.ok) throw new Error(await parseError(res) || 'Eroare la autentificare.')
   return res.json()
 }
 
-export async function registerPlayer(phone: string, password: string, fullName: string): Promise<{ token: string, user: PlayerUser }> {
+export async function registerPlayer(phone: string, password: string, fullName: string, email?: string): Promise<{ token: string, user: PlayerUser }> {
   const res = await fetch(`${BASE_URL}/player/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: normalizePhone(phone), password, fullName }),
+    body: JSON.stringify({ phone: normalizePhone(phone), password, fullName, email }),
   })
-  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la crearea contului.')
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la creare cont.')
   return res.json()
+}
+
+export async function forgotPassword(identifier: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/player/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier }),
+  })
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la trimitere cod de reset.')
+}
+
+export async function resetPassword(identifier: string, otp: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/player/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, otp, newPassword }),
+  })
+  if (!res.ok) throw new Error(await parseError(res) || 'Eroare la schimbarea parolei.')
 }
 
 export async function loginWithGoogle(credential: string): Promise<{ token: string, user: PlayerUser }> {
@@ -237,6 +260,17 @@ export async function linkPlayerPhone(token: string, phone: string, otp: string)
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ phone: normalizePhone(phone), otp }),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json()
+}
+
+export async function verifyUserPhone(token: string, otp: string): Promise<PlayerUser> {
+  const res = await fetch(`${BASE_URL}/player/auth/verify-phone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    // no phone needed because verify-phone just uses token directly on backend
+    body: JSON.stringify({ otp }), 
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json()

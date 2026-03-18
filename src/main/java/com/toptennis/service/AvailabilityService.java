@@ -5,6 +5,10 @@ import com.toptennis.model.Booking;
 import com.toptennis.model.Court;
 import com.toptennis.model.SportType;
 import com.toptennis.repository.BookingRepository;
+import com.toptennis.model.PlayerUser;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,13 +20,33 @@ import java.util.List;
 public class AvailabilityService {
     private final CourtService courtService;
     private final BookingRepository bookingRepository;
+    private final PlayerAuthService playerAuthService;
 
-    public AvailabilityService(CourtService courtService, BookingRepository bookingRepository) {
+    public AvailabilityService(CourtService courtService, BookingRepository bookingRepository, PlayerAuthService playerAuthService) {
         this.courtService = courtService;
         this.bookingRepository = bookingRepository;
+        this.playerAuthService = playerAuthService;
     }
 
     public List<AvailabilityDto> getAvailability(SportType sportType, LocalDate date) {
+        boolean isAdmin = false;
+        PlayerUser currentUser = null;
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String auth = request.getHeader("Authorization");
+                if (auth != null && auth.startsWith("Bearer ")) {
+                    currentUser = playerAuthService.getUserByToken(auth).orElse(null);
+                }
+                
+                org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                    isAdmin = true;
+                }
+            }
+        } catch (Exception e) {}
+
         List<Court> courts = courtService.listActive(sportType);
         List<AvailabilityDto> result = new ArrayList<>();
         for (Court court : courts) {
@@ -39,7 +63,9 @@ public class AvailabilityService {
                 tr.start = b.getStartTime().toString();
                 tr.end = b.getEndTime().toString();
                 tr.status = b.getStatus().name();
-                tr.customerName = b.getCustomerName();
+                boolean isOwner = currentUser != null && b.getPlayerUser() != null && b.getPlayerUser().getId().equals(currentUser.getId());
+                boolean canViewPii = isAdmin || isOwner;
+                tr.customerName = canViewPii ? b.getCustomerName() : "Ocupat";
                 if (b.getPlayerUser() != null) {
                     tr.playerMatchesCount = b.getPlayerUser().getMatchesPlayed();
                 }
