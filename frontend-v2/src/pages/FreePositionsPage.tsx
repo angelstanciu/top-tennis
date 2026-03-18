@@ -128,11 +128,73 @@ export default function FreePositionsPage() {
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    fetchAvailability(date, sport)
-      .then(setData)
-      .finally(() => setLoading(false))
+    setTableLoading(true)
+    const base = import.meta.env.VITE_API_BASE_URL || '/api'
+    const url = new URL(`${window.location.origin}${base}/availability`)
+    url.searchParams.set('date', date)
+    url.searchParams.set('sportType', sport)
+    url.searchParams.set('_', String(Date.now()))
+    
+    fetch(url.toString(), { cache: 'no-store' })
+      .then(res => res.json())
+      .then(async all => {
+         const fresh = all.filter((d: any) => {
+           if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
+           if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+           return true
+         })
+         setData(fresh)
+      })
+      .catch(console.error)
+      .finally(() => setTableLoading(false))
   }, [date, sport])
+
+  useEffect(() => {
+    if (data.length === 0) {
+      setText('')
+      return
+    }
+    const header = formatHeader(sport, courtId ? data.find(d => d.court.id === Number(courtId))?.court : null)
+    
+    let body = ''
+    const dayStart = 8 * 60, dayEnd = 24 * 60
+
+    const processRow = (row: AvailabilityDto) => {
+      const raw: Array<{ start: number, end: number }> = []
+      for (const fr of row.free || []) {
+        const s = Math.max(dayStart, parseHHmm(fr.start))
+        const e = Math.min(dayEnd, parseHHmm(fr.end))
+        if (e > s) raw.push({ start: s, end: e })
+      }
+      raw.sort((a, b) => a.start - b.start)
+      const merged: typeof raw = []
+      for (const r of raw) {
+        const last = merged[merged.length - 1]
+        if (!last || r.start > last.end) merged.push({ ...r })
+        else last.end = Math.max(last.end, r.end)
+      }
+      return merged.map(seg => `✅ *${fmtHHmm(seg.start)} - ${fmtHHmm(seg.end)}*`).join('\n')
+    }
+
+    if (courtId) {
+      const row = data.find(d => d.court.id === Number(courtId))
+      if (!row) { setText(''); return }
+      body = processRow(row)
+    } else {
+      const parts: string[] = []
+      for (const row of data) {
+        const slotsText = processRow(row)
+        if (slotsText) {
+          parts.push(`🏟️ ${row.court.name}:\n${slotsText}`)
+        }
+      }
+      body = parts.join('\n\n')
+    }
+
+    const intro = `Salut! 👋\nAcestea sunt pozițiile libere de astăzi pentru ${sportLabelUpper(sport)}.\n`
+    const footer = `\n🎾 Pentru rezervări rapide, accesați: www.star-arena.ro ! Vă așteptăm cu drag! 🚀`
+    setText(`${intro}\n${body}\n${footer}`.trim())
+  }, [data, courtId, sport, date])
 
   useEffect(() => {
     if (!text) return
@@ -226,94 +288,7 @@ export default function FreePositionsPage() {
     return `${dd} ${months[monthIdx]} ${y}`
   }
 
-  // Always fetch fresh availability (no cache) before generating
-  async function fetchAvailabilityFresh(dateISO: string, s: SportType): Promise<AvailabilityDto[]> {
-    const base = import.meta.env.VITE_API_BASE_URL || '/api'
-    const url = new URL(`${window.location.origin}${base}/availability`)
-    url.searchParams.set('date', dateISO)
-    url.searchParams.set('sportType', s)
-    url.searchParams.set('_', String(Date.now()))
-    const res = await fetch(url.toString(), { cache: 'no-store' })
-    if (!res.ok) throw new Error('Nu am putut incarca disponibilitatea')
-    return res.json()
-  }
 
-  async function generate() {
-    setLoading(true)
-    try {
-      const all = await fetchAvailabilityFresh(date, sport)
-      const fresh = all.filter(d => {
-        if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
-        return true
-      })
-      setData(fresh)
-      
-      const header = formatHeader(sport, courtId ? fresh.find(d => d.court.id === Number(courtId))?.court : null)
-      const dateLine = formatDateLine(date)
-      
-      let body = ''
-      const dayStart = 8 * 60, dayEnd = 24 * 60
-
-      const processRow = (row: AvailabilityDto) => {
-        const raw: Array<{ start: number, end: number }> = []
-        for (const fr of row.free || []) {
-          const s = Math.max(dayStart, parseHHmm(fr.start))
-          const e = Math.min(dayEnd, parseHHmm(fr.end))
-          if (e > s) raw.push({ start: s, end: e })
-        }
-        raw.sort((a, b) => a.start - b.start)
-        const merged: typeof raw = []
-        for (const r of raw) {
-          const last = merged[merged.length - 1]
-          if (!last || r.start > last.end) merged.push({ ...r })
-          else last.end = Math.max(last.end, r.end)
-        }
-        const expanded: Array<{ start: number, end: number }> = []
-        for (const seg of merged) {
-          expanded.push(...splitRange(seg.start, seg.end))
-        }
-        return expanded.map(seg => `✅ *${fmtHHmm(seg.start)} - ${fmtHHmm(seg.end)}*`).join('\n')
-      }
-
-      if (courtId) {
-        const row = fresh.find(d => d.court.id === Number(courtId))
-        if (!row) { setText(''); return }
-        body = processRow(row)
-      } else {
-        // Multi-court
-        const parts: string[] = []
-        for (const row of fresh) {
-          const slotsText = processRow(row)
-          if (slotsText) {
-            parts.push(`🏟️ ${row.court.name}:\n${slotsText}`)
-          }
-        }
-        body = parts.join('\n\n')
-      }
-
-      const intro = `Salut! 👋\nAcestea sunt pozițiile libere de astăzi pentru ${sportLabelUpper(sport)}.\n`
-      const footer = `\n🎾 Pentru rezervări rapide, accesați: www.star-arena.ro ! Vă așteptăm cu drag! 🚀`
-      setText(`${intro}\n${body}\n${footer}`.trim())
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleLoadTable() {
-    setTableLoading(true)
-    try {
-      const all = await fetchAvailabilityFresh(date, sport)
-      const fresh = all.filter(d => {
-        if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
-        return true
-      })
-      setData(fresh)
-    } finally {
-      setTableLoading(false)
-    }
-  }
 
   async function copy() {
     try {
@@ -580,14 +555,8 @@ export default function FreePositionsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button className="btn w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleLoadTable} disabled={tableLoading}>
-            {tableLoading ? 'Se incarcă...' : 'Încarcă Tabel'}
-          </button>
-          <button className="btn w-full bg-sky-600 hover:bg-sky-700 text-white" onClick={generate} disabled={loading}>
-            {loading ? 'Se generează...' : 'Generează Mesaje & Poster'}
-          </button>
-          <button className={`px-3 py-1.5 rounded border border-lime-300 bg-lime-50 hover:bg-lime-100 text-lime-800 font-bold transition-all sm:col-span-2 ${copiedImage ? "ring-2 ring-lime-400" : ""}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
+        <div className="mt-3 grid grid-cols-1 gap-2">
+          <button className={`py-3 rounded-[1rem] bg-lime-50 hover:bg-lime-100 border border-lime-300 shadow-sm text-lime-800 font-bold transition-all ${copiedImage ? "ring-2 ring-lime-400" : ""}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
             {imageCopying ? 'Se randeaza...' : (copiedImage ? 'Imagine Copiată!' : 'Copiaza Poster (Imagine)')}
           </button>
         </div>
@@ -693,7 +662,7 @@ export default function FreePositionsPage() {
            </button>
         </div>
         <div className="p-4 bg-white">
-           <pre className="text-sm whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-2 bg-slate-50 rounded-lg border border-slate-100">{loading ? 'Se incarca…' : (text || 'Alege sportul, terenul si data apoi apasa Genereaza.')}</pre>
+           <pre className="text-sm whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-2 bg-slate-50 rounded-lg border border-slate-100">{tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}</pre>
         </div>
       </div>
 
