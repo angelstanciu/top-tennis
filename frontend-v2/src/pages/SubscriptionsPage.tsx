@@ -11,7 +11,7 @@ export default function SubscriptionsPage() {
       title: "Early Booking",
       subtitle: "Până în ora 14:00",
       price: "50",
-      features: ["Lumină naturală inclusă", "Rezervare prioritară", "Anulare flexibilă"],
+      features: ["Parcare privată gratuită", "Rezervare prioritară", "Anulare flexibilă"],
       color: "from-indigo-600 to-blue-600",
       bg: "bg-indigo-500/10"
     },
@@ -71,7 +71,7 @@ export default function SubscriptionsPage() {
                Evoluează la <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">Nivelul Următor</span>
              </h1>
              <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-               Te așteaptă 4 terenuri de ultimă generație <span className="text-white font-bold">PREMIER PADEL</span>, dotate cu mocheta PGR și nocturnă LED profesională.
+               Te așteaptă 5 terenuri de ultimă generație <span className="text-white font-bold">PREMIER PADEL</span>, dotate cu mocheta PGR și nocturnă LED profesională.
              </p>
           </div>
 
