@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
-import { Phone, Check, X, MessageSquare, Clock, Filter, Trash2 } from 'lucide-react'
+import { Phone, Check, X, MessageSquare, Clock, Filter, Trash2, Calendar } from 'lucide-react'
 import AdminHeader from '../components/AdminHeader'
 
 export default function AdminSubscriptionRequestsPage() {
@@ -11,6 +11,8 @@ export default function AdminSubscriptionRequestsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('PENDING')
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [approveId, setApproveId] = useState<number | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('adminAuth')
@@ -45,26 +47,51 @@ export default function AdminSubscriptionRequestsPage() {
     fetchRequests()
   }, [auth])
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Ești sigur că vrei să ștergi această cerere?")) return;
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      const res = await fetch(`/api/admin/subscriptions/requests/${id}`, {
+      const res = await fetch(`/api/admin/subscriptions/requests/${deleteId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Basic ${auth}`
         }
       })
       if (res.ok) {
-        setRequests(prev => prev.filter(r => r.id !== id))
+        setRequests(prev => prev.filter(r => r.id !== deleteId))
       }
     } catch (err) {
       console.error(err)
+    } finally {
+      setDeleteId(null);
+    }
+  }
+
+  const confirmApprove = async (navAway: boolean) => {
+    if (!approveId) return;
+    try {
+      const res = await fetch(`/api/admin/subscriptions/requests/${approveId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${auth}`
+        },
+        body: JSON.stringify({ status: 'APPROVED' })
+      })
+      if (res.ok) {
+        setRequests(prev => prev.map(r => r.id === approveId ? { ...r, status: 'APPROVED' } : r))
+        if (navAway) navigate('/admin');
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setApproveId(null);
     }
   }
 
   const handleStatusUpdate = async (id: number, status: string) => {
     if (status === 'APPROVED') {
-       alert("Nu uita să creezi abonamentul din secțiunea 'Adaugă Rezervare/Abonament'!");
+      setApproveId(id);
+      return;
     }
     try {
       const res = await fetch(`/api/admin/subscriptions/requests/${id}/status`, {
@@ -145,7 +172,7 @@ export default function AdminSubscriptionRequestsPage() {
                 <CardContent className="pt-6 relative">
                    {req.status === 'APPROVED' && (
                       <button 
-                         onClick={() => handleDelete(req.id)}
+                         onClick={() => setDeleteId(req.id)}
                          className="absolute top-0 right-0 -mt-[4.5rem] mr-4 p-2 bg-white rounded-xl shadow-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 border border-slate-100 transition-all z-10"
                          title="Șterge definitiv"
                       >
@@ -168,7 +195,7 @@ export default function AdminSubscriptionRequestsPage() {
                    {req.status === 'PENDING' && (
                      <div className="flex gap-2">
                         <button 
-                          onClick={() => handleDelete(req.id)}
+                          onClick={() => setDeleteId(req.id)}
                           className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200 font-bold text-xs uppercase transition-all shadow-sm"
                           title="Șterge Cererea"
                         >
@@ -186,7 +213,7 @@ export default function AdminSubscriptionRequestsPage() {
                    {req.status === 'CONTACTED' && (
                      <div className="flex gap-2">
                         <button 
-                          onClick={() => handleDelete(req.id)}
+                          onClick={() => setDeleteId(req.id)}
                           className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200 font-bold text-xs uppercase transition-all shadow-sm"
                           title="Șterge Cererea"
                         >
@@ -214,6 +241,52 @@ export default function AdminSubscriptionRequestsPage() {
           </div>
         )}
       </main>
+
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 mb-2">Confirmare Ștergere</h3>
+              <p className="text-sm text-slate-500 font-medium">Ești sigur că vrei să ștergi această cerere? Această acțiune este ireversibilă.</p>
+            </div>
+            <div className="flex bg-slate-50 p-4 gap-3 border-t border-slate-100">
+               <button onClick={() => setDeleteId(null)} className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Anulează</button>
+               <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-bold bg-rose-500 text-white shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 text-sm">Șterge Cererea</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {approveId !== null && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+             <div className="bg-emerald-500 p-6 text-center text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500 shadow-xl shadow-emerald-500/20">
+                  <Calendar className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-black tracking-tight relative z-10">Aprobare Cerere</h3>
+             </div>
+             <div className="p-6 text-center">
+                <p className="text-sm text-slate-600 font-medium leading-relaxed mb-6">
+                  Ai aprobat cererea de abonament! Statusul va fi schimbat în Finalizat.<br/><br/>
+                  <strong className="text-emerald-600">Nu uita să creezi abonamentul propriu-zis în calendar</strong> pentru a rezerva slot-urile aferente.
+                </p>
+                <div className="flex flex-col gap-3">
+                   <button onClick={() => confirmApprove(true)} className="w-full py-4 rounded-xl font-bold bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 flex items-center justify-center gap-2">
+                     <Calendar className="w-5 h-5" /> Mergi la Programare Abonamente
+                   </button>
+                   <button onClick={() => confirmApprove(false)} className="w-full py-3.5 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all">
+                     Închide (Programez mai târziu)
+                   </button>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
