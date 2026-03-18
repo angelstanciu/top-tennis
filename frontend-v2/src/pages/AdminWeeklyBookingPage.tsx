@@ -194,8 +194,8 @@ export default function AdminWeeklyBookingPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div className="space-y-1 md:col-span-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Prima Dată *</label>
                     <div className="relative flex items-stretch bg-slate-50 rounded-xl overflow-hidden shadow-sm h-12 border border-slate-200">
                       <button type="button" className="px-3 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-r border-slate-200 focus:outline-none transition-colors" onClick={() => shiftDate(-1)}>{'\u2039'}</button>
@@ -213,7 +213,7 @@ export default function AdminWeeklyBookingPage() {
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="space-y-1 md:col-span-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Start *</label>
                     <div className="relative w-full">
                       <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={startTime} onChange={e => setStartTime(e.target.value)}>
@@ -224,7 +224,7 @@ export default function AdminWeeklyBookingPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 md:col-span-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Stop *</label>
                     <div className="relative w-full">
                       <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={endTime} onChange={e => setEndTime(e.target.value)}>
