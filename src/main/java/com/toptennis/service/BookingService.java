@@ -279,7 +279,14 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public java.util.List<Booking> findByDateAndSport(java.time.LocalDate date, com.toptennis.model.SportType sportType) {
-        return bookingRepository.findByDateAndSportType(date, sportType);
+        List<Booking> list = bookingRepository.findByDateAndSportType(date, sportType);
+        for (Booking b : list) {
+            if (b.getPlayerUser() != null) {
+                long count = countMatchesPlayed(b.getPlayerUser().getId());
+                b.getPlayerUser().setMatchesPlayed((int)count);
+            }
+        }
+        return list;
     }
 
     // Computes matches played dynamically: past, non-cancelled bookings linked to this user

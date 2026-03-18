@@ -73,6 +73,7 @@ export default function AdminPage() {
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [showCancelled, setShowCancelled] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const dateInputRef = React.useRef<HTMLInputElement | null>(null)
 
@@ -234,6 +235,9 @@ export default function AdminPage() {
 
   const filteredBookings = useMemo(() => {
     let list = courtId ? bookings.filter(b => b.court?.id === courtId) : bookings
+    if (!showCancelled) {
+      list = list.filter(b => b.status !== 'CANCELLED')
+    }
     if (searchTerm) {
       const low = searchTerm.toLowerCase()
       list = list.filter(b => 
@@ -671,6 +675,18 @@ export default function AdminPage() {
                 )}
               </div>
               
+              <div className="flex bg-slate-100/50 p-1.5 rounded-2xl shadow-inner w-full sm:w-auto border border-slate-100 items-center justify-between sm:justify-start gap-4 mr-2">
+                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-500 pl-2">
+                    <input 
+                      type="checkbox" 
+                      className="rounded text-sky-500 focus:ring-sky-500" 
+                      checked={showCancelled} 
+                      onChange={e => setShowCancelled(e.target.checked)} 
+                    />
+                    Arată Anulate
+                 </label>
+              </div>
+
               <div className="flex bg-slate-100/50 p-1.5 rounded-2xl shadow-inner w-full sm:w-auto border border-slate-100">
                 <button 
                   onClick={() => setViewMode('list')}
