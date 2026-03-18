@@ -64,7 +64,7 @@ public class AvailabilityService {
                 tr.end = b.getEndTime().toString();
                 tr.status = b.getStatus().name();
                 boolean isOwner = currentUser != null && b.getPlayerUser() != null && b.getPlayerUser().getId().equals(currentUser.getId());
-                boolean canViewPii = isAdmin || isOwner;
+                boolean canViewPii = isAdmin || isOwner || b.getStatus() == com.toptennis.model.BookingStatus.BLOCKED;
                 tr.customerName = canViewPii ? b.getCustomerName() : "Ocupat";
                 if (b.getPlayerUser() != null) {
                     tr.playerMatchesCount = b.getPlayerUser().getMatchesPlayed();

@@ -34,7 +34,7 @@ public class BookingController {
         } else {
             end = LocalTime.parse(req.endTime);
         }
-        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail, token);
+        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail, token, req.bypassDoubleBooking);
         return BookingMapper.toDto(b);
     }
 
@@ -58,7 +58,7 @@ public class BookingController {
         } catch (Exception e) {}
 
         boolean isOwner = currentUser != null && b.getPlayerUser() != null && b.getPlayerUser().getId().equals(currentUser.getId());
-        if (!isAdmin && !isOwner) {
+        if (!isAdmin && !isOwner && b.getStatus() != com.toptennis.model.BookingStatus.BLOCKED) {
             dto.customerName = "Ocupat";
             dto.customerPhone = null;
             dto.customerEmail = null;
