@@ -54,10 +54,13 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "617835105268-m8h07g94gkvsn669r170n09vrt6688ee.apps.googleusercontent.com"
 
+import CookieConsent from './components/CookieConsent'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <RouterProvider router={router} />
+      <CookieConsent />
     </GoogleOAuthProvider>
   </React.StrictMode>
 )

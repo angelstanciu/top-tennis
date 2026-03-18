@@ -19,7 +19,30 @@ export default function Footer() {
           <Link to="/termeni" className="hover:text-emerald-400 transition-colors">Termeni și Condiții</Link>
           <Link to="/confidentialitate" className="hover:text-emerald-400 transition-colors">Politica de Confidențialitate</Link>
           <Link to="/cookies" className="hover:text-emerald-400 transition-colors">Politica de Cookies</Link>
-          <Link to="https://anpc.ro/" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">ANPC</Link>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6">
+          <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener noreferrer" className="group flex border border-slate-700/60 rounded-lg overflow-hidden bg-slate-800/50 text-white items-center w-[230px] h-[60px] hover:border-emerald-500/50 hover:bg-slate-800 transition-all shadow-md">
+            <div className="w-[60px] h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 to-blue-950 border-r border-slate-700/60 shrink-0">
+              <span className="text-[9px] font-black text-yellow-400 tracking-wider">ANPC</span>
+              <svg className="w-6 h-6 text-yellow-500 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            </div>
+            <div className="flex-1 px-3 py-1.5 leading-tight flex flex-col justify-center">
+              <span className="text-[10px] text-slate-400 font-bold tracking-widest mb-0.5">ROMÂNIA</span>
+              <span className="text-[11px] font-black uppercase leading-tight text-slate-200 group-hover:text-white transition-colors">Soluționarea<br/><span className="text-emerald-400">Alternativă</span> a litigiilor</span>
+            </div>
+          </a>
+          
+          <a href="https://ec.europa.eu/consumers/odr/main/index.cfm?event=main.home2.show&lng=RO" target="_blank" rel="noopener noreferrer" className="group flex border border-slate-700/60 rounded-lg overflow-hidden bg-slate-800/50 text-white items-center w-[230px] h-[60px] hover:border-blue-500/50 hover:bg-slate-800 transition-all shadow-md">
+            <div className="w-[60px] h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-700 to-blue-900 border-r border-slate-700/60 shrink-0">
+              <span className="text-[9px] font-black text-yellow-400 tracking-wider">EUROPA</span>
+              <svg className="w-6 h-6 text-yellow-400 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+            </div>
+            <div className="flex-1 px-3 py-1.5 leading-tight flex flex-col justify-center">
+              <span className="text-[10px] text-slate-400 font-bold tracking-widest mb-0.5">UNIUNEA EUROPEANĂ</span>
+              <span className="text-[11px] font-black uppercase leading-tight text-slate-200 group-hover:text-white transition-colors">Soluționarea<br/><span className="text-blue-400">Online</span> a litigiilor</span>
+            </div>
+          </a>
         </div>
       </div>
     </footer>
