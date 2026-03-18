@@ -956,8 +956,9 @@ export default function TimelineGrid({
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
-        // If range exceeds operating hours defined in ticks, it is invalid.
-        if (!t || !next) return false
+        // If range exceeds operating hours defined in ticks, it is invalid...
+        // EXCEPT if the user is an Admin! Admins have supreme rights to book past operating hours/midnight.
+        if (!t || !next) return !!onAdminClick
         
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))

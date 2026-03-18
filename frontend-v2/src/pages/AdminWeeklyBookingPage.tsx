@@ -185,7 +185,7 @@ export default function AdminWeeklyBookingPage() {
                     <select required className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={courtId} onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}>
                       <option value="">-- Selectează un teren --</option>
                       {filteredCourts.map(c => (
-                        <option key={c.id} value={c.id}>{c.sportType} {c.name}</option>
+                        <option key={c.id} value={c.id}>{c.sportType === 'TENNIS' ? 'Teren' : c.sportType === 'BEACH_VOLLEY' ? 'Volei Plajă' : c.sportType === 'TABLE_TENNIS' ? 'Tenis Masă' : c.sportType === 'FOOTVOLLEY' ? 'Fotbal Tenis' : c.sportType === 'BASKETBALL' ? 'Baschet' : c.sportType === 'PADEL' ? 'Padel' : c.sportType} {c.name}</option>
                       ))}
                     </select>
                   </div>

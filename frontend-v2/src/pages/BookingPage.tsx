@@ -29,6 +29,9 @@ export default function BookingPage() {
   const isLoggedUser = useMemo(() => {
     try { return !!JSON.parse(localStorage.getItem('playerData') || '{}').phoneNumber } catch { return false }
   }, [])
+  const isAdminUser = useMemo(() => {
+    try { return !!localStorage.getItem('adminAuth') } catch { return false }
+  }, [])
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function BookingPage() {
   }, [])
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
+  const [requireBypassApproval, setRequireBypassApproval] = useState(false)
   const [successVisible, setSuccessVisible] = useState(false)
   const [pendingVisible, setPendingVisible] = useState(false)
   const nav = useNavigate()
@@ -130,8 +134,8 @@ export default function BookingPage() {
     return ' - ' + parts.join(' - ')
   }, [court])
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function onSubmit(e?: React.FormEvent, bypassDoubleBooking = false) {
+    if (e) e.preventDefault()
     if (!courtId || !date || !startTime || !endTime) return
     validatePhone()
     if (phoneInputRef.current && !phoneInputRef.current.checkValidity()) {
@@ -148,8 +152,9 @@ export default function BookingPage() {
         startTime,
         endTime: normalizedEnd,
         customerName: name,
-        customerPhone: phone,
+        customerPhone: phone || (isAdminUser ? '0000000000' : ''),
         customerEmail: email || undefined,
+        bypassDoubleBooking,
       })
       if (result && result.status) {
           bookingResultStatus = result.status
@@ -174,7 +179,12 @@ export default function BookingPage() {
           setSuccessVisible(true)
       }
     } catch (err: any) {
-      showUnavailable(err.message || 'Se pare că a apărut o problemă de comunicare cu serverul.')
+      if (err.message && err.message.includes('rezervare confirmată sau în așteptare')) {
+        setRequireBypassApproval(true)
+        showUnavailable(err.message)
+      } else {
+        showUnavailable(err.message || 'Se pare că a apărut o problemă de comunicare cu serverul.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -254,7 +264,7 @@ export default function BookingPage() {
             </div>
             
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Telefon *</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Telefon {isAdminUser ? '(Opțional pt Admin)' : '*'}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -262,13 +272,13 @@ export default function BookingPage() {
                 <input
                   ref={phoneInputRef}
                   type="tel"
-                  className={`w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none ${isLoggedUser ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10'} transition-all font-semibold text-slate-800`}
+                  className={`w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none ${isLoggedUser && !isAdminUser ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10'} transition-all font-semibold text-slate-800`}
                   value={phone}
-                  onChange={e => !isLoggedUser && setPhone(e.target.value)}
-                  onInput={(e) => !isLoggedUser && validatePhone(e.currentTarget)}
-                  placeholder="07XX XXX XXX"
-                  required
-                  readOnly={isLoggedUser}
+                  onChange={e => (!isLoggedUser || isAdminUser) && setPhone(e.target.value)}
+                  onInput={(e) => (!isLoggedUser || isAdminUser) && validatePhone(e.currentTarget)}
+                  placeholder={isAdminUser ? "Opțional" : "07XX XXX XXX"}
+                  required={!isAdminUser}
+                  readOnly={isLoggedUser && !isAdminUser}
                 />
               </div>
             </div>
@@ -289,10 +299,10 @@ export default function BookingPage() {
               </div>
 
               {/* Midnight/Night Warning */}
-              {(startTime && endTime) && (startTime >= '22:00' || endTime === '24:00' || endTime === '00:00' || startTime < '06:00') && (
+              {(startTime && endTime) && (endTime === '00:00' || (endTime !== '24:00' && endTime <= startTime)) && (
                 <div className="mt-3 p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-[10px] font-black uppercase tracking-tight flex gap-2 items-center animate-pulse">
                   <span className="shrink-0 text-lg">🌙</span>
-                  <span className="leading-tight text-left">Atenție: Rezervările care depășesc ora 24:00 sau sunt efectuate noaptea necesită aprobarea administratorului din motive logistice.</span>
+                  <span className="leading-tight text-left">Atenție: Rezervările nocturne (care depășesc miezul nopții) necesită aprobarea administratorului din motive logistice.</span>
                 </div>
               )}
 
@@ -330,9 +340,22 @@ export default function BookingPage() {
               <p className="text-slate-600 font-medium leading-relaxed mb-8 text-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 {unavailableMessage}
               </p>
+              {requireBypassApproval && (
+                <button
+                  onClick={() => {
+                    setUnavailableVisible(false)
+                    setRequireBypassApproval(false)
+                    onSubmit(undefined, true)
+                  }}
+                  className="w-full py-4 bg-emerald-500 text-white rounded-xl font-bold text-lg hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 mb-3"
+                >
+                  Continuă (Necesită Aprobare)
+                </button>
+              )}
               <button
                 onClick={() => {
                   setUnavailableVisible(false)
+                  setRequireBypassApproval(false)
                   redirectToGrid()
                 }}
                 className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold text-lg hover:bg-slate-900 active:scale-95 transition-all shadow-lg shadow-slate-900/20"
