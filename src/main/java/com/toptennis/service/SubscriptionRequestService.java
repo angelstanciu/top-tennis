@@ -36,4 +36,11 @@ public class SubscriptionRequestService {
     public List<SubscriptionRequest> getPlayerRequests(Integer playerId) {
         return repository.findByPlayerId(playerId);
     }
+
+    public void deleteRequest(Long id) {
+        if (!repository.existsById(id)) {
+            throw new RuntimeException("Cererea nu a fost găsită.");
+        }
+        repository.deleteById(id);
+    }
 }

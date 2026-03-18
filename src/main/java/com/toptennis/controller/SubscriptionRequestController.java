@@ -47,4 +47,13 @@ public class SubscriptionRequestController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+    @DeleteMapping("/admin/subscriptions/requests/{id}")
+    public ResponseEntity<?> deleteRequest(@PathVariable Long id) {
+        try {
+            service.deleteRequest(id);
+            return ResponseEntity.ok(Map.of("message", "Cererea a fost ștearsă avec succes."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
