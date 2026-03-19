@@ -143,6 +143,32 @@ public class PlayerAuthController {
                 .toList();
     }
 
+    @GetMapping("/debug/history/{phone}")
+    public List<BookingDto> getDebugHistory(@PathVariable String phone) {
+        try {
+            return bookingService.getBookingRepository().findByCustomerPhoneOrderByBookingDateDesc(phone).stream()
+                .map(BookingMapper::toDto)
+                .toList();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping("/debug/all")
+    public List<BookingDto> getDebugAll() {
+        try {
+            List<BookingDto> result = bookingService.getBookingRepository().findAll().stream()
+                .map(BookingMapper::toDto)
+                .toList();
+            System.out.println("TOTAL DB BOOKINGS: " + result.size());
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
     public record UpdateProfileRequest(
             @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[^<>%$]+$", message="Nume invalid") String fullName, 
             @Email String email, 

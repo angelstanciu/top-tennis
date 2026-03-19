@@ -43,11 +43,12 @@ export interface BookingDto {
   customerName: string
   customerPhone: string
   customerEmail?: string
-  status: 'CONFIRMED' | 'CANCELLED' | 'BLOCKED' | 'PENDING_APPROVAL'
+  status: 'CONFIRMED' | 'CANCELLED' | 'BLOCKED' | 'PENDING_APPROVAL' | 'NO_SHOW' | 'PENDING_PAYMENT'
   createdAt: string
   updatedAt: string
   price: number
   playerMatchesCount?: number
+  playerCancellationsCount?: number
 }
 
 export interface PlayerUser {

@@ -65,7 +65,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [cancellingIds, setCancellingIds] = useState<Set<number>>(new Set())
   const [confirmId, setConfirmId] = useState<number | null>(null)
-  const [confirmAction, setConfirmAction] = useState<'cancel' | 'restore' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'cancel' | 'restore' | 'noshow' | null>(null)
   const [restoringIds, setRestoringIds] = useState<Set<number>>(new Set())
   const [availabilityCourts, setAvailabilityCourts] = useState<CourtDto[]>([])
   const [availabilityData, setAvailabilityData] = useState<any[]>([]) // For Grid view
@@ -128,6 +128,8 @@ export default function AdminPage() {
       case 'CANCELLED': return 'Anulat'
       case 'BLOCKED': return 'Blocat'
       case 'PENDING_APPROVAL': return 'Aprobare'
+      case 'NO_SHOW': return 'Neprezentat'
+      case 'PENDING_PAYMENT': return 'Asteapta Plata'
       default: return s || ''
     }
   }
@@ -140,10 +142,14 @@ export default function AdminPage() {
         return `${base} bg-emerald-50 text-emerald-700 border-emerald-300`
       case 'CANCELLED':
         return `${base} bg-rose-100 text-rose-800 border-rose-300`
+      case 'NO_SHOW':
+        return `${base} bg-slate-800 text-white border-slate-900`
       case 'BLOCKED':
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
       case 'PENDING_APPROVAL':
         return `${base} bg-amber-100 text-amber-700 border-amber-300 animate-pulse`
+      case 'PENDING_PAYMENT':
+        return `${base} bg-sky-100 text-sky-700 border-sky-300`
       default:
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
     }
@@ -451,6 +457,22 @@ export default function AdminPage() {
     }
   }
 
+  async function noshow(id: number) {
+    if (!auth) return
+    setCancellingIds(prev => new Set(prev).add(id))
+    try {
+      await adminPatch(`/admin/bookings/${id}/no-show`, auth)
+      broadcastUpdate()
+      await reload()
+    } finally {
+      setCancellingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
   async function approve(id: number) {
     if (!auth) return
     setLoading(true)
@@ -748,7 +770,7 @@ export default function AdminPage() {
                     <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-3">
                       <div className="text-sm font-black text-emerald-700 italic">{(b.price as unknown as number)?.toFixed?.(0)} RON</div>
                       <div className="flex gap-2">
-                        {b.status === 'CANCELLED' ? (
+                        {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
                           <button
                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${restoringIds.has(b.id) ? 'opacity-50' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95'}`}
                             onClick={() => { setConfirmId(b.id); setConfirmAction('restore') }}
@@ -757,19 +779,37 @@ export default function AdminPage() {
                             Restabileste
                           </button>
                         ) : (
-                          <button
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
-                            onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
-                            disabled={cancellingIds.has(b.id)}
-                          >
-                            Anuleaza
-                          </button>
+                          <>
+                            <button
+                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
+                              onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
+                              disabled={cancellingIds.has(b.id)}
+                            >
+                              Anuleaza
+                            </button>
+                            {(b.status === 'CONFIRMED' || isPassed) && (
+                               <button
+                                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95'}`}
+                                 onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
+                                 disabled={cancellingIds.has(b.id)}
+                               >
+                                 Neprezentat
+                               </button>
+                            )}
+                          </>
                         )}
-                         {!b.status.includes('CANCELLED') && b.status !== 'PENDING_APPROVAL' && <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>}
+                         {!b.status.includes('CANCELLED') && b.status !== 'PENDING_APPROVAL' && b.status !== 'NO_SHOW' && <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>}
                         {b.status === 'PENDING_APPROVAL' && (
-                          <div className="flex gap-1">
-                             <button onClick={() => approve(b.id)} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all font-bold">✓</button>
-                             <button onClick={() => reject(b.id)} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-90 transition-all font-bold">✗</button>
+                          <div className="flex flex-col gap-2 items-end">
+                            <div className="flex gap-1">
+                               <button onClick={() => approve(b.id)} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all font-bold">✓</button>
+                               <button onClick={() => reject(b.id)} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-90 transition-all font-bold">✗</button>
+                            </div>
+                            {(b.playerCancellationsCount ?? 0) > 0 && (
+                               <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                 {b.playerCancellationsCount} ANULĂRI
+                               </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -831,8 +871,8 @@ export default function AdminPage() {
                           <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>
                         </td>
                         <td className="px-5 py-4 border-b border-slate-50">
-                         <div className="flex justify-center gap-2">
-                             {b.status === 'CANCELLED' ? (
+                         <div className="flex justify-center flex-wrap gap-2">
+                             {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
                                <button
                                  className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
                                  onClick={() => { setConfirmId(b.id); setConfirmAction('restore') }}
@@ -841,18 +881,36 @@ export default function AdminPage() {
                                  Restabileste
                                </button>
                              ) : b.status === 'PENDING_APPROVAL' ? (
-                               <div className="flex gap-2">
-                                 <button onClick={() => approve(b.id)} className="h-9 px-4 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Aprobă</button>
-                                 <button onClick={() => reject(b.id)} className="h-9 px-4 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Respinge</button>
+                               <div className="flex flex-col gap-2 items-center">
+                                 <div className="flex gap-2">
+                                   <button onClick={() => approve(b.id)} className="h-9 px-4 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Aprobă</button>
+                                   <button onClick={() => reject(b.id)} className="h-9 px-4 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Respinge</button>
+                                 </div>
+                                 {(b.playerCancellationsCount ?? 0) > 0 && (
+                                   <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                     {b.playerCancellationsCount} ANULĂRI (+{(b.playerCancellationsCount ?? 0) * 10}% NO_SHOW)
+                                   </div>
+                                 )}
                                </div>
                              ) : (
-                               <button
-                                 className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
-                                 onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
-                                 disabled={cancellingIds.has(b.id)}
-                               >
-                                 Anuleaza
-                               </button>
+                               <>
+                                 <button
+                                   className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
+                                   onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
+                                   disabled={cancellingIds.has(b.id)}
+                                 >
+                                   Anuleaza
+                                 </button>
+                                 {(b.status === 'CONFIRMED' || isPassed) && (
+                                   <button
+                                     className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95 transition-all"
+                                     onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
+                                     disabled={cancellingIds.has(b.id)}
+                                   >
+                                     Neprezentare
+                                   </button>
+                                 )}
+                               </>
                              )}
                           </div>
                         </td>
@@ -966,14 +1024,16 @@ export default function AdminPage() {
       {confirmId !== null && confirmAction !== null && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="w-full max-w-sm overflow-hidden bg-white rounded-[2rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
-            <div className={`p-8 flex flex-col items-center text-center ${confirmAction === 'restore' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-              <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-5 rotate-3 shadow-xl ${confirmAction === 'restore' ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-rose-500 text-white shadow-rose-500/30'}`}>
+            <div className={`p-8 flex flex-col items-center text-center ${confirmAction === 'restore' ? 'bg-emerald-50' : confirmAction === 'noshow' ? 'bg-slate-100' : 'bg-rose-50'}`}>
+              <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-5 rotate-3 shadow-xl ${confirmAction === 'restore' ? 'bg-emerald-500 text-white shadow-emerald-500/30' : confirmAction === 'noshow' ? 'bg-slate-800 text-white shadow-slate-800/30' : 'bg-rose-500 text-white shadow-rose-500/30'}`}>
                 {confirmAction === 'restore' ? <CalendarIcon className="w-10 h-10" /> : <X className="w-10 h-10" />}
               </div>
-              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-widest tracking-tighter">{confirmAction === 'restore' ? 'Restabilire' : 'Anulare'}</h3>
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-widest tracking-tighter">{confirmAction === 'restore' ? 'Restabilire' : confirmAction === 'noshow' ? 'Neprezentare' : 'Anulare'}</h3>
               <p className="text-sm text-slate-500 mt-3 leading-relaxed font-semibold">
                 {confirmAction === 'restore'
                   ? 'Ești sigur că vrei să restabilești această rezervare? Va apărea imediat ca activă.'
+                  : confirmAction === 'noshow'
+                  ? 'Ești sigur că acest client nu s-a prezentat? Va primi automat O PENALIZARE MAJORĂ (+10 anulări)!'
                   : 'Ești sigur că vrei să anulezi acest interval? Locul va deveni disponibil publicului.'}
               </p>
             </div>
@@ -983,15 +1043,16 @@ export default function AdminPage() {
                 className="w-full py-4 rounded-2xl border border-slate-100 text-slate-400 font-black hover:bg-slate-50 active:scale-95 transition-all text-[11px] uppercase tracking-widest"
                 onClick={() => { setConfirmId(null); setConfirmAction(null) }}
               >
-                Nu, am înțeles
+                Nu, înapoi
               </button>
               <button
-                className={`w-full py-4 rounded-2xl text-white font-black shadow-xl active:scale-95 transition-all text-[11px] uppercase tracking-widest ${confirmAction === 'restore' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}
+                className={`w-full py-4 rounded-2xl text-white font-black shadow-xl active:scale-95 transition-all text-[11px] uppercase tracking-widest ${confirmAction === 'restore' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : confirmAction === 'noshow' ? 'bg-slate-800 hover:bg-slate-900 shadow-slate-800/30' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}
                 onClick={async () => {
                   const id = confirmId; const action = confirmAction
                   setConfirmId(null); setConfirmAction(null)
                   if (id != null && action === 'restore') await restore(id)
                   if (id != null && action === 'cancel') await cancel(id)
+                  if (id != null && action === 'noshow') await noshow(id)
                 }}
               >
                 Da, confirmă

@@ -29,7 +29,11 @@ public class AdminController {
             @org.springframework.web.bind.annotation.RequestParam java.time.LocalDate date,
             @org.springframework.web.bind.annotation.RequestParam(required = false) com.toptennis.model.SportType sportType) {
         return bookingService.findByDateAndSport(date, sportType).stream()
-                .map(com.toptennis.mapper.BookingMapper::toDto)
+                .map(b -> {
+                    com.toptennis.dto.BookingDto dto = com.toptennis.mapper.BookingMapper.toDto(b);
+                    dto.playerCancellationsCount = bookingService.calculateCancelCount(b);
+                    return dto;
+                })
                 .toList();
     }
 
@@ -48,6 +52,11 @@ public class AdminController {
     @PatchMapping("/bookings/{id}/cancel")
     public BookingDto cancel(@PathVariable Long id) {
         return BookingMapper.toDto(bookingService.cancel(id));
+    }
+
+    @PatchMapping("/bookings/{id}/no-show")
+    public BookingDto markNoShow(@PathVariable Long id) {
+        return BookingMapper.toDto(bookingService.markNoShow(id));
     }
 
     @PatchMapping("/bookings/{id}/restore")

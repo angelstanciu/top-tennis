@@ -40,6 +40,10 @@ public class BookingService {
         this.taskExecutor = taskExecutor;
     }
 
+    public BookingRepository getBookingRepository() {
+        return this.bookingRepository;
+    }
+
     @Transactional
     public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, PaymentMethod paymentMethod) {
         // Task 5: 3 months limit
@@ -113,16 +117,20 @@ public class BookingService {
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
         long cancelCount = 0;
         if (normPhone != null && !normPhone.isBlank()) {
-            cancelCount = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+            long standardCancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+            long noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
+            cancelCount = standardCancels + (10 * noShows);
         }
         if (playerFromToken != null) {
-            long playerCancelCount = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
+            long playerStandardCancels = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
+            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.NO_SHOW);
+            long playerCancelCount = playerStandardCancels + (10 * playerNoShows);
             cancelCount = Math.max(cancelCount, playerCancelCount);
         }
         
-        if (cancelCount > 5) {
+        if (cancelCount > 5 && paymentMethod != PaymentMethod.CARD_ONLINE) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
-            System.out.println("[PENALTY] User/Phone has " + cancelCount + " cancellations. Forcing PENDING_APPROVAL for new booking.");
+            System.out.println("[PENALTY] User/Phone has " + cancelCount + " cancellations (" + (cancelCount/10) + " no-shows). Forcing PENDING_APPROVAL.");
         }
 
             if (!crossesMidnight) {
@@ -335,10 +343,35 @@ public class BookingService {
 
     @Transactional
     public Booking cancel(Long id) {
-        Booking b = get(id);
+        Booking b = bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Rezervarea nu exista."));
         b.setStatus(BookingStatus.CANCELLED);
-        b.setUpdatedAt(LocalDateTime.now());
         return bookingRepository.save(b);
+    }
+
+    @Transactional
+    public Booking markNoShow(Long id) {
+        Booking b = bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Rezervarea nu exista."));
+        b.setStatus(BookingStatus.NO_SHOW);
+        return bookingRepository.save(b);
+    }
+
+    public int calculateCancelCount(Booking b) {
+        long cancelCount = 0;
+        String normPhone = normalizePhone(b.getCustomerPhone());
+        if (normPhone != null && !normPhone.isBlank()) {
+            long standardCancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+            long noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
+            cancelCount = standardCancels + (10 * noShows);
+        }
+        if (b.getPlayerUser() != null) {
+            long playerStandardCancels = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.CANCELLED);
+            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.NO_SHOW);
+            long playerCancelCount = playerStandardCancels + (10 * playerNoShows);
+            cancelCount = Math.max(cancelCount, playerCancelCount);
+        }
+        return (int) cancelCount;
     }
 
     @Transactional

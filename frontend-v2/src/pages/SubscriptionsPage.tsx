@@ -19,7 +19,7 @@ export default function SubscriptionsPage() {
       title: "Abonament 3 Luni",
       subtitle: "Pasiune pe termen lung",
       price: "60/70",
-      features: ["60 LEI - Lumină naturală", "70 LEI - Nocturnă", "Program fix săptămânal", "Prioritate la rezervare"],
+      features: ["60 LEI - Ziua (până în 16:00)", "70 LEI - Seara/Nocturnă", "Program fix săptămânal", "Prioritate la rezervare"],
       color: "from-emerald-600 to-teal-600",
       bg: "bg-emerald-500/10",
       highlight: true,
@@ -29,7 +29,7 @@ export default function SubscriptionsPage() {
       title: "Abonament 1 Lună",
       subtitle: "Echilibru și performanță",
       price: "70/80",
-      features: ["70 LEI - Lumină naturală", "80 LEI - Nocturnă", "Flexibilitate maximă", "Program stabilit cu admin-ul"],
+      features: ["70 LEI - Ziua (până în 16:00)", "80 LEI - Seara/Nocturnă", "Flexibilitate maximă", "Program stabilit cu admin-ul"],
       color: "from-amber-600 to-orange-600",
       bg: "bg-amber-500/10",
       requestOnly: true

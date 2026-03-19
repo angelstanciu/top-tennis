@@ -1,6 +1,8 @@
 package com.toptennis.dto;
 
 import com.toptennis.model.BookingStatus;
+import com.toptennis.model.PaymentMethod;
+import com.toptennis.model.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,8 +22,9 @@ public class BookingDto {
     public LocalDateTime updatedAt;
     public BigDecimal price;
     public Integer playerMatchesCount;
-    public com.toptennis.model.PaymentMethod paymentMethod;
-    public com.toptennis.model.PaymentStatus paymentStatus;
+    public PaymentMethod paymentMethod;
+    public PaymentStatus paymentStatus;
     public String transactionId;
-}
 
+    public Integer playerCancellationsCount;
+}
