@@ -31,7 +31,7 @@ export default function TermsPage() {
 
             <section>
               <h3 className="text-xl font-bold text-slate-800 mb-3">2. Rezervări și Anulări</h3>
-              <p>Rezervările sunt considerate ferme după confirmarea pe site. Orice anulare se face cu cel puțin 24 de ore înainte, direct la recepția bazei sportive sau apelând numărul de telefon afișat pe site. Ne rezervăm dreptul de a refuza accesul persoanelor care prezintă un istoric de rezervări neprezentate (no-shows).</p>
+              <p>Rezervările sunt considerate ferme după confirmarea pe site. <strong>Anularea gratuită a unei rezervări (inclusiv returnarea integrală a fondurilor în cazul plății online cu cardul) se poate face cu până la 24 de ore înainte de ora de începere a jocului.</strong> Orice anulare efectuată cu mai puțin de 24 de ore înainte va atrage reținerea integrală a sumei achitate (banii nu se mai returnează). Ne rezervăm dreptul de a refuza accesul persoanelor care prezintă un istoric de rezervări neprezentate (no-shows) fără a anunța în prealabil.</p>
             </section>
 
             <section>
@@ -40,8 +40,9 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">4. Plăți</h3>
-              <p>Plata contravalorii orelor rezervate se face momentan la recepție / fizic, direct la bază, înainte sau după efectuarea orei de joc, conform tarifelor în vigoare afișate pe site sau la locație.</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">4. Plăți și Securitate</h3>
+              <p>Plata contravalorii orelor rezervate se poate face la recepție (cash sau card) sau <strong>online, direct pe site, prin intermediul procesatorului de plăți autorizat Netopia Payments</strong>.</p>
+              <p className="mt-2">În cazul plății online, tranzacțiile sunt procesate într-un mediu securizat 3D Secure. Star Arena nu solicită și nu stochează niciun fel de detalii referitoare la cardul dumneavoastră.</p>
             </section>
 
             <section>
