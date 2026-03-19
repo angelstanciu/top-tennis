@@ -37,6 +37,8 @@ export default function Footer() {
               <strong className="text-slate-300">SC HOBBY RALLY JUNIOR SRL</strong>
               <span>CUI: RO36469122</span>
               <span>Baza Sportivă Star Arena, Bascov, RO</span>
+              <span className="mt-1">Email: rezervari@star-arena.ro</span>
+              <span>Tel: 0741 042 531</span>
             </p>
             
             {/* Payment Logos Block for Netopia Approval */}

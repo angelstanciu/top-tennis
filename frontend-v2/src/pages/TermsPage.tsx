@@ -35,18 +35,23 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">3. Regulamentul Bazei Sportive</h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">3. Politica de Livrare</h3>
+              <p>Fiind vorba de un serviciu (închirierea unei baze sportive), "livrarea" are loc digital, imediat după confirmarea plății online. Clientul primește automat un e-mail/SMS de confirmare, iar serviciul este considerat prestat la data și ora rezervării, prin prezentarea fizică a clientului la locația Star Arena.</p>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">4. Regulamentul Bazei Sportive</h3>
               <p>Toți jucătorii trebuie să aibă echipament adecvat sportului ales (Tenis, Padel etc.), în special încălțăminte curată dedicată. Este strict interzisă deteriorarea bunurilor sau folosirea unui limbaj agresiv în incinta bazei.</p>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">4. Plăți și Securitate</h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Plăți și Securitate</h3>
               <p>Plata contravalorii orelor rezervate se poate face la recepție (cash sau card) sau <strong>online, direct pe site, prin intermediul procesatorului de plăți autorizat Netopia Payments</strong>.</p>
               <p className="mt-2">În cazul plății online, tranzacțiile sunt procesate într-un mediu securizat 3D Secure. Star Arena nu solicită și nu stochează niciun fel de detalii referitoare la cardul dumneavoastră.</p>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Forță majoră</h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">6. Forță majoră</h3>
               <p>Star Arena nu este responsabil pentru imposibilitatea onorării rezervărilor în caz de forță majoră, inclusiv factori meteorologici extremi pentru terenurile outdoor.</p>
             </section>
 
