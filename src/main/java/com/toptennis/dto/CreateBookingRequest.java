@@ -28,5 +28,7 @@ public class CreateBookingRequest {
     public String customerEmail;
 
     public Boolean bypassDoubleBooking;
+
+    public String paymentMethod;
 }
 

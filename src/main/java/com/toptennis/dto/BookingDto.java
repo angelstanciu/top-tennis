@@ -20,5 +20,8 @@ public class BookingDto {
     public LocalDateTime updatedAt;
     public BigDecimal price;
     public Integer playerMatchesCount;
+    public com.toptennis.model.PaymentMethod paymentMethod;
+    public com.toptennis.model.PaymentStatus paymentStatus;
+    public String transactionId;
 }
 

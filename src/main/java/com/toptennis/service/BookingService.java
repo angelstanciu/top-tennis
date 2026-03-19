@@ -41,7 +41,7 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking) {
+    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, PaymentMethod paymentMethod) {
         // Task 5: 3 months limit
         if (date.isAfter(LocalDate.now().plusMonths(3))) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
@@ -50,7 +50,7 @@ public class BookingService {
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         boolean isTennis = court.getSportType() == SportType.TENNIS;
         validateTime(court, date, start, end, isTennis);
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL, BookingStatus.PENDING_PAYMENT);
 
         String normPhone = normalizePhone(phone);
         String normEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
@@ -104,6 +104,11 @@ public class BookingService {
         if (Boolean.TRUE.equals(bypassDoubleBooking)) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
         }
+        
+        // Netopia Force PENDING_PAYMENT for card transactions
+        if (paymentMethod == PaymentMethod.CARD_ONLINE) {
+            initialStatus = BookingStatus.PENDING_PAYMENT;
+        }
 
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
         long cancelCount = 0;
@@ -138,6 +143,8 @@ public class BookingService {
                 b.setUpdatedAt(LocalDateTime.now());
                 b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
                 b.setMidnightBooking(touchesMidnight);
+                b.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
+                b.setPaymentStatus(PaymentStatus.PENDING);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
                 // PlayerUser is explicitly resolved at the top of the method
@@ -193,6 +200,8 @@ public class BookingService {
                 b1.setUpdatedAt(LocalDateTime.now());
                 b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
                 b1.setMidnightBooking(true);
+                b1.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
+                b1.setPaymentStatus(PaymentStatus.PENDING);
 
                 Booking b2 = new Booking();
                 b2.setCourt(court);
@@ -207,6 +216,8 @@ public class BookingService {
                 b2.setUpdatedAt(LocalDateTime.now());
                 b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
                 b2.setMidnightBooking(true);
+                b2.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
+                b2.setPaymentStatus(PaymentStatus.PENDING);
                 
                 String sharedToken = java.util.UUID.randomUUID().toString();
                 b1.setCancelToken(sharedToken + "-1");
@@ -625,6 +636,27 @@ public class BookingService {
             return 24 * 60; // treat 23:59 as 24:00 end-of-day
         }
         return t.getHour() * 60 + t.getMinute();
+    }
+
+    /**
+     * Scheduled task to automatically cancel any bookings that have been stuck in PENDING_PAYMENT 
+     * for more than 15 minutes (meaning the customer abandoned the Netopia checkout).
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000) // Run every 60 seconds
+    @Transactional
+    public void cleanupAbandonedPayments() {
+        LocalDateTime expiryThreshold = LocalDateTime.now().minusMinutes(15);
+        List<Booking> abandoned = bookingRepository.findByStatusAndCreatedAtBefore(BookingStatus.PENDING_PAYMENT, expiryThreshold);
+        for (Booking b : abandoned) {
+            b.setStatus(BookingStatus.CANCELLED);
+            b.setPaymentStatus(PaymentStatus.FAILED);
+            b.setUpdatedAt(LocalDateTime.now());
+            // We do NOT send cancellation SMS for abandoned carts
+            System.out.println("[PAYMENT] Auto-cancelled abandoned booking " + b.getId() + " from " + b.getCreatedAt());
+        }
+        if (!abandoned.isEmpty()) {
+            bookingRepository.saveAll(abandoned);
+        }
     }
 }
 

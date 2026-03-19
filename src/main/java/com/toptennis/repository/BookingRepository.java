@@ -64,4 +64,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByPlayerUserIdAndStatus(Long playerUserId, BookingStatus status);
     
     long countByCustomerPhoneAndStatus(String customerPhone, BookingStatus status);
+
+    List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, java.time.LocalDateTime createdAt);
 }
