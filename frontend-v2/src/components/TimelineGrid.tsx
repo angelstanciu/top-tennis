@@ -91,9 +91,9 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
     
     if (startIndex === undefined || endIndex === undefined) continue
     
-    // If blocked, use the note as the primary label if available
+    // If blocked, use the full customerName as the primary label to avoid truncation
     const isBlocked = b.status === 'BLOCKED'
-    const label = isBlocked && b.note ? b.note : getDisplayName(b as any)
+    const label = isBlocked && b.customerName ? b.customerName : getDisplayName(b as any)
 
     if (endIndex <= startIndex && normalizedEnd !== '00:00' && normalizedEnd !== '24:00') {
       // Over midnight booking - create TWO blocks

@@ -45,9 +45,8 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Plăți și Securitate</h3>
-              <p>Plata contravalorii orelor rezervate se poate face la recepție (cash sau card) sau <strong>online, direct pe site, prin intermediul procesatorului de plăți autorizat Netopia Payments</strong>.</p>
-              <p className="mt-2">În cazul plății online, tranzacțiile sunt procesate într-un mediu securizat 3D Secure. Star Arena nu solicită și nu stochează niciun fel de detalii referitoare la cardul dumneavoastră.</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Plăți</h3>
+              <p>Plata contravalorii orelor rezervate se face la recepția bazei sportive (cash sau card) înainte de începerea partidei.</p>
             </section>
 
             <section>

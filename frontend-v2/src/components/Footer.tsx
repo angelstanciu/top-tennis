@@ -40,17 +40,6 @@ export default function Footer() {
               <span className="mt-1">Email: contact@star-arena.ro</span>
               <span>Tel: 0742 197 487</span>
             </p>
-            
-            {/* Payment Logos Block for Netopia Approval */}
-            <div className="mt-2 flex items-center gap-3 bg-white/5 py-2 px-3 rounded-lg border border-white/10">
-              <span className="font-black italic text-[#1434CB] text-sm tracking-tighter">VISA</span>
-              <div className="flex items-center space-x-[-6px]">
-                <div className="w-[18px] h-[18px] rounded-full bg-[#EB001B] mix-blend-screen opacity-90"></div>
-                <div className="w-[18px] h-[18px] rounded-full bg-[#F79E1B] mix-blend-screen opacity-90"></div>
-              </div>
-              <span className="w-px h-4 bg-slate-700/50 mx-1"></span>
-              <span className="font-black text-slate-300 text-[11px] tracking-widest"><span className="text-[#00AEEF]">NET</span>OPIA</span>
-            </div>
           </div>
         </div>
 

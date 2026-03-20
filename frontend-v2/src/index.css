@@ -8,6 +8,11 @@
   --bg-main: #f8fafc;
 }
 
+html, body {
+  overflow-x: hidden; /* Prevents horizontal scroll */
+  max-width: 100%;
+}
+
 body {
   @apply text-slate-800 bg-slate-50 font-sans antialiased;
   font-family: 'Inter', system-ui, sans-serif;

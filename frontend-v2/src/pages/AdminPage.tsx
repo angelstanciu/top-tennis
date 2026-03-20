@@ -129,7 +129,6 @@ export default function AdminPage() {
       case 'BLOCKED': return 'Blocat'
       case 'PENDING_APPROVAL': return 'Aprobare'
       case 'NO_SHOW': return 'Neprezentat'
-      case 'PENDING_PAYMENT': return 'Asteapta Plata'
       default: return s || ''
     }
   }
@@ -148,8 +147,6 @@ export default function AdminPage() {
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
       case 'PENDING_APPROVAL':
         return `${base} bg-amber-100 text-amber-700 border-amber-300 animate-pulse`
-      case 'PENDING_PAYMENT':
-        return `${base} bg-sky-100 text-sky-700 border-sky-300`
       default:
         return `${base} bg-slate-100 text-slate-700 border-slate-300`
     }
@@ -746,6 +743,9 @@ export default function AdminPage() {
                   const nowStr = new Date().toTimeString().slice(0, 5)
                   const todayStr = new Date().toISOString().slice(0, 10)
                   const isPassed = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.endTime <= nowStr) || b.status === 'CANCELLED'
+                  const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
+                  const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
+                  const isOld = hoursSinceEnd >= 2
                   
                   return (
                     <div key={b.id} className={`rounded-3xl border border-sky-100 bg-white/80 backdrop-blur-sm p-4 shadow-lg relative overflow-hidden group ${isPassed ? 'grayscale-[0.8] opacity-70 bg-slate-50/50' : ''}`}>
@@ -780,13 +780,15 @@ export default function AdminPage() {
                           </button>
                         ) : (
                           <>
-                            <button
-                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
-                              onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
-                              disabled={cancellingIds.has(b.id)}
-                            >
-                              Anuleaza
-                            </button>
+                            {!isOld && (
+                              <button
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
+                                onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
+                                disabled={cancellingIds.has(b.id)}
+                              >
+                                Anuleaza
+                              </button>
+                            )}
                             {(b.status === 'CONFIRMED' || isPassed) && (
                                <button
                                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95'}`}
@@ -805,9 +807,18 @@ export default function AdminPage() {
                                <button onClick={() => approve(b.id)} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all font-bold">✓</button>
                                <button onClick={() => reject(b.id)} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-90 transition-all font-bold">✗</button>
                             </div>
-                            {(b.playerCancellationsCount ?? 0) > 0 && (
-                               <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                 {b.playerCancellationsCount} ANULĂRI
+                            {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
+                               <div className="flex gap-2">
+                                 {(b.playerCancellationsCount ?? 0) > 0 && (
+                                   <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                     {b.playerCancellationsCount} ANULĂRI
+                                   </div>
+                                 )}
+                                 {(b.playerNoShowCount ?? 0) > 0 && (
+                                   <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                     {b.playerNoShowCount} NEPREZENTĂRI
+                                   </div>
+                                 )}
                                </div>
                             )}
                           </div>
@@ -843,6 +854,9 @@ export default function AdminPage() {
                       const nowStr = new Date().toTimeString().slice(0, 5)
                       const todayStr = new Date().toISOString().slice(0, 10)
                       const isPassed = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.endTime <= nowStr) || b.status === 'CANCELLED'
+                      const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
+                      const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
+                      const isOld = hoursSinceEnd >= 2
                       
                       return (
                         <tr key={b.id} className={`hover:bg-sky-50/50 transition-colors group ${isPassed ? 'grayscale-[0.8] opacity-70 bg-slate-50/30' : ''}`}>
@@ -886,21 +900,32 @@ export default function AdminPage() {
                                    <button onClick={() => approve(b.id)} className="h-9 px-4 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Aprobă</button>
                                    <button onClick={() => reject(b.id)} className="h-9 px-4 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Respinge</button>
                                  </div>
-                                 {(b.playerCancellationsCount ?? 0) > 0 && (
-                                   <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                     {b.playerCancellationsCount} ANULĂRI (+{(b.playerCancellationsCount ?? 0) * 10}% NO_SHOW)
+                                 {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
+                                   <div className="flex gap-2">
+                                     {(b.playerCancellationsCount ?? 0) > 0 && (
+                                       <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                         {b.playerCancellationsCount} ANULĂRI
+                                       </div>
+                                     )}
+                                     {(b.playerNoShowCount ?? 0) > 0 && (
+                                       <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                         {b.playerNoShowCount} NEPREZENTĂRI
+                                       </div>
+                                     )}
                                    </div>
                                  )}
                                </div>
                              ) : (
                                <>
-                                 <button
-                                   className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
-                                   onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
-                                   disabled={cancellingIds.has(b.id)}
-                                 >
-                                   Anuleaza
-                                 </button>
+                                 {!isOld && (
+                                   <button
+                                     className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
+                                     onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
+                                     disabled={cancellingIds.has(b.id)}
+                                   >
+                                     Anuleaza
+                                   </button>
+                                 )}
                                  {(b.status === 'CONFIRMED' || isPassed) && (
                                    <button
                                      className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95 transition-all"

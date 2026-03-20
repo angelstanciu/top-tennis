@@ -31,7 +31,8 @@ public class AdminController {
         return bookingService.findByDateAndSport(date, sportType).stream()
                 .map(b -> {
                     com.toptennis.dto.BookingDto dto = com.toptennis.mapper.BookingMapper.toDto(b);
-                    dto.playerCancellationsCount = bookingService.calculateCancelCount(b);
+                    dto.playerCancellationsCount = bookingService.calculateOriginalCancelCount(b);
+                    dto.playerNoShowCount = bookingService.calculateNoShowCount(b);
                     return dto;
                 })
                 .toList();

@@ -44,11 +44,6 @@ export default function PrivacyPage() {
               <p>Vă puteți exercita în orice moment dreptul la:"Uitare" (stergerea datelor), modificarea acestora, sau restricționarea prelucrării adresându-vă recepției Star Arena conform datelor publice de contact din homepage.</p>
             </section>
 
-            <section>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Procesarea Plăților Online</h3>
-              <p>Pentru rezervările achitate online, tranzacțiile sunt procesate de către partenerul nostru <strong>Netopia Payments</strong>. Datele introduse pe paginile de plată (număr card, CVV, nume) sunt colectate și procesate exclusiv de către aceștia în calitate de operator de plăți autorizat. <strong>Star Arena NU are acces la datele cardului dumneavoastră și nu stochează astfel de informații în sistemele proprii.</strong> Netopia Payments acționează ca un procesator independent, având propriile politici stricte de securitate și confidențialitate datelor conform standardelor PCI-DSS.</p>
-            </section>
-
             <p className="text-sm text-slate-400 mt-10 pt-6 border-t border-slate-100 italic">Prezenta politică poate suferi modificări, vă recomandăm consultarea ei periodică.</p>
           </div>
         </div>

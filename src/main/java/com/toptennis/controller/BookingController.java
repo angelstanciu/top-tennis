@@ -35,12 +35,7 @@ public class BookingController {
             end = LocalTime.parse(req.endTime);
         }
         
-        com.toptennis.model.PaymentMethod requestedMethod = com.toptennis.model.PaymentMethod.CASH;
-        if (req.paymentMethod != null && req.paymentMethod.trim().equalsIgnoreCase("CARD_ONLINE")) {
-            requestedMethod = com.toptennis.model.PaymentMethod.CARD_ONLINE;
-        }
-        
-        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail, token, req.bypassDoubleBooking, requestedMethod);
+        Booking b = bookingService.createPublic(req.courtId, date, start, end, req.customerName, req.customerPhone, req.customerEmail, token, req.bypassDoubleBooking);
         return BookingMapper.toDto(b);
     }
 

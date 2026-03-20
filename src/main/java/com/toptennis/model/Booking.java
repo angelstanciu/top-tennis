@@ -48,15 +48,6 @@ public class Booking {
     @Column(unique = true)
     private String cancelToken;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentMethod paymentMethod = PaymentMethod.CASH;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
-
-    private String transactionId;
 
     public String getCancelToken() { return cancelToken; }
     public void setCancelToken(String cancelToken) { this.cancelToken = cancelToken; }
@@ -99,11 +90,5 @@ public class Booking {
     public boolean isMidnightBooking() { return isMidnightBooking; }
     public void setMidnightBooking(boolean midnightBooking) { this.isMidnightBooking = midnightBooking; }
 
-    public PaymentMethod getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
-    public PaymentStatus getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
 }
 

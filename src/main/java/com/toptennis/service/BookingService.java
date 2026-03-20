@@ -45,7 +45,7 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, PaymentMethod paymentMethod) {
+    public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking) {
         // Task 5: 3 months limit
         if (date.isAfter(LocalDate.now().plusMonths(3))) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
@@ -54,7 +54,7 @@ public class BookingService {
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         boolean isTennis = court.getSportType() == SportType.TENNIS;
         validateTime(court, date, start, end, isTennis);
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL, BookingStatus.PENDING_PAYMENT);
+        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
 
         String normPhone = normalizePhone(phone);
         String normEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
@@ -109,11 +109,6 @@ public class BookingService {
             initialStatus = BookingStatus.PENDING_APPROVAL;
         }
         
-        // Netopia Force PENDING_PAYMENT for card transactions
-        if (paymentMethod == PaymentMethod.CARD_ONLINE) {
-            initialStatus = BookingStatus.PENDING_PAYMENT;
-        }
-
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
         long cancelCount = 0;
         if (normPhone != null && !normPhone.isBlank()) {
@@ -128,7 +123,7 @@ public class BookingService {
             cancelCount = Math.max(cancelCount, playerCancelCount);
         }
         
-        if (cancelCount > 5 && paymentMethod != PaymentMethod.CARD_ONLINE) {
+        if (cancelCount > 5) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
             System.out.println("[PENALTY] User/Phone has " + cancelCount + " cancellations (" + (cancelCount/10) + " no-shows). Forcing PENDING_APPROVAL.");
         }
@@ -151,8 +146,6 @@ public class BookingService {
                 b.setUpdatedAt(LocalDateTime.now());
                 b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
                 b.setMidnightBooking(touchesMidnight);
-                b.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
-                b.setPaymentStatus(PaymentStatus.PENDING);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
                 // PlayerUser is explicitly resolved at the top of the method
@@ -208,8 +201,6 @@ public class BookingService {
                 b1.setUpdatedAt(LocalDateTime.now());
                 b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
                 b1.setMidnightBooking(true);
-                b1.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
-                b1.setPaymentStatus(PaymentStatus.PENDING);
 
                 Booking b2 = new Booking();
                 b2.setCourt(court);
@@ -224,8 +215,6 @@ public class BookingService {
                 b2.setUpdatedAt(LocalDateTime.now());
                 b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
                 b2.setMidnightBooking(true);
-                b2.setPaymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.CASH);
-                b2.setPaymentStatus(PaymentStatus.PENDING);
                 
                 String sharedToken = java.util.UUID.randomUUID().toString();
                 b1.setCancelToken(sharedToken + "-1");
@@ -321,6 +310,20 @@ public class BookingService {
         return bookingRepository.countPastNonCancelledByUserId(userId, LocalDate.now(), LocalTime.now());
     }
 
+    private void applyToSiblingIfExists(Booking b, java.util.function.Consumer<Booking> action) {
+        if (b.isMidnightBooking() && b.getCancelToken() != null && b.getCancelToken().length() > 2) {
+            String token = b.getCancelToken();
+            String siblingToken = token.endsWith("-1") ? token.substring(0, token.length() - 2) + "-2" :
+                                  token.endsWith("-2") ? token.substring(0, token.length() - 2) + "-1" : null;
+            if (siblingToken != null) {
+                bookingRepository.findByCancelToken(siblingToken).ifPresent(sibling -> {
+                    action.accept(sibling);
+                    bookingRepository.save(sibling);
+                });
+            }
+        }
+    }
+
     @Transactional
     public Booking confirm(Long id) {
         Booking b = get(id);
@@ -329,6 +332,11 @@ public class BookingService {
             b.setUpdatedAt(LocalDateTime.now());
             Booking saved = bookingRepository.save(b);
             
+            applyToSiblingIfExists(b, sibling -> {
+                sibling.setStatus(BookingStatus.CONFIRMED);
+                sibling.setUpdatedAt(LocalDateTime.now());
+            });
+
             // Trigger notifications upon manual approval
             taskExecutor.execute(() -> {
                 smsService.sendReservationNotifications(saved);
@@ -338,7 +346,12 @@ public class BookingService {
         }
         b.setStatus(BookingStatus.CONFIRMED);
         b.setUpdatedAt(LocalDateTime.now());
-        return bookingRepository.save(b);
+        Booking saved = bookingRepository.save(b);
+        applyToSiblingIfExists(b, sibling -> {
+            sibling.setStatus(BookingStatus.CONFIRMED);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
+        return saved;
     }
 
     @Transactional
@@ -346,7 +359,13 @@ public class BookingService {
         Booking b = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Rezervarea nu exista."));
         b.setStatus(BookingStatus.CANCELLED);
-        return bookingRepository.save(b);
+        b.setUpdatedAt(LocalDateTime.now());
+        Booking saved = bookingRepository.save(b);
+        applyToSiblingIfExists(b, sibling -> {
+            sibling.setStatus(BookingStatus.CANCELLED);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
+        return saved;
     }
 
     @Transactional
@@ -354,24 +373,39 @@ public class BookingService {
         Booking b = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Rezervarea nu exista."));
         b.setStatus(BookingStatus.NO_SHOW);
-        return bookingRepository.save(b);
+        b.setUpdatedAt(LocalDateTime.now());
+        Booking saved = bookingRepository.save(b);
+        applyToSiblingIfExists(b, sibling -> {
+            sibling.setStatus(BookingStatus.NO_SHOW);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
+        return saved;
     }
 
-    public int calculateCancelCount(Booking b) {
-        long cancelCount = 0;
+    public int calculateOriginalCancelCount(Booking b) {
+        long cancels = 0;
         String normPhone = normalizePhone(b.getCustomerPhone());
         if (normPhone != null && !normPhone.isBlank()) {
-            long standardCancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
-            long noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
-            cancelCount = standardCancels + (10 * noShows);
+            cancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
         }
         if (b.getPlayerUser() != null) {
-            long playerStandardCancels = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.CANCELLED);
-            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.NO_SHOW);
-            long playerCancelCount = playerStandardCancels + (10 * playerNoShows);
-            cancelCount = Math.max(cancelCount, playerCancelCount);
+            long playerCancels = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.CANCELLED);
+            cancels = Math.max(cancels, playerCancels);
         }
-        return (int) cancelCount;
+        return (int) cancels;
+    }
+
+    public int calculateNoShowCount(Booking b) {
+        long noShows = 0;
+        String normPhone = normalizePhone(b.getCustomerPhone());
+        if (normPhone != null && !normPhone.isBlank()) {
+            noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
+        }
+        if (b.getPlayerUser() != null) {
+            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.NO_SHOW);
+            noShows = Math.max(noShows, playerNoShows);
+        }
+        return (int) noShows;
     }
 
     @Transactional
@@ -394,7 +428,12 @@ public class BookingService {
         }
         b.setStatus(BookingStatus.CONFIRMED);
         b.setUpdatedAt(LocalDateTime.now());
-        return bookingRepository.save(b);
+        Booking saved = bookingRepository.save(b);
+        applyToSiblingIfExists(b, sibling -> {
+            sibling.setStatus(BookingStatus.CONFIRMED);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
+        return saved;
     }
 
     @Transactional
@@ -411,7 +450,7 @@ public class BookingService {
         b.setBookingDate(date);
         b.setStartTime(start);
         b.setEndTime(end);
-        b.setCustomerName("Club");
+        b.setCustomerName(note != null && !note.trim().isEmpty() ? note : "Blocat de Administrator");
         b.setCustomerPhone("-");
         b.setCustomerEmail(note);
         b.setStatus(BookingStatus.BLOCKED);
@@ -505,6 +544,10 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
+        applyToSiblingIfExists(booking, sibling -> {
+            sibling.setStatus(BookingStatus.CANCELLED);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
     }
 
     @Transactional
@@ -525,6 +568,10 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
+        applyToSiblingIfExists(booking, sibling -> {
+            sibling.setStatus(BookingStatus.CANCELLED);
+            sibling.setUpdatedAt(LocalDateTime.now());
+        });
     }
 
     private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end, LocalTime effectiveGridStart, boolean isTennis) {
@@ -671,26 +718,7 @@ public class BookingService {
         return t.getHour() * 60 + t.getMinute();
     }
 
-    /**
-     * Scheduled task to automatically cancel any bookings that have been stuck in PENDING_PAYMENT 
-     * for more than 15 minutes (meaning the customer abandoned the Netopia checkout).
-     */
-    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000) // Run every 60 seconds
-    @Transactional
-    public void cleanupAbandonedPayments() {
-        LocalDateTime expiryThreshold = LocalDateTime.now().minusMinutes(15);
-        List<Booking> abandoned = bookingRepository.findByStatusAndCreatedAtBefore(BookingStatus.PENDING_PAYMENT, expiryThreshold);
-        for (Booking b : abandoned) {
-            b.setStatus(BookingStatus.CANCELLED);
-            b.setPaymentStatus(PaymentStatus.FAILED);
-            b.setUpdatedAt(LocalDateTime.now());
-            // We do NOT send cancellation SMS for abandoned carts
-            System.out.println("[PAYMENT] Auto-cancelled abandoned booking " + b.getId() + " from " + b.getCreatedAt());
-        }
-        if (!abandoned.isEmpty()) {
-            bookingRepository.saveAll(abandoned);
-        }
-    }
+
 }
 
 @Configuration

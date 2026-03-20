@@ -224,7 +224,7 @@ export default function AdminBlockDayPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Notiță Internă (Apare ca nume pe grid)</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Motiv (vizibil pentru toți jucătorii)</label>
                   <input type="text" className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" placeholder="ex: Ocupat de Admin, Turneu, Reabilitare..." value={note} onChange={e => setNote(e.target.value)} />
                 </div>
 

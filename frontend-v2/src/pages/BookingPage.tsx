@@ -53,8 +53,6 @@ export default function BookingPage() {
   const [requireBypassApproval, setRequireBypassApproval] = useState(false)
   const [successVisible, setSuccessVisible] = useState(false)
   const [pendingVisible, setPendingVisible] = useState(false)
-  const [paymentRedirecting, setPaymentRedirecting] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD_ONLINE'>('CASH')
   const nav = useNavigate()
   const phoneInputRef = useRef<HTMLInputElement | null>(null)
   const [court, setCourt] = useState<CourtDto | null>(null)
@@ -157,7 +155,6 @@ export default function BookingPage() {
         customerPhone: phone || (isAdminUser ? '0000000000' : ''),
         customerEmail: email || undefined,
         bypassDoubleBooking,
-        paymentMethod,
       })
       if (result && result.status) {
           bookingResultStatus = result.status
@@ -178,14 +175,6 @@ export default function BookingPage() {
       
       if (bookingResultStatus === 'PENDING_APPROVAL') {
           setPendingVisible(true)
-      } else if (bookingResultStatus === 'PENDING_PAYMENT') {
-          setPaymentRedirecting(true)
-          // TBD: Redirection to Netopia /initiate API endpoint
-          setTimeout(() => {
-              // Placeholder until API Keys are linked
-              alert("Plata online nu este inca conectata de Netopia. Rezervarea a fost pusa in asteptare.")
-              redirectToGrid()
-          }, 4000)
       } else {
           setSuccessVisible(true)
       }
@@ -324,38 +313,16 @@ export default function BookingPage() {
           </div>
 
           <div className="pt-2">
-            {/* Payment Method Selector */}
-            <div className="mb-4">
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Metodă de plată</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('CASH')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mb-1.5 text-emerald-600"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
-                  <span className="text-[11px] font-bold">La Bază</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('CARD_ONLINE')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CARD_ONLINE' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mb-1.5 text-emerald-600"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  <span className="text-[11px] font-bold">Online cu Cardul</span>
-                </button>
-              </div>
-            </div>
 
              <button 
                className="w-full h-[52px] rounded-xl font-bold tracking-wide text-[15px] bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:bg-slate-300 disabled:shadow-none" 
                disabled={submitting || !meetsMinDuration} 
                type="submit"
              >
-               {submitting ? 'SE PROCESEAZĂ...' : (paymentMethod === 'CARD_ONLINE' ? 'CĂTRE PLATA ONLINE' : 'CONFIRMĂ REZERVAREA')}
+               {submitting ? 'SE PROCESEAZĂ...' : 'CONFIRMĂ REZERVAREA'}
              </button>
              <p className="text-[10px] text-slate-400 font-medium text-center mt-3 px-2 leading-relaxed">
-               Apasând pe buton ești de acord cu prelucrarea datelor. {paymentMethod === 'CASH' ? 'Plata se face la locație.' : 'Vei fi redirecționat către Netopia.'}
+               Apasând pe buton ești de acord cu prelucrarea datelor. Plata se face la locație.
              </p>
           </div>
         </form>
