@@ -212,6 +212,8 @@ export default function AdminPage() {
         let items = res.filter(r => r.court.active !== false)
         // Task 1: Remove Padel Court 4 if it exists and clean labels
         items = items.filter(r => !(r.court.sportType === 'PADEL' && r.court.name === '4'))
+        // Hide Temporarily TENNIS 1-5
+        items = items.filter(r => !(r.court.sportType === 'TENNIS' && ['1', '2', '3', '4', '5'].includes(r.court.name)))
         
         items.forEach(item => {
           if (item.court.sportType === 'PADEL' && (item.court.name === '2' || item.court.name === '3')) {
@@ -956,7 +958,7 @@ export default function AdminPage() {
                <div className="p-5 bg-sky-50/50 border-b border-sky-100 flex items-center justify-between">
                   <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] flex items-center gap-3">
                     <CalendarIcon className="w-5 h-5 text-emerald-500" />
-                    Vederea Calendar — {formatDateDisplay(date)}
+                    Orar Terenuri — {formatDateDisplay(date)}
                   </h3>
                   <div className="text-[9px] text-slate-400 font-black bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest">
                     Apasă pe o rezervare pentru Control
