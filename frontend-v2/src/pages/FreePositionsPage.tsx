@@ -90,17 +90,7 @@ export default function FreePositionsPage() {
   const highlightTimer = useRef<number | null>(null)
   const highlightCourtTimer = useRef<number | null>(null)
   const dateInputRef = useRef<HTMLInputElement | null>(null)
-  const backgroundBySport: Record<SportType, string> = {
-    TENNIS: '/tennis-background.png',
-    PADEL: '/padel-background.png',
-    BEACH_VOLLEY: '/volley-ball-background.png',
-    BASKETBALL: '/basketball-background.png',
-    FOOTVOLLEY: '/soccer-background.png',
-    TABLE_TENNIS: '/ping-pong-background.png',
-  }
-  const pageBgStyle = backgroundBySport[sport]
-    ? { backgroundImage: `url('${backgroundBySport[sport]}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }
-    : undefined
+
   // Compact toast for missing court selection
   const [missingToastVisible, setMissingToastVisible] = useState(false)
   const [missingToastFading, setMissingToastFading] = useState(false)
@@ -488,14 +478,19 @@ export default function FreePositionsPage() {
   }
 
   return (
-    <div className="min-h-screen w-full" style={pageBgStyle}><div className="max-w-3xl mx-auto p-4 space-y-4">
+    <div className="min-h-screen relative font-sans text-slate-900 bg-slate-50 selection:bg-sky-100 selection:text-sky-900 overflow-x-hidden">
+      <div className="fixed inset-0 z-0 pointer-events-none transition-all duration-700">
+        <div className="absolute inset-0 bg-slate-100/40 backdrop-blur-[1px]" />
+      </div>
+
+      <div className="max-w-3xl mx-auto p-4 space-y-6 relative z-10">
       <AdminHeader active="free" />
 
-      <div className="rounded border border-sky-200 bg-sky-50 p-3 shadow-md">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <div className="text-xs text-slate-600 mb-1">Sport</div>
-            <select className="border rounded px-2 py-1.5 w-full bg-white h-9" value={sport} onChange={e => { setSport(e.target.value as SportType); setCourtId(''); }}>
+      <div className="bg-white/80 backdrop-blur-xl border border-sky-100 rounded-[2rem] p-6 shadow-xl shadow-sky-900/5 transition-all">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="relative">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sport</div>
+            <select className="w-full h-11 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm cursor-pointer" value={sport} onChange={e => { setSport(e.target.value as SportType); setCourtId(''); }}>
               <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
               <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
               <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
@@ -503,23 +498,29 @@ export default function FreePositionsPage() {
               <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
               <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
             </select>
+            <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-600 mb-1">Teren</div>
-            <select className={`border rounded px-2 py-1.5 w-full ${highlightCourt ? "animate-pulse ring-2 ring-rose-300" : ""}`} value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)}>
+          <div className="relative">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Teren</div>
+            <select className={`w-full h-11 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm cursor-pointer ${highlightCourt ? "animate-pulse ring-2 ring-rose-300" : ""}`} value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)}>
               <option value="">Selecteaza terenul</option>
               {courts.map(c => {
                 const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
                 return <option key={c.id} value={c.id}>{label}</option>
               })}
             </select>
+            <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-600 mb-1">Data</div>
-            <div className="relative flex items-stretch border rounded bg-white overflow-hidden">
+          <div className="relative">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data</div>
+            <div className="relative flex items-stretch border border-slate-100 bg-slate-50 rounded-2xl overflow-hidden h-11 shadow-sm focus-within:ring-4 focus-within:ring-sky-500/10 focus-within:border-sky-500 transition-all">
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-r border-slate-200 focus:outline-none"
+                className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-r border-slate-100 focus:outline-none transition-all"
                 aria-label="Ziua anterioara"
                 title="Ziua anterioara"
                 onClick={() => shiftDate(-1)}
@@ -527,7 +528,7 @@ export default function FreePositionsPage() {
                 {'\u2039'}
               </button>
               <div className="relative flex-1 min-w-0">
-                <div className="px-2 pr-8 py-1.5 text-sm text-slate-800 text-center select-none truncate">
+                <div className="flex items-center justify-center h-full text-sm font-bold text-slate-700 select-none truncate">
                   {formatDateDisplay(date)}
                 </div>
                 <input
@@ -539,33 +540,10 @@ export default function FreePositionsPage() {
                   onChange={e => setDate(e.target.value)}
                   aria-label="Data"
                 />
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-black/70 hover:text-black focus:outline-none z-10"
-                  aria-label="Deschide calendarul"
-                  title="Deschide calendarul"
-                  onClick={() => {
-                    const el = dateInputRef.current
-                    if (!el) return
-                    try {
-                      // @ts-ignore
-                      if (typeof el.showPicker === 'function') { (el as any).showPicker(); return }
-                    } catch { }
-                    try { el.focus() } catch { }
-                    try { el.click() } catch { }
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                </button>
               </div>
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-2.5 text-lg leading-none text-slate-600 hover:bg-sky-50 hover:text-slate-800 border-l border-slate-200 focus:outline-none"
+                className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-l border-slate-100 focus:outline-none transition-all"
                 aria-label="Ziua urmatoare"
                 onClick={() => shiftDate(1)}
                 title="Ziua urmatoare"
@@ -575,9 +553,9 @@ export default function FreePositionsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-1 gap-2">
-          <button className={`py-3 rounded-[1rem] bg-lime-50 hover:bg-lime-100 border border-lime-300 shadow-sm text-lime-800 font-bold transition-all ${copiedImage ? "ring-2 ring-lime-400" : ""}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
-            {imageCopying ? 'Se randeaza...' : (copiedImage ? 'Imagine Copiată!' : 'Copiaza Poster (Imagine)')}
+        <div className="mt-5 grid grid-cols-1 gap-2">
+          <button className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl transition-all disabled:opacity-50 active:scale-95 ${copiedImage ? 'bg-sky-500 text-white shadow-sky-500/20 ring-2 ring-sky-300' : 'bg-slate-800 text-white shadow-slate-800/20 hover:bg-slate-700'}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
+            {imageCopying ? 'Se genereaza imaginea...' : (copiedImage ? 'Imagine Copiată!' : 'Copiaza Poster (Imagine)')}
           </button>
         </div>
       </div>
@@ -674,15 +652,17 @@ export default function FreePositionsPage() {
       )}
 
       {/* Text Template Section */}
-      <div className="rounded-xl border border-slate-300 bg-white shadow-xl mt-6 overflow-hidden">
-        <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-200">
-           <div className="text-sm text-slate-800 font-bold uppercase tracking-wider">Previzualizare Text (Social Media)</div>
-           <button className={`px-4 py-2 rounded-lg border bg-white font-bold transition-all shadow-sm ${highlightCopy ? "ring-2 ring-emerald-400 border-emerald-400 text-emerald-700" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`} onClick={copy} disabled={!text}>
-             {copiedText ? 'Text Copiat ✅' : 'Copiaza Text'}
+      <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-sky-100 shadow-xl overflow-hidden mt-6 flex flex-col items-stretch relative z-10 transition-all">
+        <div className="p-5 bg-sky-50/50 border-b border-sky-100 flex items-center justify-between">
+           <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] flex items-center gap-3">
+              PREVIZUALIZARE TEXT (SOCIAL MEDIA)
+           </h3>
+           <button className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${highlightCopy ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white text-slate-700 border border-slate-200 hover:border-sky-300 hover:text-sky-600"}`} onClick={copy} disabled={!text}>
+             {copiedText ? 'Copiat' : 'Copiaza Text'}
            </button>
         </div>
-        <div className="p-4 bg-white">
-           <pre className="text-sm whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-2 bg-slate-50 rounded-lg border border-slate-100">{tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}</pre>
+        <div className="p-6 bg-white/50">
+           <pre className="text-[13px] leading-relaxed whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-5 bg-slate-50/80 backdrop-blur-xl rounded-2xl border border-slate-100">{tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}</pre>
         </div>
       </div>
 
