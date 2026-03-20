@@ -479,8 +479,18 @@ export default function FreePositionsPage() {
 
   return (
     <div className="min-h-screen relative font-sans text-slate-900 bg-slate-50 selection:bg-sky-100 selection:text-sky-900 overflow-x-hidden">
-      <div className="fixed inset-0 z-0 pointer-events-none transition-all duration-700">
-        <div className="absolute inset-0 bg-slate-100/40 backdrop-blur-[1px]" />
+      {/* Premium Dark Background Image */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none transition-all duration-1000 bg-slate-900"
+        style={{ 
+          backgroundImage: "url('/img-padel-premium.png')", 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center', 
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed'
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[3px]" />
       </div>
 
       <div className="max-w-3xl mx-auto p-4 space-y-6 relative z-10">
@@ -661,8 +671,15 @@ export default function FreePositionsPage() {
              {copiedText ? 'Copiat' : 'Copiaza Text'}
            </button>
         </div>
-        <div className="p-6 bg-white/50">
-           <pre className="text-[13px] leading-relaxed whitespace-pre-wrap font-mono min-h-[120px] text-slate-700 p-5 bg-slate-50/80 backdrop-blur-xl rounded-2xl border border-slate-100">{tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}</pre>
+        <div className="p-6 bg-slate-100/50 flex justify-center">
+           <div className="w-full max-w-sm">
+             <div className="bg-gradient-to-br from-[#E8F5E9] to-[#E0F2F1] rounded-3xl rounded-tl-sm shadow-sm border border-teal-100/50 p-5 relative">
+                <div className="text-[14.5px] font-sans font-medium text-[#1A2F33] leading-relaxed whitespace-pre-wrap break-words pb-4">
+                  {tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}
+                </div>
+                <div className="absolute right-4 bottom-2 text-[10px] font-bold text-teal-700 opacity-50 select-none tracking-widest uppercase">Acum</div>
+             </div>
+           </div>
         </div>
       </div>
 
