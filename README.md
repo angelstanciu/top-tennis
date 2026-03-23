@@ -1,111 +1,109 @@
-Sport Base Booking
-===================
+<div align="center">
+  <img src="frontend-dragos/public/favicon.png" alt="Star Arena Logo" width="100"/>
+  <h1>🎾 Star Arena Booking Platform</h1>
+  <p><strong>A Full-Stack B2B & B2C Sports Facility Management System</strong></p>
 
-A full-stack booking app for a multi-sport base.
+  <!-- Badges -->
+  <p>
+    <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+    <img src="https://img.shields.io/badge/Styling-TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+    <img src="https://img.shields.io/badge/Backend-Java%20Spring%20Boot-6DB33F?style=for-the-badge&logo=spring&logoColor=white" alt="Spring" />
+    <img src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="Postgres" />
+  </p>
+</div>
 
-Backend
--------
-- Java 21, Spring Boot 3.x, Maven
-- Spring Data JPA, Flyway, Spring Security, Validation
-- H2 for dev, PostgreSQL for prod
-- CORS allows `http://localhost:5173`
+---
 
-Run (Dev):
-- Prereqs: Java 21, Maven
-- If your JDK is exposed as `JAVA_21_HOME` (Windows), the wrapper will use it automatically.
-- `mvnw.cmd spring-boot:run` (Windows) or `./mvnw spring-boot:run` (macOS/Linux)
-- App runs at `http://localhost:8080`
+## 📖 Overview
 
-Profiles and DB:
-- Dev (default): H2 in-memory with Flyway migrations
-- Prod: set env vars `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` or edit `application.yml` prod section
+**Star Arena Booking Platform** is a complete, end-to-end web application developed to digitalize the booking process for a multi-sport facility (Tennis, Padel, Basketball, Foot-Tennis, etc.). 
 
-Admin login (temporary):
-- Username: `admin`
-- Password: `admin123`
-- Admin endpoints under `/api/admin/**`
+Designed to replace manual pen-and-paper tracking, this system provides a **sleek, interactive, glassmorphism-inspired UI** for customers, coupled with a **powerful Admin Control Panel** capable of handling automated slot generation, clash prevention, and revenue tracking.
 
-Key endpoints (/api):
-- `GET /courts` — list courts
-- `GET /courts/{id}` — court details
-- `GET /availability?date=YYYY-MM-DD&sportType=TENNIS` — daily availability per court
-- `POST /bookings` — create booking (public)
-  - Body: `{ courtId, date, startTime, endTime, customerName, customerPhone, customerEmail? }`
-- `GET /bookings/{id}` — booking details
-- Admin:
-  - `PATCH /admin/bookings/{id}/confirm`
-  - `PATCH /admin/bookings/{id}/cancel`
-  - `POST /admin/block-slot` with `{ courtId, date, startTime, endTime, note }`
+---
 
-Frontend
---------
-- React + TypeScript + Vite, Tailwind CSS
-- Timeline grid inspired by provided snippet with sticky court column and horizontal time axis
+## ✨ Key Features
 
-Run:
-- Prereqs: Node 18+
-- `cd frontend`
-- `npm install`
-- `npm run dev`
-- Opens `http://localhost:5173`
+### B2C (Customer Facing)
+- 🖥️ **Interactive Booking Grid:** Visual timeline matching real-world court availability.
+- 📱 **Mobile-First Glassmorphism UI:** Premium aesthetic tailored for iOS and Android web.
+- 🔐 **Secure Player Authentication:** Login via Google OAuth2, SMS OTP, or Email/Password.
+- 📧 **Automated Notifications:** SMS and Email confirmations upon successful bookings.
 
-Config:
-- Create `frontend/.env` (optional):
-  - `VITE_API_BASE_URL=http://localhost:8080/api`
+### B2B (Admin Dashboard)
+- 🛡️ **Role-Based Access Control (RBAC):** Distinct privileges separating Players from Admins.
+- 📅 **Advanced Scheduling Engine:** Blocks overlapping reservations automatically. Granularity down to 30-minute intervals.
+- 📊 **Financial & Usage Analytics:** Daily revenue reports and real-time court utilization metrics.
+- 🎨 **Dynamic Poster Generator:** Automatically generates exportable, sport-specific images containing the day's "Free Positions" to be shared on WhatsApp/Social Media.
+- 🔄 **Recurring Subscriptions:** Batch-applies long-term bookings for recurring clients.
 
-Usage
------
-1) Open frontend, choose sport and date.
-2) Click a free slot to open booking form.
-3) Submit basic contact info. Rezervarea se confirmă automat; clubul poate ulterior anula din panoul de administrare.
+---
 
-Notes
------
-- Time granularity is 30 minutes; minimum booking 1 hour.
-- Price is calculated from court hourly price and duration.
-- Seed courts are created via Flyway migration `V2__seed_courts.sql`.
+## 🛠️ Tech Stack & Architecture
 
+### **Frontend architecture**
+Located in the `/frontend-dragos` workspace.
+- **Framework:** React 18 + TypeScript + Vite
+- **Styling:** Tailwind CSS + Radix UI Primitives
+- **State Management:** React Hooks & Context API
+- **Design System:** Custom Dark/Glass Theme (inspired by Shadcn UI)
 
-H2 Console (Dev)
-----------------
-- URL: `http://localhost:8080/h2-console`
-- JDBC URL: `jdbc:h2:file:./.localdb/tennisdb;AUTO_SERVER=TRUE;MODE=PostgreSQL`
-- Username: `sa`
-- Password: (leave blank)
-- Notes:
-  - H2 console is enabled only in dev.
-  - Security allows same-origin frames and permits `/h2-console/**`.
+### **Backend architecture**
+Built on a robust Java ecosystem.
+- **Framework:** Java 21 LTS + Spring Boot 3.x
+- **Data Layer:** Spring Data JPA + Hibernate
+- **Database:** H2 (In-Memory for Dev) / PostgreSQL (Production)
+- **Migrations:** Flyway (`V2__seed_courts.sql`)
+- **Security:** JWT (JSON Web Tokens) & Spring Security
+- **Integrations:** Zoho Mail SMTP, Custom SMS Gateway
 
-API Examples
-------------
-- List courts
-  - `curl http://localhost:8080/api/courts`
-- Court details
-  - `curl http://localhost:8080/api/courts/1`
-- Availability (Tennis on a given date)
-  - `curl "http://localhost:8080/api/availability?date=2025-11-19&sportType=TENNIS"`
-- Create a booking (public)
-  - `curl -X POST http://localhost:8080/api/bookings -H "Content-Type: application/json" -d "{\"courtId\":1,\"date\":\"2025-11-19\",\"startTime\":\"09:00\",\"endTime\":\"10:00\",\"customerName\":\"Jane Doe\",\"customerPhone\":\"+40123123123\",\"customerEmail\":\"jane@example.com\"}"`
-- Get booking by id
-  - `curl http://localhost:8080/api/bookings/1`
-- Admin cancel booking (basic auth)
-  - `curl -u admin:admin123 -X PATCH http://localhost:8080/api/admin/bookings/1/cancel`
-- Admin block a slot (creates BLOCKED booking)
-  - `curl -u admin:admin123 -X POST http://localhost:8080/api/admin/block-slot -H "Content-Type: application/json" -d "{\"courtId\":1,\"date\":\"2025-11-19\",\"startTime\":\"12:00\",\"endTime\":\"13:00\",\"note\":\"maintenance\"}"`
+---
 
-H2 Console: Useful Queries
---------------------------
-- All courts: `SELECT id, name, sport_type, open_time, close_time, active FROM court ORDER BY id;`
-- Today’s bookings: `SELECT * FROM booking WHERE booking_date = CURRENT_DATE ORDER BY court_id, start_time;`
-- Bookings for a date: `SELECT * FROM booking WHERE booking_date = DATE '2025-11-19' ORDER BY court_id, start_time;`
-- Bookings by status: `SELECT * FROM booking WHERE status = 'PENDING' ORDER BY created_at DESC;`
+## 🚀 Local Development Setup
 
-Reset Dev DB
-------------
-- Removes the local H2 file database (./.localdb) so Flyway re-applies all migrations on next start.
-- Run from repo root (PowerShell):
-  - `./scripts/reset-dev-db.ps1`
-  - To reset and immediately start the backend: `./scripts/reset-dev-db.ps1 -Run`
-- Notes:
-  - Ensure the backend is stopped before running the reset.
-  - The script sets JAVA_HOME from JAVA_21_HOME for this session when using `-Run`.
+Follow these steps to spin up the project locally.
+
+### 1. Start the Java Backend
+Prerequisites: **Java 21** & **Maven**.
+By default, the backend runs an in-memory `H2` database with `UPDATE` flyway migrations, making local testing effortless.
+
+```bash
+# macOS / Linux
+./mvnw spring-boot:run
+
+# Windows
+mvnw.cmd spring-boot:run
+```
+> The API will be available at: `http://localhost:8080/api`
+
+### 2. Start the React Frontend
+Prerequisites: **Node.js 18+**.
+
+```bash
+cd frontend-dragos
+npm install
+npm run dev
+```
+> The Frontend UI will be available at: `http://localhost:5174`
+
+### 3. Admin Access
+For local testing, bootstrap credentials are:
+- **Username:** `admin`
+- **Password:** `admin123`
+
+*(Important: Change these immediately if deploying to production!)*
+
+---
+
+## 🌐 Production Deployment
+
+The application is built to be deployed on an on-premise Linux environment or cloud VPS:
+1. **Application Server:** `PM2` daemonizes the compiled `.jar` file.
+2. **Web Server:** `Nginx` acts as a load balancer and reverse proxy, serving the static `dist/` React bundle and forwarding `/api/` traffic to the underlying Java instance.
+3. **Security:** Cloudflare Zero Trust (Tunnel) is utilized to securely expose the local port 80 to the public domain, mitigating DDoS attacks and providing automatic SSL bridging without complex port forwarding.
+
+---
+
+<div align="center">
+  <i>Developed with ❤️ by <a href="https://github.com/dragoscocs">Dragoș C.</a></i>
+</div>
