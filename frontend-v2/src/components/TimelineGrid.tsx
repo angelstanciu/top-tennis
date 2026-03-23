@@ -730,16 +730,7 @@ export default function TimelineGrid({
                                   setSelCourtId(null); setSelStart(null); setSelEnd(null)
                                   onSelectionChange?.(null, null, null, false, false)
                                 }
-                                const end60 = ticks[i+2]
-                                if (end60) {
-                                  const slot2Booked = booked.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
-                                  const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                                  const free60 = !isBooked && !slot2Booked && !isPast && !slot2Past
-                                  if (free60) {
-                                    const gapInvalid = leavesThirtyMinuteGap(booked, t, end60, row.court.sportType)
-                                    if (gapInvalid) { onSelectionChange?.(null, null, null, false, gapInvalid); return }
-                                  }
-                                }
+                                // Note: Premature gap validation removed here to allow selecting 90+ min intervals even if 60 mins is invalid
                                 popupRowIndexRef.current = rowIndex
                                 handleCellClick(row.court.id, t, next, isBooked, true, (booked as any))
                                 const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
@@ -911,19 +902,7 @@ export default function TimelineGrid({
                               setSelCourtId(null); setSelStart(null); setSelEnd(null)
                               onSelectionChange?.(null, null, null, false, false)
                             }
-                            const end60 = ticks[i+2]
-                            if (end60) {
-                              const slot2Booked = bookedRanges.some(b => !(b.end <= ticks[i+1] || b.start >= end60))
-                              const slot2Past = (date < todayStr) || (date === todayStr && ticks[i+1] < nowTime)
-                              const free60 = !isBooked && !isPastRow && !slot2Past && !slot2Booked
-                              if (free60) {
-                                const gapInvalid = leavesThirtyMinuteGap(bookedRanges, t, end60, row.court.sportType)
-                                if (gapInvalid) { onSelectionChange?.(null, null, null, false, gapInvalid); return }
-                              } else {
-                                onSelectionChange?.(null, null, null, false, "Sunt necesare cel puțin 60 de minute libere consecutive pentru o rezervare."); 
-                                return;
-                              }
-                            }
+                            // Note: Premature gap validation removed here to allow selecting 90+ min intervals even if 60 mins is invalid
                             popupRowIndexRef.current = rowIndex
                             handleCellClick(row.court.id, t, next, isBooked, true, bookedRanges)
                             const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
@@ -1016,6 +995,67 @@ export default function TimelineGrid({
         setReserveWarnFading(false)
       }
     }
+
+    function getSuggestionText() {
+       const activeLocal = row.booked.filter(b => b.status !== 'CANCELLED');
+       const startMin = timeToMinutes(startTime);
+       
+       let blockStart = timeToMinutes(row.court.openTime || '08:00');
+       let blockEnd = timeToMinutes(row.court.closeTime === '23:59' ? '24:00' : (row.court.closeTime || '24:00'));
+       activeLocal.forEach(b => {
+         const bs = timeToMinutes(b.start);
+         const be = timeToMinutes(b.end);
+         if (be <= startMin && be > blockStart) blockStart = be;
+         if (bs > startMin && bs < blockEnd) blockEnd = bs;
+       });
+
+       const formatTime = (m: number) => {
+         if (m >= 24 * 60) return '24:00';
+         const h = Math.floor(m / 60).toString().padStart(2, '0');
+         const min = (m % 60).toString().padStart(2, '0');
+         return `${h}:${min}`;
+       };
+
+       const bStartStr = formatTime(blockStart);
+       const gap = blockEnd - blockStart;
+
+       if (gap < 60) return "Vă informăm că spațiul disponibil aici este prea scurt pentru o rezervare de minim 1 oră.";
+
+       const isTennis = row.court.sportType === 'TENNIS';
+       
+       if (isTennis) {
+           const nextValidLeft = blockStart + 90;
+           const nextLeftStr = nextValidLeft + 60 <= blockEnd ? ` sau de la ${formatTime(nextValidLeft)}` : '';
+           const leftStr = `💡 Sfat: Pentru a respecta regula de pauză, poți începe rezervarea exact de la ${bStartStr}${nextLeftStr}.`;
+           
+           if (blockEnd >= 24 * 60 - 30) {
+               return leftStr; // No right booking to snap to
+           } else {
+               const bEndStr = formatTime(blockEnd);
+               const rightPicks: string[] = [];
+               if (blockEnd - 90 >= blockStart) rightPicks.push(formatTime(blockEnd - 90));
+               if (blockEnd - 60 >= blockStart) rightPicks.push(formatTime(blockEnd - 60));
+               const rightStr = rightPicks.length > 0 ? rightPicks.join(' sau ') : '';
+               
+               if (rightStr) {
+                   return `💡 Sfat: Poți rezerva în siguranță de la ora ${bStartStr}, sau poți alege ${rightStr} (pentru a te lipi corect de următoarea rezervare de la ${bEndStr}).`;
+               }
+               return leftStr;
+           }
+       } else {
+           if (blockEnd >= 24 * 60 - 30) {
+               return `💡 Sfat: Cel mai bine este să începi rezervarea fix de la ora ${bStartStr}.`;
+           }
+           const bEndStr = formatTime(blockEnd);
+           const rightPicks: string[] = [];
+           if (blockEnd - 90 >= blockStart) rightPicks.push(formatTime(blockEnd - 90));
+           if (blockEnd - 60 >= blockStart) rightPicks.push(formatTime(blockEnd - 60));
+           const rightStr = rightPicks.length > 0 ? rightPicks.join(' / ') : formatTime(blockEnd - 60);
+
+           return `💡 Sfat: Poți alege să începi exact de la ${bStartStr}, sau de la ora ${rightStr} pentru a te alinia cu rezervarea de la ${bEndStr}.`;
+       }
+    }
+
     function handleReserveClick() {
       if (!selectionValid) {
         setReserveWarnVisible(true)
@@ -1084,7 +1124,23 @@ export default function TimelineGrid({
              )}
 
              <div className="space-y-2.5">
-                {options.map((mins) => {
+                {options.every(mins => !isRangeFree(mins)) ? (
+                  <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
+                    <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
+                    <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
+                      La <strong>{sportLabel(row.court.sportType)}</strong>, regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări. 
+                    </p>
+                    <div className="bg-white/60 p-3 rounded-2xl border border-rose-200/50 text-[13px] text-rose-800 leading-snug w-full">
+                      {getSuggestionText()}
+                    </div>
+                    <button 
+                      onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }} 
+                      className="mt-2 w-full px-4 py-3 bg-white text-rose-700 font-black uppercase text-[11px] tracking-widest rounded-2xl border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
+                    >
+                      Am înțeles
+                    </button>
+                  </div>
+                ) : options.map((mins) => {
                   const ok = isRangeFree(mins)
                   const isSelectedCurrent = selEnd && (timeToMinutes(selEnd) - timeToMinutes(startTime) === mins)
                   const label = mins === 60 ? '1 oră' : mins === 90 ? '1h 30m' : '2 ore'
@@ -1114,21 +1170,23 @@ export default function TimelineGrid({
                 })}
              </div>
 
-             <div className="mt-4 pt-2 flex flex-col gap-3">
-                <button 
-                  onClick={handleReserveClick}
-                  className={`w-full py-5 rounded-[2rem] font-black text-xl tracking-tight transition-all shadow-xl active:scale-95 ${
-                    selectionValid 
-                      ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30' 
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  Confirmă Rezervarea
-                </button>
-                <div className="text-center">
-                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">Prețul include TVA</p>
-                </div>
-             </div>
+             {!options.every(mins => !isRangeFree(mins)) && (
+               <div className="mt-4 pt-2 flex flex-col gap-3">
+                  <button 
+                    onClick={handleReserveClick}
+                    className={`w-full py-5 rounded-[2rem] font-black text-xl tracking-tight transition-all shadow-xl active:scale-95 ${
+                      selectionValid 
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30' 
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Confirmă Rezervarea
+                  </button>
+                  <div className="text-center">
+                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">Prețul include TVA</p>
+                  </div>
+               </div>
+             )}
           </div>
         </div>
       </>

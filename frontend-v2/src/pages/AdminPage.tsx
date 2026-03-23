@@ -782,6 +782,10 @@ export default function AdminPage() {
                           </button>
                         ) : (
                           <>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm select-none">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                              Aprobat
+                            </div>
                             {!isOld && (
                               <button
                                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
@@ -919,6 +923,10 @@ export default function AdminPage() {
                                </div>
                              ) : (
                                <>
+                                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm mr-2 select-none">
+                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                   Aprobat
+                                 </div>
                                  {!isOld && (
                                    <button
                                      className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
