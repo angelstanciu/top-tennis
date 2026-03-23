@@ -91,6 +91,18 @@ export default function FreePositionsPage() {
   const highlightCourtTimer = useRef<number | null>(null)
   const dateInputRef = useRef<HTMLInputElement | null>(null)
 
+  const getSportImage = (s: SportType | '') => {
+    switch (s) {
+      case 'TENNIS': return '/img-tenis-premium-night.jpg'
+      case 'PADEL': return '/img-padel-real-court.jpg'
+      case 'BASKETBALL': return '/img-basketball-top-view.jpg'
+      case 'BEACH_VOLLEY': return '/img-volley-real.jpg'
+      case 'FOOTVOLLEY': return '/img-foot-tennis-real.jpg'
+      case 'TABLE_TENNIS': return '/img-pingpong.png'
+      default: return '/img-padel-premium.png'
+    }
+  }
+
   // Compact toast for missing court selection
   const [missingToastVisible, setMissingToastVisible] = useState(false)
   const [missingToastFading, setMissingToastFading] = useState(false)
@@ -576,15 +588,17 @@ export default function FreePositionsPage() {
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Previzualizare Poster</div>
           <div 
             ref={posterRef}
-            className="w-full max-w-[480px] rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden relative border-2 border-white/10"
+            className="w-full max-w-[480px] rounded-[2rem] shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden relative border-2 border-white/10"
             style={{ 
-              background: 'linear-gradient(135deg, #0a2342 0%, #0f4c5c 50%, #0a2342 100%)',
+              backgroundImage: `linear-gradient(rgba(10, 35, 66, 0.75), rgba(15, 76, 92, 0.85)), url(${getSportImage(sport)})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
               fontFamily: 'Outfit, sans-serif',
               aspectRatio: '1 / 1'
             }}
           >
             {/* Logo */}
-            <div className="bg-lime-300 w-14 h-14 rounded-2xl rotate-3 flex items-center justify-center mb-3 shadow-lg flex-shrink-0">
+            <div className="bg-lime-400 w-14 h-14 rounded-2xl rotate-3 flex items-center justify-center mb-3 shadow-lg flex-shrink-0 border border-white/20">
                <span className="text-2xl">🎾</span>
             </div>
 
