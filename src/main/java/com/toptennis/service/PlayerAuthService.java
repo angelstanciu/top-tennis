@@ -10,6 +10,7 @@ import com.toptennis.repository.BookingRepository;
 import com.toptennis.model.Booking;
 import com.toptennis.security.JwtService;
 import com.toptennis.service.EmailService;
+import com.toptennis.sms.SmsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class PlayerAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final SmsService smsService;
     private static final Logger log = LoggerFactory.getLogger(PlayerAuthService.class);
     
     @Value("${google.auth.client-id}")
@@ -42,19 +44,30 @@ public class PlayerAuthService {
     private final Map<String, String> phoneToOtp = new ConcurrentHashMap<>();
     private final Map<String, LocalDateTime> otpExpiry = new ConcurrentHashMap<>();
 
-    public PlayerAuthService(PlayerUserRepository playerUserRepository, BookingRepository bookingRepository, PasswordEncoder passwordEncoder, JwtService jwtService, EmailService emailService) {
+    public PlayerAuthService(PlayerUserRepository playerUserRepository, BookingRepository bookingRepository, PasswordEncoder passwordEncoder, JwtService jwtService, EmailService emailService, SmsService smsService) {
         this.playerUserRepository = playerUserRepository;
         this.bookingRepository = bookingRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.emailService = emailService;
+        this.smsService = smsService;
     }
 
     public void requestOtp(String phone) {
         String normalized = normalizePhone(phone);
-        String otp = "123456"; // Hardcodat pentru ușurința testării frontend / MVP
+        // Verifica daca s-a trimis un OTP recent (protectie anti-spam)
+        LocalDateTime lastExpiry = otpExpiry.get(normalized);
+        if (lastExpiry != null && lastExpiry.isAfter(LocalDateTime.now().plusMinutes(9))) {
+            throw new IllegalStateException("Un cod a fost trimis recently. Te rugam sa astepti.");
+        }
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         phoneToOtp.put(normalized, otp);
         otpExpiry.put(normalized, LocalDateTime.now().plusMinutes(10));
+        // Trimite SMS real cu codul OTP
+        String toE164 = "+40" + normalized.replaceFirst("^0", "");
+        String text = "Buna! Codul tau de acces pe platforma Star Arena Bascov este: " + otp + ". Valabil 10 minute. Nu il impartasi nimanui.";
+        log.info("Sending login OTP SMS to: {}", toE164);
+        smsService.sendSms(toE164, text);
     }
 
     public String verifyOtp(String phone, String otp) {
@@ -409,18 +422,24 @@ public class PlayerAuthService {
         }
 
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
-        // Use test OTP for development until SMS is live
-        if ("0799888999".equals(normalizePhone(identifier))) otp = "123456"; 
 
         if (isEmail) {
             phoneToOtp.put(identifier, otp);
             otpExpiry.put(identifier, LocalDateTime.now().plusMinutes(15));
-            emailService.sendEmail(identifier, "Resetare parolă Star Arena", "Codul tău de resetare a parolei este: " + otp + "\nAcest cod expiră în 15 minute.");
+            emailService.sendEmail(identifier,
+                "Resetare parola - Star Arena Bascov",
+                "Buna,\n\nAm primit o cerere de resetare a parolei pentru contul tau Star Arena.\n" +
+                "Codul tau de resetare este: " + otp + "\n" +
+                "Codul este valabil 15 minute.\n\n" +
+                "Daca nu ai solicitat resetarea parolei, ignora acest mesaj.");
         } else {
             String normalizedPhone = normalizePhone(identifier);
             phoneToOtp.put(normalizedPhone, otp);
             otpExpiry.put(normalizedPhone, LocalDateTime.now().plusMinutes(15));
-            // In a real scenario, an SMS service integration should be called here.
+            String toE164 = "+40" + normalizedPhone.replaceFirst("^0", "");
+            String text = "Star Arena Bascov: Codul tau de resetare a parolei este " + otp + ". Valabil 15 min. Daca nu ai solicitat resetarea, ignora acest SMS.";
+            log.info("Sending password reset SMS to: {}", toE164);
+            smsService.sendSms(toE164, text);
         }
     }
 

@@ -35,7 +35,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("select distinct b from Booking b join fetch b.court c left join fetch b.playerUser pu where b.bookingDate = :date and (:sportType is null or c.sportType = :sportType)")
     List<Booking> findByDateAndSportType(@Param("date") LocalDate date, @Param("sportType") SportType sportType);
 
-    @Query("select b from Booking b join fetch b.court c where b.bookingDate = :date and b.status = :status and b.startTime between :start and :end")
+    @Query("select b from Booking b join fetch b.court c where b.bookingDate = :date and b.status = :status and b.startTime between :start and :end and b.weeklyUser = false")
     List<Booking> findForReminder(@Param("date") LocalDate date,
                                   @Param("status") BookingStatus status,
                                   @Param("start") LocalTime start,

@@ -91,12 +91,17 @@ public class ReminderService {
         String start = formatTime(booking.getStartTime());
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
+        String name = (booking.getCustomerName() != null && !booking.getCustomerName().isBlank())
+                ? booking.getCustomerName().split(" ")[0]
+                : "Salut";
         if (sameDay) {
-            return "Buna ziua! Va reamintim ca azi, incepand cu orele " + start +
-                    ", aveti rezervare la baza sportiva Star Arena, " + sport + ", Teren " + court + ". Jocuri frumoase!";
+            return name + ", iti reamintim ca astazi ai rezervare la Star Arena Bascov! " +
+                    "\u23F0 Ora " + start + " | " + sport + " | Teren " + court +
+                    ". Te asteptam! \uD83C\uDFBE";
         }
-        return "Buna seara! Va reamintim ca maine, incepand cu orele " + start +
-                ", aveti rezervare la baza sportiva Star Arena, " + sport + ", Teren " + court + ". Jocuri frumoase!";
+        return name + ", maine ai rezervare la Star Arena Bascov! " +
+                "\uD83D\uDCC5 Ora " + start + " | " + sport + " | Teren " + court +
+                ". Ne vedem acolo! \uD83D\uDE4C";
     }
 
     private String formatTime(LocalTime time) {

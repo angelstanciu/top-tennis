@@ -53,6 +53,9 @@ public class Booking {
     public void setCancelToken(String cancelToken) { this.cancelToken = cancelToken; }
 
     private boolean isMidnightBooking;
+
+    @Column(nullable = false)
+    private boolean weeklyUser = false;
     
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -89,6 +92,8 @@ public class Booking {
 
     public boolean isMidnightBooking() { return isMidnightBooking; }
     public void setMidnightBooking(boolean midnightBooking) { this.isMidnightBooking = midnightBooking; }
+    public boolean isWeeklyUser() { return weeklyUser; }
+    public void setWeeklyUser(boolean weeklyUser) { this.weeklyUser = weeklyUser; }
 
 }
 

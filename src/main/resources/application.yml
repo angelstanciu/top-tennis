@@ -38,13 +38,19 @@ app:
   base-url: http://localhost:5173
 
 sms:
+  mode: ${SMS_MODE:production}
+  port: ${SMS_PORT:/dev/ttyUSB0}
+  baud: 115200
+  clubNumber: ${SMS_CLUB_NUMBER:+40741066381}
+  commandTimeoutMs: 4000
+  sendTimeoutMs: 20000
 
 logging:
   level:
     com.toptennis: INFO
 
 reminder:
-  firstBatchHour: 09:00
+  firstBatchHour: 08:30
   firstBatchIntervals: 10:00-23:59
   secondBatchHour: 18:00
   secondBatchIntervals: 00:00-09:59
