@@ -31,12 +31,13 @@ frontend/.vite/
 frontend/.eslintcache
 frontend/tsconfig.tsbuildinfo
 
-# Node / Vite (frontend-v2)
-frontend-v2/node_modules/
-frontend-v2/dist/
-frontend-v2/.vite/
-frontend-v2/.eslintcache
-frontend-v2/tsconfig.tsbuildinfo
+# Node / Vite (frontend-dragos)
+frontend-dragos/node_modules/
+frontend-dragos/dist/
+frontend-dragos/.vite/
+frontend-dragos/.eslintcache
+frontend-dragos/tsconfig.tsbuildinfo
+node_modules/
 
 # Env files / secrets
 .env
