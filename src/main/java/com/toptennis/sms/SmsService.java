@@ -209,7 +209,8 @@ public class SmsService {
         }
         transcript.append(client.waitForPrompt('>', cmdTimeout));
 
-        byte[] messageBytes = (text + (char) 0x1A).getBytes(StandardCharsets.UTF_8);
+        String safeText = stripDiacritics(text);
+        byte[] messageBytes = (safeText + (char) 0x1A).getBytes(StandardCharsets.ISO_8859_1);
         client.writeRaw(messageBytes);
 
         String finalResp = client.readResponse(doneOkOrError(), sendTimeout);
@@ -408,6 +409,34 @@ public class SmsService {
             default:
                 return sport == null ? "" : sport;
         }
+    }
+
+    /**
+     * Replaces Romanian and common diacritical characters with plain ASCII equivalents
+     * so that the SMS text can be encoded as GSM 7-bit / ISO-8859-1, compatible with
+     * AT+CMGF=1 text mode on Orange Romania modems.
+     */
+    private String stripDiacritics(String text) {
+        if (text == null) return "";
+        return text
+                .replace('ă', 'a').replace('Ă', 'A')
+                .replace('â', 'a').replace('Â', 'A')
+                .replace('î', 'i').replace('Î', 'I')
+                .replace('ș', 's').replace('Ș', 'S')
+                .replace('ț', 't').replace('Ț', 'T')
+                .replace('ş', 's').replace('Ş', 'S') // comma-below variant
+                .replace('ţ', 't').replace('Ţ', 'T') // comma-below variant
+                .replace('é', 'e').replace('É', 'E')
+                .replace('è', 'e').replace('È', 'E')
+                .replace('ê', 'e').replace('Ê', 'E')
+                .replace('ë', 'e').replace('Ë', 'E')
+                .replace('á', 'a').replace('Á', 'A')
+                .replace('à', 'a').replace('À', 'A')
+                .replace('ö', 'o').replace('Ö', 'O')
+                .replace('ó', 'o').replace('Ó', 'O')
+                .replace('ü', 'u').replace('Ü', 'U')
+                .replace('ú', 'u').replace('Ú', 'U')
+                .replace('ñ', 'n').replace('Ñ', 'N');
     }
 
     private java.util.function.Predicate<String> doneOkOrError() {

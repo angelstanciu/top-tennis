@@ -303,9 +303,8 @@ export default function PlayerAuthPage() {
                 ) : (
                   <form onSubmit={handleVerifyOtp} className="space-y-6">
                     <div className="space-y-2">
-                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex justify-between">
+                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
                          Cod Primit
-                         <span className="text-lime-500/60 lowercase italic tracking-normal">Test: 123456</span>
                        </label>
                        <div className="relative">
                          <input 
@@ -527,7 +526,7 @@ export default function PlayerAuthPage() {
 
                    {authMode === 'reset' && (
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex justify-between">Cod Resetare Primit <span className="text-lime-500/60 lowercase italic tracking-normal">Test: 123456</span></label>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1">Cod Resetare Primit</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
                           <input 
