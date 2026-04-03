@@ -197,10 +197,12 @@ public class PlayerAuthController {
         }
     }
 
+    public record VerifyOnlyOtpRequest(@NotBlank @Size(min=6, max=6) String otp) {}
+
     @PostMapping("/auth/verify-phone")
     public PlayerUser verifyPhone(
             @RequestHeader("Authorization") String token,
-            @RequestBody @Valid VerifyRequest req) {
+            @RequestBody @Valid VerifyOnlyOtpRequest req) {
         PlayerUser user = playerAuthService.getUserByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalid."));
         try {

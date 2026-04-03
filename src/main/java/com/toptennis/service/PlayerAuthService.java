@@ -65,7 +65,7 @@ public class PlayerAuthService {
         otpExpiry.put(normalized, LocalDateTime.now().plusMinutes(10));
         // Trimite SMS real cu codul OTP
         String toE164 = "+40" + normalized.replaceFirst("^0", "");
-        String text = "Buna! Codul tau de acces pe platforma Star Arena Bascov este: " + otp + ". Valabil 10 minute. Nu il impartasi nimanui.";
+        String text = "Codul tau de conectare este: " + otp + " (valabil 10 min). Nu-l oferi nimanui.\n\n- Star Arena";
         log.info("Sending login OTP SMS to: {}", toE164);
         var result = smsService.sendSms(toE164, text);
         if (!result.success) {
@@ -441,7 +441,7 @@ public class PlayerAuthService {
             phoneToOtp.put(normalizedPhone, otp);
             otpExpiry.put(normalizedPhone, LocalDateTime.now().plusMinutes(15));
             String toE164 = "+40" + normalizedPhone.replaceFirst("^0", "");
-            String text = "Star Arena Bascov: Codul tau de resetare a parolei este " + otp + ". Valabil 15 min. Daca nu ai solicitat resetarea, ignora acest SMS.";
+            String text = "Codul de resetare a parolei : " + otp + ". Valabil 15 min.\n\n- Star Arena";
             log.info("Sending password reset SMS to: {}", toE164);
             var result = smsService.sendSms(toE164, text);
             if (!result.success) {
