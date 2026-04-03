@@ -31,6 +31,10 @@ public class SmsService {
     }
 
     public SmsSendResult sendSms(String toE164, String text) {
+        if (toE164 != null && toE164.startsWith("07")) {
+            toE164 = "+40" + toE164.substring(1);
+        }
+        
         if ("mock".equalsIgnoreCase(props.getMode())) {
             log.info("====== SMS MOCK (MODE=MOCK) ======");
             log.info("To: {}", toE164);

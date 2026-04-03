@@ -67,7 +67,11 @@ public class PlayerAuthService {
         String toE164 = "+40" + normalized.replaceFirst("^0", "");
         String text = "Buna! Codul tau de acces pe platforma Star Arena Bascov este: " + otp + ". Valabil 10 minute. Nu il impartasi nimanui.";
         log.info("Sending login OTP SMS to: {}", toE164);
-        smsService.sendSms(toE164, text);
+        var result = smsService.sendSms(toE164, text);
+        if (!result.success) {
+            log.error("Failed to send OTP SMS to {}. Transcript: {}", toE164, result.transcript);
+            throw new RuntimeException("Eroare la trimiterea SMS-ului. Te rugăm să încerci din nou mai târziu.");
+        }
     }
 
     public String verifyOtp(String phone, String otp) {
@@ -439,7 +443,11 @@ public class PlayerAuthService {
             String toE164 = "+40" + normalizedPhone.replaceFirst("^0", "");
             String text = "Star Arena Bascov: Codul tau de resetare a parolei este " + otp + ". Valabil 15 min. Daca nu ai solicitat resetarea, ignora acest SMS.";
             log.info("Sending password reset SMS to: {}", toE164);
-            smsService.sendSms(toE164, text);
+            var result = smsService.sendSms(toE164, text);
+            if (!result.success) {
+                log.error("Failed to send reset SMS to {}. Transcript: {}", toE164, result.transcript);
+                throw new RuntimeException("Eroare la trimiterea SMS-ului de recuperare. Te rugăm să încerci mai târziu.");
+            }
         }
     }
 
