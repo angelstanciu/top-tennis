@@ -52,7 +52,7 @@ const router = createBrowserRouter([
 
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "617835105268-m8h07g94gkvsn669r170n09vrt6688ee.apps.googleusercontent.com"
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "337840626682-f4c0aj43u6pbiba781bfhqrlfc9q0tde.apps.googleusercontent.com"
 
 import CookieConsent from './components/CookieConsent'
 
