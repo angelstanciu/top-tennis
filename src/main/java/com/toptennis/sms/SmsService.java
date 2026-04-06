@@ -200,6 +200,9 @@ public class SmsService {
         Duration sendTimeout = Duration.ofMillis(props.getSendTimeoutMs());
 
         transcript.append(executeAtWithReconnect(cmdTimeout));
+        client.execute("AT+CSCS=\"GSM\"", doneOkOrError(), cmdTimeout);
+        client.execute("AT+CSMP=17,167,0,0", doneOkOrError(), cmdTimeout);
+        
         String cmgfResp = client.execute("AT+CMGF=1", doneOkOrError(), cmdTimeout);
         transcript.append(cmgfResp);
         if (hasErrorLine(cmgfResp)) {
@@ -310,8 +313,8 @@ public class SmsService {
         String sportLabel = mapSportLabel(sport);
         return "Rezervare noua Star Arena!\n" +
                 customer + " / " + customerPhone + "\n" +
-                sportLabel + " | Teren " + courtNumber + "\n" +
-                date + " | " + start + " - " + end;
+                sportLabel + " - Teren " + courtNumber + "\n" +
+                date + " - " + start + " - " + end;
     }
 
     private String buildCustomerMessage(Booking booking) {
@@ -325,9 +328,9 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata! " + sportLabel + " | Teren " + courtNumber +
-                " | " + date + " | " + start + " - " + end +
-                " | " + price + " RON." +
+        return "Rezervare confirmata! " + sportLabel + " - Teren " + courtNumber +
+                " - " + date + " - " + start + " - " + end +
+                " - " + price + " RON." +
                 AUTOMAT_FOOTER;
     }
 
@@ -342,9 +345,9 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata! " + sportLabel + " | Teren " + courtNumber +
-                " | " + date + " | " + start + " - " + end +
-                " | " + price + " RON." +
+        return "Rezervare confirmata! " + sportLabel + " - Teren " + courtNumber +
+                " - " + date + " - " + start + " - " + end +
+                " - " + price + " RON." +
                 AUTOMAT_FOOTER;
     }
 
@@ -361,8 +364,8 @@ public class SmsService {
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
         return "Rezervare noua:\n" +
-                sportLabel + " | Teren " + courtNumber + "\n" +
-                date + " | " + start + " - " + end + "\n" +
+                sportLabel + " - Teren " + courtNumber + "\n" +
+                date + " - " + start + " - " + end + "\n" +
                 customer + " / " + customerPhone;
     }
 
@@ -379,8 +382,8 @@ public class SmsService {
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
         return "Rezervare noua:\n" +
-                sportLabel + " | Teren " + courtNumber + "\n" +
-                date + " | " + start + " - " + end + "\n" +
+                sportLabel + " - Teren " + courtNumber + "\n" +
+                date + " - " + start + " - " + end + "\n" +
                 customer + " / " + customerPhone;
     }
 
@@ -481,7 +484,8 @@ public class SmsService {
                 .replace('ó', 'o').replace('Ó', 'O')
                 .replace('ü', 'u').replace('Ü', 'U')
                 .replace('ú', 'u').replace('Ú', 'U')
-                .replace('ñ', 'n').replace('Ñ', 'N');
+                .replace('ñ', 'n').replace('Ñ', 'N')
+                .replace('\n', '\r');
     }
 
     private java.util.function.Predicate<String> doneOkOrError() {
