@@ -87,7 +87,7 @@ public class AtSerialClient {
         SerialPort sp = SerialPort.getCommPort(props.getPort());
         sp.setComPortParameters(props.getBaud(), 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
         sp.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
-        sp.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 500, 0);
+        sp.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1000, 0);
         if (!sp.openPort()) {
             throw new SmsPortException("Cannot open " + props.getPort() + ". If permission is denied, add your user to the dialout group.");
         }
@@ -112,6 +112,7 @@ public class AtSerialClient {
         StringBuilder transcript = new StringBuilder();
         try {
             ensureOpen();
+            clearBuffers();
             writeLine(command);
             sleepInterCommand();
             readUntil(doneCondition, timeout, transcript);
@@ -130,6 +131,7 @@ public class AtSerialClient {
         StringBuilder transcript = new StringBuilder();
         try {
             ensureOpen();
+            clearBuffers();
             if (lastTranscript != null && lastTranscript.indexOf(promptChar) >= 0) {
                 return "";
             }
@@ -149,6 +151,7 @@ public class AtSerialClient {
         StringBuilder transcript = new StringBuilder();
         try {
             ensureOpen();
+            clearBuffers();
             readUntil(doneCondition, timeout, transcript);
             lastTranscript = transcript.toString();
             return lastTranscript;
@@ -229,6 +232,20 @@ public class AtSerialClient {
             Thread.sleep(props.getInterCommandDelayMs());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private void clearBuffers() {
+        if (port != null && port.isOpen()) {
+            InputStream is = port.getInputStream();
+            try {
+                int avail = is.available();
+                if (avail > 0) {
+                    is.skip(avail);
+                    // System.out.println("[SERIAL] Cleared " + avail + " leftover bytes from buffer.");
+                }
+            } catch (IOException ignored) {
+            }
         }
     }
 }

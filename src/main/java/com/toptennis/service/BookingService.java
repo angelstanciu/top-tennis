@@ -342,6 +342,7 @@ public class BookingService {
             // Trigger notifications upon manual approval
             taskExecutor.execute(() -> {
                 smsService.sendReservationNotifications(saved);
+                smsService.sendAdminNewBookingNotification(saved);
                 emailService.sendBookingConfirmation(saved);
             });
             return saved;

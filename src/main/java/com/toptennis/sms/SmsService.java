@@ -212,6 +212,7 @@ public class SmsService {
             return failResult(transcript.toString());
         }
         transcript.append(client.waitForPrompt('>', cmdTimeout));
+        try { Thread.sleep(300); } catch (InterruptedException ignored) {}
 
         String safeText = stripDiacritics(text);
         byte[] messageBytes = (safeText + (char) 0x1A).getBytes(StandardCharsets.ISO_8859_1);
@@ -265,7 +266,7 @@ public class SmsService {
 
     private void sleepBetweenMessages() {
         try {
-            Thread.sleep(5000L);
+            Thread.sleep(2000L);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
