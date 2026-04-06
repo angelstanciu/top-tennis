@@ -399,8 +399,8 @@ export default function TimelineGrid({
     // Calculate precise LeftEdge by matching the exact present time boundary.
     const nowHHMM = new Date().toTimeString().slice(0,5)
     let isLeftEdge = gapBefore >= 10 * 60; // fallback UI proxy
-    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 30) {
-       // if the free block essentially starts right around 'now', treat as left edge
+    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) {
+       // if the free block essentially starts right around 'now' (up to 65 mins ago), treat as left edge
        isLeftEdge = true;
     }
     
@@ -431,7 +431,7 @@ export default function TimelineGrid({
     if (gapBefore === 30 && gapAfter === 30) return standardErrorMsg
 
     // 2. Fragmented on one side and NOT snapped to the other (Force snapping)
-    if (gapBefore === 30 && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
+    if ((gapBefore === 30 || gapBefore === 60) && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
     if (gapAfter === 30 && gapBefore >= 60 && !isRightEdge) return standardErrorMsg
 
     // ALLOW ALL OTHER CASES:
@@ -1124,7 +1124,7 @@ export default function TimelineGrid({
              )}
 
              <div className="space-y-2.5">
-                {options.every(mins => !isRangeFree(mins)) ? (
+                {(options.every(mins => !isRangeFree(mins)) || (selEnd && !selectionValid)) ? (
                   <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
                     <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
                     <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
@@ -1137,7 +1137,7 @@ export default function TimelineGrid({
                       onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }} 
                       className="mt-2 w-full px-4 py-3 bg-white text-rose-700 font-black uppercase text-[11px] tracking-widest rounded-2xl border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
                     >
-                      Am înțeles
+                      {selEnd && !selectionValid ? "Reselectează Intervalul" : "Am înțeles"}
                     </button>
                   </div>
                 ) : options.map((mins) => {
@@ -1170,7 +1170,7 @@ export default function TimelineGrid({
                 })}
              </div>
 
-             {!options.every(mins => !isRangeFree(mins)) && (
+             {!(options.every(mins => !isRangeFree(mins)) || (selEnd && !selectionValid)) && (
                <div className="mt-4 pt-2 flex flex-col gap-3">
                   <button 
                     onClick={handleReserveClick}

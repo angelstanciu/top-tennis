@@ -620,7 +620,7 @@ public class BookingService {
             // is effectively ~30 minutes (or less, given time passes between reading the grid and clicking),
             // we consider it a 'Left Edge' meaning they are booking right after the "hashed" out expired time.
             int nowMin = minutesSinceMidnight(LocalTime.now());
-            if (bookingStartMin - nowMin <= 30 && bookingStartMin >= nowMin) {
+            if (bookingStartMin - nowMin <= 65 && bookingStartMin >= nowMin) {
                 isLeftEdge = true;
             }
         }
@@ -635,7 +635,7 @@ public class BookingService {
         }
         
         if (isTennis) {
-            boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && gapBefore == 30);
+            boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && (gapBefore == 30 || gapBefore == 60));
             boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter == 30 || gapAfter == 60));
             
             if (isBeforeValid && isAfterValid) {
@@ -654,9 +654,9 @@ public class BookingService {
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
-        if (gapBefore == 30 && gapAfter >= 60) {
+        if ((gapBefore == 30 || gapBefore == 60) && gapAfter >= 60) {
             if (isLeftEdge) {
-                return; // Left edge allows 30m gaps from current time
+                return; // Left edge allows 30m/60m gaps from current time
             }
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
