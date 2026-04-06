@@ -172,11 +172,13 @@ export async function createWeeklyUserBooking(payload: {
 
 // === Player Auth ===
 
-export async function requestPlayerOtp(phone: string): Promise<void> {
+export type OtpPurpose = 'LOGIN' | 'LINK_PHONE' | 'VERIFY_PHONE'
+
+export async function requestPlayerOtp(phone: string, purpose: OtpPurpose = 'LOGIN'): Promise<void> {
   const res = await fetch(`${BASE_URL}/player/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: normalizePhone(phone) }),
+    body: JSON.stringify({ phone: normalizePhone(phone), purpose }),
   })
   if (!res.ok) {
     const msg = await parseError(res)

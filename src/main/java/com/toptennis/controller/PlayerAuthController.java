@@ -29,19 +29,25 @@ public class PlayerAuthController {
         this.rateLimitingService = rateLimitingService;
     }
 
-    public record PhoneRequest(@NotBlank @Pattern(regexp = "^\\+?[0-9\\s]{9,15}$") String phone) {}
+    public record PhoneRequest(
+            @NotBlank @Pattern(regexp = "^\\+?[0-9\\s]{9,15}$") String phone,
+            String purpose) {}
 
     @PostMapping("/auth/request-otp")
     public void requestOtp(@RequestBody @Valid PhoneRequest req) {
-        if (req.phone() == null || req.phone().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Numărul de telefon este obligatoriu.");
-        }
         try {
             rateLimitingService.checkRateLimit("otp_" + req.phone());
-            playerAuthService.requestOtp(req.phone());
+            PlayerAuthService.OtpPurpose purpose = parsePurpose(req.purpose());
+            playerAuthService.requestOtp(req.phone(), purpose);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
         }
+    }
+
+    private PlayerAuthService.OtpPurpose parsePurpose(String raw) {
+        if (raw == null) return PlayerAuthService.OtpPurpose.LOGIN;
+        try { return PlayerAuthService.OtpPurpose.valueOf(raw.toUpperCase()); }
+        catch (IllegalArgumentException e) { return PlayerAuthService.OtpPurpose.LOGIN; }
     }
 
     public record VerifyRequest(@NotBlank @Pattern(regexp = "^\\+?[0-9\\s]{9,15}$") String phone, @NotBlank @Size(min=6, max=6) String otp) {}
@@ -143,31 +149,6 @@ public class PlayerAuthController {
                 .toList();
     }
 
-    @GetMapping("/debug/history/{phone}")
-    public List<BookingDto> getDebugHistory(@PathVariable String phone) {
-        try {
-            return bookingService.getBookingRepository().findByCustomerPhoneOrderByBookingDateDesc(phone).stream()
-                .map(BookingMapper::toDto)
-                .toList();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
-
-    @GetMapping("/debug/all")
-    public List<BookingDto> getDebugAll() {
-        try {
-            List<BookingDto> result = bookingService.getBookingRepository().findAll().stream()
-                .map(BookingMapper::toDto)
-                .toList();
-            System.out.println("TOTAL DB BOOKINGS: " + result.size());
-            return result;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
 
     public record UpdateProfileRequest(
             @NotBlank @Size(min=2, max=50) @Pattern(regexp = "^[^<>%$]+$", message="Nume invalid") String fullName, 

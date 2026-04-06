@@ -30,7 +30,7 @@ export default function BookingPage() {
     try { return !!JSON.parse(localStorage.getItem('playerData') || '{}').phoneNumber } catch { return false }
   }, [])
   const isAdminUser = useMemo(() => {
-    try { return !!localStorage.getItem('adminAuth') } catch { return false }
+    try { return !!sessionStorage.getItem('adminAuth') } catch { return false }
   }, [])
   const [submitting, setSubmitting] = useState(false)
 

@@ -12,6 +12,29 @@ export default defineConfig({
             devOptions: {
                 enabled: false
             },
+            workbox: {
+                cleanupOutdatedCaches: true,
+                navigateFallback: '/index.html',
+                navigateFallbackDenylist: [/^\/api/, /^\/h2-console/],
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'google-fonts-cache',
+                            expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
+                        }
+                    },
+                    {
+                        urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'gstatic-fonts-cache',
+                            expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
+                        }
+                    }
+                ]
+            },
             manifest: {
                 name: 'Star Arena',
                 short_name: 'Star Arena',

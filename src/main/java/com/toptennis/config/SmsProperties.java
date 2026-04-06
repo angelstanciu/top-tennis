@@ -13,6 +13,7 @@ public class SmsProperties {
     private long sendTimeoutMs = 20000;
     private long interCommandDelayMs = 100;
     private String clubNumber;
+    private String adminNotificationNumber;
 
     public String getMode() { return mode; }
     public void setMode(String mode) { this.mode = mode; }
@@ -28,4 +29,6 @@ public class SmsProperties {
     public void setInterCommandDelayMs(long interCommandDelayMs) { this.interCommandDelayMs = interCommandDelayMs; }
     public String getClubNumber() { return clubNumber; }
     public void setClubNumber(String clubNumber) { this.clubNumber = clubNumber; }
+    public String getAdminNotificationNumber() { return adminNotificationNumber; }
+    public void setAdminNotificationNumber(String adminNotificationNumber) { this.adminNotificationNumber = adminNotificationNumber; }
 }

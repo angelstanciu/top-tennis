@@ -112,11 +112,11 @@ export default function FreePositionsPage() {
   // Guard: redirect to /login if token missing/expired (>1h)
   useEffect(() => {
     try {
-      const token = localStorage.getItem('adminAuth')
-      const ts = Number(localStorage.getItem('adminAuthTS') || 0)
+      const token = sessionStorage.getItem('adminAuth')
+      const ts = Number(sessionStorage.getItem('adminAuthTS') || 0)
       const valid = token && ts && (Date.now() - ts) <= 3600000
       if (!valid) {
-        try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch { }
+        try { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminAuthTS') } catch { }
         nav('/login')
       }
     } catch { }

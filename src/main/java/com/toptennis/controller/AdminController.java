@@ -80,4 +80,18 @@ public class AdminController {
         return BookingMapper.toDto(bookingService.block(req.courtId, req.date, req.startTime, req.endTime, req.note));
     }
 
+    @GetMapping("/debug/all")
+    public java.util.List<BookingDto> debugAll() {
+        return bookingService.getBookingRepository().findAll().stream()
+            .map(BookingMapper::toDto)
+            .toList();
+    }
+
+    @GetMapping("/debug/history/{phone}")
+    public java.util.List<BookingDto> debugHistory(@PathVariable String phone) {
+        return bookingService.getBookingRepository().findByCustomerPhoneOrderByBookingDateDesc(phone).stream()
+            .map(BookingMapper::toDto)
+            .toList();
+    }
+
 }

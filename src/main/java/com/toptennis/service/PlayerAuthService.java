@@ -53,9 +53,10 @@ public class PlayerAuthService {
         this.smsService = smsService;
     }
 
-    public void requestOtp(String phone) {
+    public enum OtpPurpose { LOGIN, LINK_PHONE, VERIFY_PHONE }
+
+    public void requestOtp(String phone, OtpPurpose purpose) {
         String normalized = normalizePhone(phone);
-        // Verifica daca s-a trimis un OTP recent (protectie anti-spam)
         LocalDateTime lastExpiry = otpExpiry.get(normalized);
         if (lastExpiry != null && lastExpiry.isAfter(LocalDateTime.now().plusMinutes(9))) {
             throw new IllegalStateException("Un cod a fost trimis recently. Te rugam sa astepti.");
@@ -63,15 +64,24 @@ public class PlayerAuthService {
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         phoneToOtp.put(normalized, otp);
         otpExpiry.put(normalized, LocalDateTime.now().plusMinutes(10));
-        // Trimite SMS real cu codul OTP
         String toE164 = "+40" + normalized.replaceFirst("^0", "");
-        String text = "Codul tau de conectare este: " + otp + " (valabil 10 min). Nu-l oferi nimanui.\n\n- Star Arena";
-        log.info("Sending login OTP SMS to: {}", toE164);
+        String text = buildOtpText(otp, purpose);
+        log.info("Sending {} OTP SMS to: {}", purpose, toE164);
         var result = smsService.sendSms(toE164, text);
         if (!result.success) {
             log.error("Failed to send OTP SMS to {}. Transcript: {}", toE164, result.transcript);
             throw new RuntimeException("Eroare la trimiterea SMS-ului. Te rugăm să încerci din nou mai târziu.");
         }
+    }
+
+    private String buildOtpText(String otp, OtpPurpose purpose) {
+        String footer = com.toptennis.sms.SmsService.AUTOMAT_FOOTER;
+        return switch (purpose) {
+            case LOGIN -> "Codul de autentificare Star Arena: " + otp +
+                    ". Valabil 10 min. Nu il impartasi nimanui." + footer;
+            case LINK_PHONE, VERIFY_PHONE -> "Codul de verificare numar de telefon Star Arena: " + otp +
+                    ". Valabil 10 min." + footer;
+        };
     }
 
     public String verifyOtp(String phone, String otp) {
@@ -441,7 +451,8 @@ public class PlayerAuthService {
             phoneToOtp.put(normalizedPhone, otp);
             otpExpiry.put(normalizedPhone, LocalDateTime.now().plusMinutes(15));
             String toE164 = "+40" + normalizedPhone.replaceFirst("^0", "");
-            String text = "Codul de resetare a parolei : " + otp + ". Valabil 15 min.\n\n- Star Arena";
+            String text = "Codul de resetare parola Star Arena: " + otp + ". Valabil 15 min." +
+                    com.toptennis.sms.SmsService.AUTOMAT_FOOTER;
             log.info("Sending password reset SMS to: {}", toE164);
             var result = smsService.sendSms(toE164, text);
             if (!result.success) {

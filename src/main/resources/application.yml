@@ -42,6 +42,7 @@ sms:
   port: ${SMS_PORT:/dev/ttyUSB0}
   baud: 115200
   clubNumber: ${SMS_CLUB_NUMBER:+40741066381}
+  adminNotificationNumber: ${SMS_ADMIN_NUMBER:+40741705156}
   commandTimeoutMs: 4000
   sendTimeoutMs: 20000
 
@@ -50,10 +51,6 @@ logging:
     com.toptennis: INFO
 
 reminder:
-  firstBatchHour: 08:30
-  firstBatchIntervals: 10:00-23:59
-  secondBatchHour: 18:00
-  secondBatchIntervals: 00:00-09:59
   mockSms: false
 
 google:
@@ -61,7 +58,7 @@ google:
     client-id: ${GOOGLE_CLIENT_ID:337840626682-f4c0aj43u6pbiba781bfhqrlfc9q0tde.apps.googleusercontent.com}
 
 jwt:
-  secret: ${JWT_SECRET:defaultSecretForLocalDevWhichMustBeVeryLongToWorkWithHS256}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:604800000}
 
 server:

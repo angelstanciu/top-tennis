@@ -160,7 +160,7 @@ export default function ProfilePage() {
     setClaimError('')
     try {
       const { requestPlayerOtp } = await import('../api')
-      await requestPlayerOtp(claimPhone)
+      await requestPlayerOtp(claimPhone, 'LINK_PHONE')
       setClaimOtpSent(true)
     } catch (err: any) {
       setClaimError(err.message)

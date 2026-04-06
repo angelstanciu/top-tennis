@@ -27,8 +27,8 @@ export default function LoginPage() {
       })
       if (!res.ok) throw new Error('Autentificare esuată. Vă rugăm verificați utilizatorul și parola.')
       try {
-        localStorage.setItem('adminAuth', enc)
-        localStorage.setItem('adminAuthTS', String(Date.now()))
+        sessionStorage.setItem('adminAuth', enc)
+        sessionStorage.setItem('adminAuthTS', String(Date.now()))
       } catch {}
       navigate('/admin', { replace: true })
     } catch (err: any) {

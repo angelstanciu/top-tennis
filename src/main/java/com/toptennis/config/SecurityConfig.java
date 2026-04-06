@@ -28,7 +28,7 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").authenticated()
-                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/h2-console/**").authenticated()
                 .anyRequest().permitAll()
             )
             .httpBasic(basic -> basic.authenticationEntryPoint(
@@ -60,8 +60,8 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService users(PasswordEncoder encoder) {
         return new InMemoryUserDetailsManager(
-            User.withUsername("admin")
-                .password(encoder.encode("admin123"))
+            User.withUsername("cosmin")
+                .password(encoder.encode("Cosmin123"))
                 .roles("ADMIN")
                 .build()
         );

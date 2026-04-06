@@ -173,6 +173,7 @@ public class BookingService {
                 if (initialStatus == BookingStatus.CONFIRMED) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotifications(saved);
+                        smsService.sendAdminNewBookingNotification(saved);
                         emailService.sendBookingConfirmation(saved);
                     });
                 }
@@ -249,6 +250,7 @@ public class BookingService {
                 if (initialStatus == BookingStatus.CONFIRMED) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
+                        smsService.sendAdminNewBookingNotificationCrossMidnight(saved1, saved2);
                         emailService.sendBookingConfirmation(saved1);
                     });
                 }

@@ -271,6 +271,48 @@ public class SmsService {
         }
     }
 
+    public static final String AUTOMAT_FOOTER = "\nMesaj automat. Nu raspundeti.";
+
+    public void sendAdminNewBookingNotification(Booking booking) {
+        String adminNumber = props.getAdminNotificationNumber();
+        if (adminNumber == null || adminNumber.isBlank()) return;
+        sleepBetweenMessages();
+        String text = buildAdminNotificationMessage(booking,
+                formatTime(booking.getStartTime()), formatTime(booking.getEndTime()),
+                formatDate(booking.getBookingDate()), booking.getPrice());
+        SmsSendResult result = sendSms(adminNumber, text);
+        if (!result.success) {
+            log.warn("Failed to send admin notification SMS. Transcript: {}", result.transcript);
+        }
+    }
+
+    public void sendAdminNewBookingNotificationCrossMidnight(Booking first, Booking second) {
+        String adminNumber = props.getAdminNotificationNumber();
+        if (adminNumber == null || adminNumber.isBlank()) return;
+        sleepBetweenMessages();
+        String text = buildAdminNotificationMessage(first,
+                formatTime(first.getStartTime()), formatTime(second.getEndTime()),
+                formatDate(first.getBookingDate()), sumPrices(first.getPrice(), second.getPrice()));
+        SmsSendResult result = sendSms(adminNumber, text);
+        if (!result.success) {
+            log.warn("Failed to send admin notification SMS (cross-midnight). Transcript: {}", result.transcript);
+        }
+    }
+
+    private String buildAdminNotificationMessage(Booking booking, String start, String end, String date, BigDecimal price) {
+        String customer = booking.getCustomerName() == null ? "Client" : booking.getCustomerName();
+        String customerPhone = booking.getCustomerPhone() == null ? "" : booking.getCustomerPhone();
+        String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
+        String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
+                ? booking.getCourt().getSportType().name() : "";
+        String courtNumber = extractCourtNumber(court);
+        String sportLabel = mapSportLabel(sport);
+        return "Rezervare noua Star Arena!\n" +
+                customer + " / " + customerPhone + "\n" +
+                sportLabel + " | Teren " + courtNumber + "\n" +
+                date + " | " + start + " - " + end;
+    }
+
     private String buildCustomerMessage(Booking booking) {
         String start = formatTime(booking.getStartTime());
         String end = formatTime(booking.getEndTime());
@@ -282,9 +324,10 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervarea dv. a fost efectuata cu succes pentru intervalul " + start + " - " + end +
-                " la " + sportLabel + ", Teren " + courtNumber + " in data de " + date +
-                ". Veti avea de achitat suma de " + price + " RON.";
+        return "Rezervare confirmata! " + sportLabel + " | Teren " + courtNumber +
+                " | " + date + " | " + start + " - " + end +
+                " | " + price + " RON." +
+                AUTOMAT_FOOTER;
     }
 
     private String buildCustomerMessageCrossMidnight(Booking first, Booking second) {
@@ -298,9 +341,10 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervarea dv. a fost efectuata cu succes pentru intervalul " + start + " - " + end +
-                " la " + sportLabel + ", Teren " + courtNumber + " in data de " + date +
-                ". Veti avea de achitat suma de " + price + " RON.";
+        return "Rezervare confirmata! " + sportLabel + " | Teren " + courtNumber +
+                " | " + date + " | " + start + " - " + end +
+                " | " + price + " RON." +
+                AUTOMAT_FOOTER;
     }
 
     private String buildOwnerMessage(Booking booking) {
@@ -315,12 +359,10 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Aveti o rezervare noua:\n\n" +
-                "Sport: " + sportLabel + "\n" +
-                "Teren: " + courtNumber + "\n" +
-                "Data: " + date + "\n" +
-                "Interval rezervat: " + start + " - " + end + "\n" +
-                "Client: " + customer + " / " + customerPhone;
+        return "Rezervare noua:\n" +
+                sportLabel + " | Teren " + courtNumber + "\n" +
+                date + " | " + start + " - " + end + "\n" +
+                customer + " / " + customerPhone;
     }
 
     private String buildOwnerMessageCrossMidnight(Booking first, Booking second) {
@@ -335,12 +377,10 @@ public class SmsService {
                 : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Aveti o rezervare noua:\n\n" +
-                "Sport: " + sportLabel + "\n" +
-                "Teren: " + courtNumber + "\n" +
-                "Data: " + date + "\n" +
-                "Interval rezervat: " + start + " - " + end + "\n" +
-                "Client: " + customer + " / " + customerPhone;
+        return "Rezervare noua:\n" +
+                sportLabel + " | Teren " + courtNumber + "\n" +
+                date + " | " + start + " - " + end + "\n" +
+                customer + " / " + customerPhone;
     }
 
     private String formatDate(LocalDate date) {

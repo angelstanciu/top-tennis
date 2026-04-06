@@ -9,10 +9,10 @@ export default function AdminLanding() {
   
   const isLogged = (() => {
     try {
-      const token = localStorage.getItem('adminAuth')
-      const ts = Number(localStorage.getItem('adminAuthTS') || 0)
+      const token = sessionStorage.getItem('adminAuth')
+      const ts = Number(sessionStorage.getItem('adminAuthTS') || 0)
       const valid = token && ts && (Date.now() - ts) <= 3600000
-      if (!valid) { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') }
+      if (!valid) { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminAuthTS') }
       return !!valid
     } catch { return false }
   })()
@@ -46,7 +46,7 @@ export default function AdminLanding() {
 
     if (isLogged) {
         fetch('/api/admin/subscriptions/requests', {
-            headers: { 'Authorization': `Basic ${localStorage.getItem('adminAuth')}` }
+            headers: { 'Authorization': `Basic ${sessionStorage.getItem('adminAuth')}` }
         })
         .then(r => r.json())
         .then((data: any[]) => {

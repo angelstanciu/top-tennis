@@ -25,7 +25,11 @@ import CancelByTokenPage from './pages/CancelByTokenPage'
 import { registerSW } from 'virtual:pwa-register'
 import ScrollToTop from './components/ScrollToTop'
 
-registerSW()
+registerSW({
+  onNeedRefresh() {
+    window.location.reload()
+  }
+})
 
 const router = createBrowserRouter([
   { path: '/', element: <><ScrollToTop /><HomePageD /></> },

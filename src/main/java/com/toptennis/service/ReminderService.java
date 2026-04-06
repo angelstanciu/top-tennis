@@ -16,108 +16,134 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ReminderService {
     private static final Logger log = LoggerFactory.getLogger(ReminderService.class);
     private static final ZoneId ZONE = ZoneId.of("Europe/Bucharest");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final LocalTime LATE_BOOKING_THRESHOLD = LocalTime.of(10, 0);
+    private static final LocalTime MAX_EARLY_REMINDER = LocalTime.of(8, 0);
 
     private final BookingRepository bookingRepository;
     private final SmsService smsService;
     private final ReminderProperties reminderProperties;
 
-    public ReminderService(BookingRepository bookingRepository, SmsService smsService, ReminderProperties reminderProperties) {
+    // Tracks booking IDs that already received a reminder today — resets at midnight
+    private final Set<Long> sentReminderIds = ConcurrentHashMap.newKeySet();
+
+    public ReminderService(BookingRepository bookingRepository, SmsService smsService,
+                           ReminderProperties reminderProperties) {
         this.bookingRepository = bookingRepository;
         this.smsService = smsService;
         this.reminderProperties = reminderProperties;
     }
 
-    @Scheduled(cron = "#{@reminderScheduleProvider.firstBatchCron}", zone = "Europe/Bucharest")
-    public void sendSameDayReminders() {
+    /**
+     * La 09:00 in fiecare zi — trimite reminder pentru toate rezervarile
+     * din ziua curenta care incep la ora 10:00 sau mai tarziu.
+     */
+    @Scheduled(cron = "0 0 9 * * *", zone = "Europe/Bucharest")
+    public void sendLateBookingReminders() {
         LocalDate today = LocalDate.now(ZONE);
-        LocalTimeRange range = parseRange(reminderProperties.getFirstBatchIntervals());
-        log.info("Reminder batch (same-day) date={} start={} end={}", today, range.start, range.end);
-        sendBatchWithWrap(today, range, true);
+        List<Booking> bookings = bookingRepository.findForReminder(
+                today, BookingStatus.CONFIRMED, LATE_BOOKING_THRESHOLD, LocalTime.of(23, 59));
+        log.info("Reminder batch (>= 10:00) date={} candidates={}", today, bookings.size());
+        for (Booking booking : bookings) {
+            sendReminderIfEligible(booking);
+        }
     }
 
-    @Scheduled(cron = "#{@reminderScheduleProvider.secondBatchCron}", zone = "Europe/Bucharest")
-    public void sendNextDayReminders() {
+    /**
+     * La fiecare 5 minute intre 00:00 si 08:55 — verifica rezervarile din ziua curenta
+     * care incep inainte de 10:00 si trimite reminder-ul cu 60 min inainte
+     * (dar nu mai tarziu de 08:00).
+     */
+    @Scheduled(cron = "0 */5 0-8 * * *", zone = "Europe/Bucharest")
+    public void sendEarlyBookingReminders() {
         LocalDate today = LocalDate.now(ZONE);
-        LocalDate tomorrow = today.plusDays(1);
-        LocalTimeRange range = parseRange(reminderProperties.getSecondBatchIntervals());
-        log.info("Reminder batch (next-day) date={} start={} end={}", tomorrow, range.start, range.end);
-        sendBatchWithWrap(tomorrow, range, false);
+        LocalTime now = LocalTime.now(ZONE).withSecond(0).withNano(0);
+        List<Booking> bookings = bookingRepository.findForReminder(
+                today, BookingStatus.CONFIRMED, LocalTime.of(0, 0), LATE_BOOKING_THRESHOLD.minusMinutes(1));
+        for (Booking booking : bookings) {
+            LocalTime remindAt = computeEarlyRemindAt(booking.getStartTime());
+            // Fereastra de 10 minute dupa ora de reminder pentru a prinde rularea cron-ului
+            if (!now.isBefore(remindAt) && now.isBefore(remindAt.plusMinutes(10))) {
+                sendReminderIfEligible(booking);
+            }
+        }
     }
 
-    private void sendBatchWithWrap(LocalDate baseDate, LocalTimeRange range, boolean sameDay) {
-        if (range.start.equals(range.end) || range.start.isBefore(range.end)) {
-            sendReminders(baseDate, range.start, range.end, sameDay);
+    /**
+     * La miezul noptii — curata setul de ID-uri trimise pentru a permite
+     * re-trimiterea reminders-urilor pentru ziua urmatoare.
+     */
+    @Scheduled(cron = "0 1 0 * * *", zone = "Europe/Bucharest")
+    public void clearSentReminderIds() {
+        int cleared = sentReminderIds.size();
+        sentReminderIds.clear();
+        log.info("Cleared {} sent reminder IDs at midnight.", cleared);
+    }
+
+    /**
+     * Calculeaza ora la care trebuie trimis reminder-ul pentru o rezervare matinala.
+     * Regula: cu 60 min inainte, dar nu mai tarziu de 08:00.
+     */
+    private LocalTime computeEarlyRemindAt(LocalTime bookingStart) {
+        LocalTime sixtyBefore = bookingStart.minusHours(1);
+        return sixtyBefore.isAfter(MAX_EARLY_REMINDER) ? MAX_EARLY_REMINDER : sixtyBefore;
+    }
+
+    private void sendReminderIfEligible(Booking booking) {
+        if (booking.getCourt() == null) {
+            log.debug("Reminder skip bookingId={} — missing court", booking.getId());
             return;
         }
-        LocalDate nextDay = baseDate.plusDays(1);
-        sendReminders(nextDay, LocalTime.of(0, 0), range.end, sameDay);
-    }
-
-    private void sendReminders(LocalDate date, LocalTime start, LocalTime end, boolean sameDay) {
-        List<Booking> bookings = bookingRepository.findForReminder(date, BookingStatus.CONFIRMED, start, end);
-        log.info("Reminder candidates found: {}", bookings.size());
-        for (Booking booking : bookings) {
-            if (booking.getCourt() == null) {
-                log.info("Reminder skip bookingId={} missing court", booking.getId());
-                continue;
-            }
-            if (!sameDay && booking.isMidnightBooking()) {
-                log.info("Reminder skip bookingId={} midnight booking in second batch", booking.getId());
-                continue;
-            }
-            String phone = booking.getCustomerPhone();
-            if (phone == null || phone.isBlank()) {
-                log.info("Reminder skip bookingId={} missing phone", booking.getId());
-                continue;
-            }
-            String message = buildReminderMessage(booking, sameDay);
-            log.info("Reminder send bookingId={} phone={} interval={} - {}", booking.getId(), phone,
-                    formatTime(booking.getStartTime()), formatTime(booking.getEndTime()));
-            if (reminderProperties.isMockSms()) {
-                log.info("{}", message);
-            } else {
-                smsService.sendSms(phone, message);
-            }
+        String phone = booking.getCustomerPhone();
+        if (phone == null || phone.isBlank()) {
+            log.debug("Reminder skip bookingId={} — missing phone", booking.getId());
+            return;
+        }
+        if (!sentReminderIds.add(booking.getId())) {
+            log.debug("Reminder skip bookingId={} — already sent today", booking.getId());
+            return;
+        }
+        String message = buildReminderMessage(booking);
+        log.info("Reminder send bookingId={} phone={} start={}", booking.getId(), phone,
+                formatTime(booking.getStartTime()));
+        if (reminderProperties.isMockSms()) {
+            log.info("REMINDER MOCK: {}", message);
+        } else {
+            smsService.sendSms(phone, message);
         }
     }
 
-    private String buildReminderMessage(Booking booking, boolean sameDay) {
+    private String buildReminderMessage(Booking booking) {
+        String firstName = firstNameOf(booking.getCustomerName());
         String start = formatTime(booking.getStartTime());
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
-        String name = (booking.getCustomerName() != null && !booking.getCustomerName().isBlank())
-                ? booking.getCustomerName().split(" ")[0]
-                : "Salut";
-        if (sameDay) {
-            return name + ", iti reamintim ca astazi ai rezervare la Star Arena Bascov! " +
-                    "\u23F0 Ora " + start + " | " + sport + " | Teren " + court +
-                    ". Te asteptam! \uD83C\uDFBE";
-        }
-        return name + ", maine ai rezervare la Star Arena Bascov! " +
-                "\uD83D\uDCC5 Ora " + start + " | " + sport + " | Teren " + court +
-                ". Ne vedem acolo! \uD83D\uDE4C";
+        return firstName + ", ai rezervare astazi la Star Arena Bascov!" +
+                " Ora " + start + " | " + sport + " | Teren " + court + "." +
+                " Te asteptam!" +
+                SmsService.AUTOMAT_FOOTER;
+    }
+
+    private String firstNameOf(String fullName) {
+        if (fullName == null || fullName.isBlank()) return "Salut";
+        return fullName.split(" ")[0];
     }
 
     private String formatTime(LocalTime time) {
-        if (time == null) {
-            return "";
-        }
-        if (time.getHour() == 23 && time.getMinute() == 59) {
-            return "24:00";
-        }
+        if (time == null) return "";
+        if (time.getHour() == 23 && time.getMinute() == 59) return "24:00";
         return time.format(TIME_FMT);
     }
 
     private String formatCourt(Booking booking) {
-        if (booking == null || booking.getCourt() == null || booking.getCourt().getName() == null) {
-            return "";
-        }
+        if (booking.getCourt() == null || booking.getCourt().getName() == null) return "";
         String name = booking.getCourt().getName().trim();
         if (name.toLowerCase().startsWith("teren")) {
             String rest = name.substring(5).trim();
@@ -127,9 +153,7 @@ public class ReminderService {
     }
 
     private String mapSportLabel(SportType sportType) {
-        if (sportType == null) {
-            return "";
-        }
+        if (sportType == null) return "";
         return switch (sportType) {
             case TENNIS -> "Tenis";
             case PADEL -> "Padel";
@@ -138,22 +162,5 @@ public class ReminderService {
             case FOOTVOLLEY -> "Tenis de picior";
             case TABLE_TENNIS -> "Tenis de masa";
         };
-    }
-
-    private LocalTimeRange parseRange(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return new LocalTimeRange(LocalTime.MIN, LocalTime.MAX);
-        }
-        String[] parts = raw.split("-");
-        if (parts.length != 2) {
-            return new LocalTimeRange(LocalTime.MIN, LocalTime.MAX);
-        }
-        LocalTime start = LocalTime.parse(parts[0].trim(), TIME_FMT);
-        String endRaw = parts[1].trim();
-        LocalTime end = "24:00".equals(endRaw) ? LocalTime.of(23, 59) : LocalTime.parse(endRaw, TIME_FMT);
-        return new LocalTimeRange(start, end);
-    }
-
-    private record LocalTimeRange(LocalTime start, LocalTime end) {
     }
 }

@@ -54,7 +54,7 @@ export default function AdminHeader({ active }: AdminHeaderProps) {
 
         <button 
            onClick={() => {
-             localStorage.removeItem('adminAuth');
+             sessionStorage.removeItem('adminAuth');
              navigate('/admin');
            }}
            className="bg-slate-900 hover:bg-rose-500 text-slate-400 hover:text-white p-3.5 rounded-2xl border border-slate-800 transition-all active:scale-90 group shadow-lg"

@@ -98,11 +98,11 @@ export default function AdminPage() {
   // Preload admin token and avoid re-login on child routes (1h expiration)
   React.useEffect(() => {
     try {
-      const token = localStorage.getItem('adminAuth')
-      const ts = Number(localStorage.getItem('adminAuthTS') || 0)
+      const token = sessionStorage.getItem('adminAuth')
+      const ts = Number(sessionStorage.getItem('adminAuthTS') || 0)
       const valid = token && ts && (Date.now() - ts) <= 3600000
       if (!valid) {
-        try { localStorage.removeItem('adminAuth'); localStorage.removeItem('adminAuthTS') } catch { }
+        try { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminAuthTS') } catch { }
         navigate('/login', { replace: true })
       } else if (!auth) {
         setAuth(token)
@@ -374,7 +374,7 @@ export default function AdminPage() {
         return (b.id || 0) - (a.id || 0)
       })
       setBookings(sorted)
-      try { localStorage.setItem('adminAuth', enc) } catch { }
+      try { sessionStorage.setItem('adminAuth', enc) } catch { }
     } catch (e: any) {
       setError(e.message || 'Autentificare esuata')
       setAuth(null)

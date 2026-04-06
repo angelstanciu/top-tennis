@@ -62,8 +62,8 @@ export default function AdminWeeklyBookingPage() {
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem('adminAuth')
-      const ts = Number(localStorage.getItem('adminAuthTS') || 0)
+      const token = sessionStorage.getItem('adminAuth')
+      const ts = Number(sessionStorage.getItem('adminAuthTS') || 0)
       if (token && ts && (Date.now() - ts) <= 3600000) {
         setAuth(token)
       } else {
