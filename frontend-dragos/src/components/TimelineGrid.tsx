@@ -225,41 +225,20 @@ export default function TimelineGrid({
   }, [ticks])
 
   const sortedData = useMemo(() => {
-    const now = new Date();
-    const currentISO = todayISO();
-    const curTime = now.toTimeString().slice(0, 5);
-
     return [...data].sort((a, b) => {
       // 1. Group by sport type
       if (a.court.sportType !== b.court.sportType) {
         return a.court.sportType.localeCompare(b.court.sportType);
       }
 
-      // 2. Count future bookings (excluding cancelled and past ones)
-      const countA = a.booked.filter(b => {
-        if (b.status === 'CANCELLED') return false;
-        if (date < currentISO) return false;
-        if (date > currentISO) return true;
-        return (b.end === '23:59' || b.end === '24:00' || b.end > curTime);
-      }).length;
-
-      const countB = b.booked.filter(b => {
-        if (b.status === 'CANCELLED') return false;
-        if (date < currentISO) return false;
-        if (date > currentISO) return true;
-        return (b.end === '23:59' || b.end === '24:00' || b.end > curTime);
-      }).length;
-
-      if (countA !== countB) return countA - countB;
-
-      // 3. Numerical order by Name (e.g. Padel 1 < Padel 2)
+      // 2. Numerical order by court number (e.g. Teren 1 < Teren 2)
       const numA = parseInt(a.court.name.replace(/\D/g, '') || '0', 10);
       const numB = parseInt(b.court.name.replace(/\D/g, '') || '0', 10);
       if (numA !== numB) return numA - numB;
 
       return a.court.name.localeCompare(b.court.name);
     });
-  }, [data, date]);
+  }, [data]);
 
   // Responsive: use mobile layout under 768px
   const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
@@ -1124,7 +1103,7 @@ export default function TimelineGrid({
              )}
 
              <div className="space-y-2.5">
-                {(options.every(mins => !isRangeFree(mins)) || (selEnd && !selectionValid)) ? (
+                {(options.every(mins => !isRangeFree(mins)) || (selEnd && selStart && minutesBetween(selStart, selEnd) >= 60 && !selectionValid)) ? (
                   <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
                     <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
                     <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
@@ -1170,7 +1149,7 @@ export default function TimelineGrid({
                 })}
              </div>
 
-             {!(options.every(mins => !isRangeFree(mins)) || (selEnd && !selectionValid)) && (
+             {!(options.every(mins => !isRangeFree(mins)) || (selEnd && selStart && minutesBetween(selStart, selEnd) >= 60 && !selectionValid)) && (
                <div className="mt-4 pt-2 flex flex-col gap-3">
                   <button 
                     onClick={handleReserveClick}
