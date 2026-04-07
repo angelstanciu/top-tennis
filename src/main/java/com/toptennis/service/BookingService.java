@@ -46,8 +46,16 @@ public class BookingService {
 
     @Transactional
     public Booking createPublic(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking) {
-        // Task 5: 3 months limit
-        if (date.isAfter(LocalDate.now().plusMonths(3))) {
+        // 3 months limit — skip for admin users (subscriptions, manual entries)
+        boolean isAdmin = false;
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                isAdmin = true;
+            }
+        } catch (Exception ignored) {}
+
+        if (!isAdmin && date.isAfter(LocalDate.now().plusMonths(3))) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
         }
 

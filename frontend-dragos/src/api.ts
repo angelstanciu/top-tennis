@@ -2,6 +2,21 @@ import { AvailabilityDto, BookingDto, CourtDto, PlayerUser } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
+export function clearPlayerAuth() {
+  localStorage.removeItem('playerToken')
+  localStorage.removeItem('playerData')
+  localStorage.removeItem('playerUser')
+}
+
 function normalizePhone(phone: string): string {
   if (!phone) return ''
   let stripped = phone.replace(/[^0-9+]/g, '')
@@ -18,8 +33,8 @@ function normalizePhone(phone: string): string {
 
 async function parseError(res: Response): Promise<string> {
   if (res.status === 401) {
-    localStorage.removeItem('playerToken')
-    localStorage.removeItem('playerUser')
+    clearPlayerAuth()
+    window.dispatchEvent(new Event('auth-change'))
     window.location.href = '/player-auth'
   }
   try {

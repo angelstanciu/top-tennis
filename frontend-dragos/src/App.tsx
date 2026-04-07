@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType, CourtDto, getPricePerHour, LOCATION_TAGS } from './types'
-import { fetchAvailability, fetchActiveCourts } from './api'
+import { fetchAvailability, fetchActiveCourts, isTokenExpired, clearPlayerAuth } from './api'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import fastCat from './assets/fast-cat.svg'
@@ -146,20 +146,25 @@ export default function App() {
   useEffect(() => {
     async function syncAuth() {
       const token = localStorage.getItem('playerToken')
+
+      // If token is expired or missing, clear everything and treat as guest
+      if (!token || isTokenExpired(token)) {
+        if (token) clearPlayerAuth() // token was present but expired - clean up silently
+        setPlayer(null)
+        return
+      }
+
       const data = localStorage.getItem('playerData')
-      
       if (data) {
         try { setPlayer(JSON.parse(data)) } catch { setPlayer(null) }
-      } else if (token) {
-        // Data missing but token exists - fetch it
+      } else {
+        // Data missing but token valid - fetch it
         try {
           const { fetchPlayerMe } = await import('./api')
           const userData = await fetchPlayerMe(token)
           setPlayer(userData)
           localStorage.setItem('playerData', JSON.stringify(userData))
         } catch { setPlayer(null) }
-      } else {
-        setPlayer(null)
       }
     }
     syncAuth()
