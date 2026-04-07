@@ -15,7 +15,7 @@ export default defineConfig({
             workbox: {
                 cleanupOutdatedCaches: true,
                 navigateFallback: '/index.html',
-                navigateFallbackDenylist: [/^\/api/, /^\/h2-console/],
+                navigateFallbackDenylist: [/^\/api/, /^\/h2-console/, /^\/admin/],
                 runtimeCaching: [
                     {
                         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
