@@ -97,10 +97,15 @@ public class AdminController {
             return BookingMapper.toDto(bookingService.createPublicAdmin(
                     req.courtId, date, start, end, req.customerName,
                     req.customerPhone != null ? req.customerPhone : "0000000000",
-                    null, null, true, true));
+                    null, null, null, true));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
+    }
+
+    @DeleteMapping("/bookings/cancel-future-by-phone")
+    public int cancelFutureByPhone(@RequestParam String phone) {
+        return bookingService.cancelFutureBookingsByPhone(phone);
     }
 
     @GetMapping("/debug/all")

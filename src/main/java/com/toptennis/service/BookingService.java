@@ -373,6 +373,22 @@ public class BookingService {
     }
 
     @Transactional
+    public int cancelFutureBookingsByPhone(String phone) {
+        String normPhone = normalizePhone(phone);
+        List<Booking> all = bookingRepository.findByCustomerPhoneOrderByBookingDateDesc(normPhone);
+        LocalDate today = LocalDate.now();
+        List<Booking> toCancel = all.stream()
+                .filter(b -> !b.getBookingDate().isBefore(today))
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING_APPROVAL)
+                .toList();
+        toCancel.forEach(b -> {
+            b.setStatus(BookingStatus.CANCELLED);
+            b.setUpdatedAt(LocalDateTime.now());
+        });
+        bookingRepository.saveAll(toCancel);
+        return toCancel.size();
+    }
+
     public Booking cancel(Long id) {
         Booking b = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Rezervarea nu exista."));

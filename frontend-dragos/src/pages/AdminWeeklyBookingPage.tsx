@@ -141,15 +141,27 @@ export default function AdminWeeklyBookingPage() {
         if (frequency === 0) break // Exit loop after 1 if 'once'
       }
 
-      await Promise.all(promises)
-      setSuccess(frequency === 0 ? 'Rezervarea a fost creată cu succes!' : `Abonamentul a fost generat cu succes pentru ${count} apariții!`)
-      setTimeout(() => setSuccess(null), 5000)
-    } catch (err: any) {
-      let errorMsg = err.message || 'Eroare la crearea rezervărilor.'
-      if (errorMsg.includes('multiplu de 30')) {
-        errorMsg = 'Eroare: Orele trebuie să fie din 30 în 30 de minute (ex: 12:00, 12:30).'
+      const results = await Promise.allSettled(promises)
+      const failed = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[]
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+
+      if (succeeded === 0) {
+        const firstError = failed[0]?.reason?.message || 'Eroare la crearea rezervărilor.'
+        setError(firstError.includes('multiplu de 30')
+          ? 'Eroare: Orele trebuie să fie din 30 în 30 de minute (ex: 12:00, 12:30).'
+          : firstError)
+      } else {
+        const msg = frequency === 0
+          ? 'Rezervarea a fost creată cu succes!'
+          : `Abonamentul a fost generat: ${succeeded}/${count} apariții create cu succes!`
+        setSuccess(msg)
+        setTimeout(() => setSuccess(null), 8000)
+        if (failed.length > 0) {
+          setError(`${failed.length} date nu au putut fi rezervate (conflicte): ${failed.map(f => f.reason?.message).join('; ')}`)
+        }
       }
-      setError(errorMsg)
+    } catch (err: any) {
+      setError(err.message || 'Eroare la crearea rezervărilor.')
     } finally {
       setLoading(false)
     }
