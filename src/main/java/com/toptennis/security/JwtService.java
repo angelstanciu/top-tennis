@@ -22,7 +22,11 @@ public class JwtService {
     private long jwtExpiration;
 
     private SecretKey getSignInKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            keyBytes = java.util.Arrays.copyOf(keyBytes, 32);
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String extractSubject(String token) {

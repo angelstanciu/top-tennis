@@ -40,10 +40,17 @@ public class PlayerAuthController {
     public void requestOtp(@RequestBody @Valid PhoneRequest req) {
         try {
             rateLimitingService.checkRateLimit("otp_" + req.phone());
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+        }
+        try {
             PlayerAuthService.OtpPurpose purpose = parsePurpose(req.purpose());
             playerAuthService.requestOtp(req.phone(), purpose);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+            log.error("Eroare la trimiterea OTP-ului către {}: {}", req.phone(), e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Eroare la trimiterea SMS-ului. Verifică numărul de telefon și încearcă din nou.");
         }
     }
 

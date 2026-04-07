@@ -118,7 +118,7 @@ export default function AdminWeeklyBookingPage() {
 
         promises.push(fetch(`${base}/bookings`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
           body: JSON.stringify(payload),
         }).then(async r => {
           if (!r.ok) {
