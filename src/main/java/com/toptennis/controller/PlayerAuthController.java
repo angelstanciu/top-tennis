@@ -2,11 +2,12 @@ package com.toptennis.controller;
 
 import com.toptennis.dto.BookingDto;
 import com.toptennis.mapper.BookingMapper;
-import com.toptennis.model.Booking;
 import com.toptennis.model.PlayerUser;
 import com.toptennis.security.RateLimitingService;
 import com.toptennis.service.BookingService;
 import com.toptennis.service.PlayerAuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,6 +19,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/player")
 public class PlayerAuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(PlayerAuthController.class);
 
     private final PlayerAuthService playerAuthService;
     private final BookingService bookingService;
@@ -57,10 +60,14 @@ public class PlayerAuthController {
     public TokenResponse verifyOtp(@RequestBody @Valid VerifyRequest req) {
         try {
             String token = playerAuthService.verifyOtp(req.phone(), req.otp());
-            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token).orElseThrow();
+            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token)
+                    .orElseThrow(() -> new IllegalArgumentException("Utilizatorul nu a putut fi recuperat după autentificare."));
             return new TokenResponse(token, user);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during OTP verification for phone {}: {}", req.phone(), e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Eroare internă la verificarea codului. Încearcă din nou.");
         }
     }
 
@@ -208,14 +215,21 @@ public class PlayerAuthController {
 
     @PostMapping("/auth/google")
     public TokenResponse loginWithGoogle(@RequestBody GoogleAuthRequest req) {
+        if (req.credential() == null || req.credential().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token Google lipsă sau invalid.");
+        }
         try {
             String token = playerAuthService.loginOrRegisterWithGoogle(req.credential());
-            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token).orElseThrow();
+            PlayerUser user = playerAuthService.getUserByToken("Bearer " + token)
+                    .orElseThrow(() -> new IllegalArgumentException("Utilizatorul nu a putut fi recuperat după autentificare."));
             return new TokenResponse(token, user);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Eroare la comunicarea cu Google.");
+        } catch (Exception e) {
+            log.error("Unexpected error during Google login: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Eroare internă la autentificarea cu Google. Încearcă din nou.");
         }
     }
 
