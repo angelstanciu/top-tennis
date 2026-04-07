@@ -185,7 +185,7 @@ public class BookingService {
                 }
 
                 Booking saved = bookingRepository.save(b);
-                if (initialStatus == BookingStatus.CONFIRMED) {
+                if (initialStatus == BookingStatus.CONFIRMED && !adminOverride) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotifications(saved);
                         smsService.sendAdminNewBookingNotification(saved);
@@ -262,7 +262,7 @@ public class BookingService {
                 Booking saved1 = bookingRepository.save(b1);
                 Booking saved2 = bookingRepository.save(b2);
 
-                if (initialStatus == BookingStatus.CONFIRMED) {
+                if (initialStatus == BookingStatus.CONFIRMED && !adminOverride) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
                         smsService.sendAdminNewBookingNotificationCrossMidnight(saved1, saved2);
