@@ -80,6 +80,29 @@ public class AdminController {
         return BookingMapper.toDto(bookingService.block(req.courtId, req.date, req.startTime, req.endTime, req.note));
     }
 
+    public record AdminCreateBookingRequest(
+            @NotNull Long courtId,
+            @NotNull String date,
+            @NotNull String startTime,
+            @NotNull String endTime,
+            @NotNull @Size(max=100) String customerName,
+            @Size(max=20) String customerPhone) {}
+
+    @PostMapping("/bookings")
+    public BookingDto createBooking(@RequestBody @Valid AdminCreateBookingRequest req) {
+        try {
+            java.time.LocalDate date = java.time.LocalDate.parse(req.date);
+            java.time.LocalTime start = java.time.LocalTime.parse(req.startTime);
+            java.time.LocalTime end = "24:00".equals(req.endTime) ? java.time.LocalTime.of(23, 59) : java.time.LocalTime.parse(req.endTime);
+            return BookingMapper.toDto(bookingService.createPublicAdmin(
+                    req.courtId, date, start, end, req.customerName,
+                    req.customerPhone != null ? req.customerPhone : "0000000000",
+                    null, null, true, true));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+    }
+
     @GetMapping("/debug/all")
     public java.util.List<BookingDto> debugAll() {
         return bookingService.getBookingRepository().findAll().stream()

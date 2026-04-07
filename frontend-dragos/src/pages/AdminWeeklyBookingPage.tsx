@@ -116,7 +116,7 @@ export default function AdminWeeklyBookingPage() {
           customerPhone: customerPhone || '0000000000'
         }
 
-        promises.push(fetch(`${base}/bookings`, {
+        promises.push(fetch(`${base}/admin/bookings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
           body: JSON.stringify(payload),
