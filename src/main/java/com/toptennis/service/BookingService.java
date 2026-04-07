@@ -161,6 +161,7 @@ public class BookingService {
                 b.setUpdatedAt(LocalDateTime.now());
                 b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
                 b.setMidnightBooking(touchesMidnight);
+                b.setWeeklyUser(adminOverride);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
                 // PlayerUser is explicitly resolved at the top of the method
@@ -217,6 +218,7 @@ public class BookingService {
                 b1.setUpdatedAt(LocalDateTime.now());
                 b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
                 b1.setMidnightBooking(true);
+                b1.setWeeklyUser(adminOverride);
 
                 Booking b2 = new Booking();
                 b2.setCourt(court);
@@ -231,7 +233,8 @@ public class BookingService {
                 b2.setUpdatedAt(LocalDateTime.now());
                 b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
                 b2.setMidnightBooking(true);
-                
+                b2.setWeeklyUser(adminOverride);
+
                 String sharedToken = java.util.UUID.randomUUID().toString();
                 b1.setCancelToken(sharedToken + "-1");
                 b2.setCancelToken(sharedToken + "-2");
