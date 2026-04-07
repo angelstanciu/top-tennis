@@ -59,7 +59,7 @@ public class PlayerAuthService {
         String normalized = normalizePhone(phone);
         LocalDateTime lastExpiry = otpExpiry.get(normalized);
         if (lastExpiry != null && lastExpiry.isAfter(LocalDateTime.now().plusMinutes(9))) {
-            throw new IllegalStateException("Un cod a fost trimis recently. Te rugam sa astepti.");
+            throw new IllegalStateException("Un cod a fost trimis recent. Te rugam sa astepti.");
         }
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         phoneToOtp.put(normalized, otp);
