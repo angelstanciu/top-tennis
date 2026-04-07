@@ -61,8 +61,8 @@ public class BookingService {
                 }
             } catch (Exception ignored) {}
 
-            if (!isAdmin && date.isAfter(LocalDate.now().plusMonths(3))) {
-                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 3 luni în avans.");
+            if (!isAdmin && date.isAfter(LocalDate.now().plusMonths(13))) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 13 luni în avans.");
             }
         }
 
