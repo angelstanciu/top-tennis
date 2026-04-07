@@ -1,7 +1,6 @@
 package com.toptennis.service;
 
 import com.toptennis.model.Booking;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,7 @@ public class EmailService {
 
             mailSender.send(message);
             log.info("Email de confirmare trimis către: {}", booking.getCustomerEmail());
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
+        } catch (Exception e) {
             log.error("Eroare la trimiterea email-ului către {}: {}", booking.getCustomerEmail(), e.getMessage());
         }
     }
