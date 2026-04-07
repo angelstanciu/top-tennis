@@ -37,6 +37,11 @@ export default function AdminWeeklyBookingPage() {
   const [count, setCount] = useState<number>(initialFrequency === 0 ? 1 : 4)
   
   const dateInputRef = React.useRef<HTMLInputElement | null>(null)
+  const maxAdminDate = React.useMemo(() => {
+    const d = new Date()
+    d.setMonth(d.getMonth() + 13)
+    return d
+  }, [])
 
   function shiftDate(delta: number) {
     try {
@@ -199,7 +204,7 @@ export default function AdminWeeklyBookingPage() {
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Prima Dată *</label>
                     <div className="relative flex items-stretch bg-slate-50 rounded-xl overflow-hidden shadow-sm h-12 border border-slate-200">
                       <button type="button" className="px-3 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-r border-slate-200 focus:outline-none transition-colors" onClick={() => shiftDate(-1)}>{'\u2039'}</button>
-                      <CalendarDemo value={startDate} onChange={newDate => setStartDate(newDate)}>
+                      <CalendarDemo value={startDate} onChange={newDate => setStartDate(newDate)} maxDate={maxAdminDate}>
                         <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4 bg-white">
                           <div className="font-semibold text-slate-800 text-center select-none truncate group-hover:text-amber-600 transition-colors">
                             {formatDateDisplay(startDate)}

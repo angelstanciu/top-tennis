@@ -6,16 +6,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import { format } from "date-fns"
 import { ro } from "date-fns/locale"
 
-export default function CalendarDemo({ 
-  value, 
-  onChange, 
+export default function CalendarDemo({
+  value,
+  onChange,
   placeholder,
-  children 
-}: { 
-  value: string, 
-  onChange: (date: string) => void, 
+  children,
+  maxDate,
+}: {
+  value: string,
+  onChange: (date: string) => void,
   placeholder?: string,
-  children?: React.ReactNode 
+  children?: React.ReactNode,
+  maxDate?: Date,
 }) {
   const [date, setDate] = useState<Date | undefined>(value ? new Date(value) : undefined)
   const [open, setOpen] = useState(false)
@@ -57,12 +59,13 @@ export default function CalendarDemo({
         )}
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 rounded-xl border-slate-200 shadow-2xl z-[100]" align="start">
-        <Calendar 
-          mode='single' 
-          defaultMonth={date} 
-          selected={date} 
-          onSelect={handleSelect} 
+        <Calendar
+          mode='single'
+          defaultMonth={date}
+          selected={date}
+          onSelect={handleSelect}
           className='rounded-xl border-0 bg-white'
+          toDate={maxDate}
         />
       </PopoverContent>
     </Popover>
