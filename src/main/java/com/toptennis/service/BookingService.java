@@ -86,16 +86,8 @@ public class BookingService {
             );
         }
 
-        if (playerFromToken == null && !effectiveAdmin) {
-            // Guest -> Throw exception if contact belongs to an existing account
-            if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
-                throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
-            }
-            if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
-                throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
-            }
-        } else if (playerFromToken == null && effectiveAdmin) {
-            // Admin creating booking for any phone — silently link to existing account if found
+        if (playerFromToken == null) {
+            // Silently link to existing account if phone/email matches (works for both admin and public)
             playerFromToken = playerUserRepository.findByPhoneNumber(normPhone).orElse(null);
         } else if (playerFromToken != null) {
             // Authenticated -> Throw exception ONLY if contact belongs to a DIFFERENT account
