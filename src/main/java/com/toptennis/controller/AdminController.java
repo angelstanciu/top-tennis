@@ -108,6 +108,11 @@ public class AdminController {
         return bookingService.cancelFutureBookingsByPhone(phone);
     }
 
+    @DeleteMapping("/bookings/cancel-all-future")
+    public int cancelAllFuture() {
+        return bookingService.cancelAllFutureBookings();
+    }
+
     @GetMapping("/debug/all")
     public java.util.List<BookingDto> debugAll() {
         return bookingService.getBookingRepository().findAll().stream()
