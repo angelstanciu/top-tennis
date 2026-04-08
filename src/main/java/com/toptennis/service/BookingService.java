@@ -51,19 +51,19 @@ public class BookingService {
 
     @Transactional
     public Booking createPublicAdmin(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, boolean adminOverride) {
-        // 3 months limit — skip for admin override or admin users via SecurityContext
-        if (!adminOverride) {
-            boolean isAdmin = false;
+        // Detect if caller is admin — either via explicit flag or via SecurityContext (Basic Auth)
+        boolean effectiveAdmin = adminOverride;
+        if (!effectiveAdmin) {
             try {
                 org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
                 if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-                    isAdmin = true;
+                    effectiveAdmin = true;
                 }
             } catch (Exception ignored) {}
+        }
 
-            if (!isAdmin && date.isAfter(LocalDate.now().plusMonths(13))) {
-                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 13 luni în avans.");
-            }
+        if (!effectiveAdmin && date.isAfter(LocalDate.now().plusMonths(13))) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rezervările pot fi făcute cu cel mult 13 luni în avans.");
         }
 
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
@@ -86,7 +86,7 @@ public class BookingService {
             );
         }
 
-        if (playerFromToken == null && !adminOverride) {
+        if (playerFromToken == null && !effectiveAdmin) {
             // Guest -> Throw exception if contact belongs to an existing account
             if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
                 throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
@@ -161,7 +161,7 @@ public class BookingService {
                 b.setUpdatedAt(LocalDateTime.now());
                 b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
                 b.setMidnightBooking(touchesMidnight);
-                b.setWeeklyUser(adminOverride);
+                b.setWeeklyUser(effectiveAdmin);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
                 
                 // PlayerUser is explicitly resolved at the top of the method
@@ -186,7 +186,7 @@ public class BookingService {
                 }
 
                 Booking saved = bookingRepository.save(b);
-                if (initialStatus == BookingStatus.CONFIRMED && !adminOverride) {
+                if (initialStatus == BookingStatus.CONFIRMED && !effectiveAdmin) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotifications(saved);
                         smsService.sendAdminNewBookingNotification(saved);
@@ -218,7 +218,7 @@ public class BookingService {
                 b1.setUpdatedAt(LocalDateTime.now());
                 b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
                 b1.setMidnightBooking(true);
-                b1.setWeeklyUser(adminOverride);
+                b1.setWeeklyUser(effectiveAdmin);
 
                 Booking b2 = new Booking();
                 b2.setCourt(court);
@@ -233,7 +233,7 @@ public class BookingService {
                 b2.setUpdatedAt(LocalDateTime.now());
                 b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
                 b2.setMidnightBooking(true);
-                b2.setWeeklyUser(adminOverride);
+                b2.setWeeklyUser(effectiveAdmin);
 
                 String sharedToken = java.util.UUID.randomUUID().toString();
                 b1.setCancelToken(sharedToken + "-1");
@@ -265,7 +265,7 @@ public class BookingService {
                 Booking saved1 = bookingRepository.save(b1);
                 Booking saved2 = bookingRepository.save(b2);
 
-                if (initialStatus == BookingStatus.CONFIRMED && !adminOverride) {
+                if (initialStatus == BookingStatus.CONFIRMED && !effectiveAdmin) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotificationsCrossMidnight(saved1, saved2);
                         smsService.sendAdminNewBookingNotificationCrossMidnight(saved1, saved2);
