@@ -94,6 +94,9 @@ public class BookingService {
             if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
                 throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
             }
+        } else if (playerFromToken == null && effectiveAdmin) {
+            // Admin creating booking for any phone — silently link to existing account if found
+            playerFromToken = playerUserRepository.findByPhoneNumber(normPhone).orElse(null);
         } else if (playerFromToken != null) {
             // Authenticated -> Throw exception ONLY if contact belongs to a DIFFERENT account
             java.util.Optional<PlayerUser> existingPhoneUser = playerUserRepository.findByPhoneNumber(normPhone);
