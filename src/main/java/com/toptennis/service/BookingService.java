@@ -86,7 +86,7 @@ public class BookingService {
             );
         }
 
-        if (playerFromToken == null) {
+        if (playerFromToken == null && !adminOverride) {
             // Guest -> Throw exception if contact belongs to an existing account
             if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
                 throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
@@ -94,7 +94,7 @@ public class BookingService {
             if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
                 throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
             }
-        } else {
+        } else if (playerFromToken != null) {
             // Authenticated -> Throw exception ONLY if contact belongs to a DIFFERENT account
             java.util.Optional<PlayerUser> existingPhoneUser = playerUserRepository.findByPhoneNumber(normPhone);
             if (existingPhoneUser.isPresent() && !existingPhoneUser.get().getId().equals(playerFromToken.getId())) {
