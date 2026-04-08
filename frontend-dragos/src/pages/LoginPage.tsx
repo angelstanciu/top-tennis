@@ -19,13 +19,25 @@ export default function LoginPage() {
       const enc = btoa(`${username}:${password}`)
       const base = import.meta.env.VITE_API_BASE_URL || '/api'
       let urlStr = `${base}/admin/bookings?date=${new Date().toISOString().slice(0, 10)}`
-      const res = await fetch(urlStr, { 
-        headers: { 
+      const res = await fetch(urlStr, {
+        headers: {
           Authorization: `Basic ${enc}`,
           'X-Requested-With': 'XMLHttpRequest' // Double safety to prevent browser popup in edge cases
-        } 
+        }
       })
       if (!res.ok) throw new Error('Autentificare esuată. Vă rugăm verificați utilizatorul și parola.')
+      // Create a Spring Security session so all subsequent requests (even old cached JS)
+      // automatically carry the JSESSIONID cookie and are recognized as admin.
+      try {
+        const formData = new URLSearchParams()
+        formData.append('username', username)
+        formData.append('password', password)
+        await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        })
+      } catch {} // best-effort; if it fails the Basic auth header still works for admin endpoints
       try {
         sessionStorage.setItem('adminAuth', enc)
         sessionStorage.setItem('adminAuthTS', String(Date.now()))
