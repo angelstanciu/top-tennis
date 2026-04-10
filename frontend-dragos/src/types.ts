@@ -83,12 +83,32 @@ const FOOTVOLLEY_DAY_PRICE = 75
 const FOOTVOLLEY_NIGHT_PRICE = 100
 
 export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
+  const isTennisOutdoor = sport === 'TENNIS' && !indoor
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
   let startMin = sh * 60 + sm
   let endMin = eh * 60 + em
   if (endMin <= startMin) endMin += 24 * 60
 
+  const splitMin = 20 * 60
+  const d = date ? new Date(date) : new Date()
+  const isBeforeNovember = d.getMonth() < 10 // 0-indexed, 10 is November
+
+  // Tennis outdoor: 35 lei/h ziua, 50 lei/h dupa 20:00 (nocturna)
+  if (isTennisOutdoor && isBeforeNovember) {
+    let price = 0
+    if (startMin < splitMin) {
+      const dayEnd = Math.min(endMin, splitMin)
+      price += ((dayEnd - startMin) * 35) / 60
+    }
+    if (endMin > splitMin) {
+      const nightStart = Math.max(startMin, splitMin)
+      price += ((endMin - nightStart) * 50) / 60
+    }
+    return price
+  }
+
+  // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
   if (sport === 'FOOTVOLLEY') {
     const nightStartMin = FOOTVOLLEY_NIGHT_HOUR * 60
     const dayMinutes = Math.max(0, Math.min(endMin, nightStartMin) - startMin)
