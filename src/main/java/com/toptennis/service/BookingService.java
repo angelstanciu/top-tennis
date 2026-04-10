@@ -86,27 +86,32 @@ public class BookingService {
             );
         }
 
-        if (playerFromToken == null && !effectiveAdmin) {
-            // Guest -> Throw exception if contact belongs to an existing account
-            if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
-                throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
+        if (playerFromToken == null) {
+            if (effectiveAdmin) {
+                // Admin creating booking for any phone — silently link to existing account if found
+                playerFromToken = playerUserRepository.findByPhoneNumber(normPhone).orElse(null);
+            } else {
+                // Guest -> Throw exception if contact belongs to an existing account
+                if (playerUserRepository.findByPhoneNumber(normPhone).isPresent()) {
+                    throw new IllegalArgumentException("Acest număr de telefon aparține deja unui cont. Te rugăm să te loghezi pentru a rezerva.");
+                }
+                if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
+                    throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
+                }
             }
-            if (normEmail != null && playerUserRepository.findByEmail(normEmail).isPresent()) {
-                throw new IllegalArgumentException("Această adresă de email este deja asociată unui cont. Te rugăm să te loghezi pentru a rezerva.");
-            }
-        } else if (playerFromToken == null && effectiveAdmin) {
-            // Admin creating booking for any phone — silently link to existing account if found
-            playerFromToken = playerUserRepository.findByPhoneNumber(normPhone).orElse(null);
-        } else if (playerFromToken != null) {
-            // Authenticated -> Throw exception ONLY if contact belongs to a DIFFERENT account
-            java.util.Optional<PlayerUser> existingPhoneUser = playerUserRepository.findByPhoneNumber(normPhone);
-            if (existingPhoneUser.isPresent() && !existingPhoneUser.get().getId().equals(playerFromToken.getId())) {
-                throw new IllegalArgumentException("Acest număr de telefon este deja asociat altui cont.");
-            }
-            if (normEmail != null) {
-                java.util.Optional<PlayerUser> existingEmailUser = playerUserRepository.findByEmail(normEmail);
-                if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(playerFromToken.getId())) {
-                    throw new IllegalArgumentException("Această adresă de email este deja asociată altui cont (posibil să ai un cont Google/Facebook și unul creat prin număr de telefon). Te rugăm să lași câmpul Email liber sau să folosești adresa aferentă acestui cont.");
+        } else {
+            // Authenticated (User or Admin from Token)
+            // Throw exception ONLY if contact belongs to a DIFFERENT account, AND it's NOT an admin-overridden call
+            if (!effectiveAdmin) {
+                java.util.Optional<PlayerUser> existingPhoneUser = playerUserRepository.findByPhoneNumber(normPhone);
+                if (existingPhoneUser.isPresent() && !existingPhoneUser.get().getId().equals(playerFromToken.getId())) {
+                    throw new IllegalArgumentException("Acest număr de telefon este deja asociat altui cont.");
+                }
+                if (normEmail != null) {
+                    java.util.Optional<PlayerUser> existingEmailUser = playerUserRepository.findByEmail(normEmail);
+                    if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(playerFromToken.getId())) {
+                        throw new IllegalArgumentException("Această adresă de email este deja asociată altui cont (posibil să ai un cont Google/Facebook și unul creat prin număr de telefon). Te rugăm să lași câmpul Email liber sau să folosești adresa aferentă acestui cont.");
+                    }
                 }
             }
         }
@@ -162,7 +167,7 @@ public class BookingService {
                 b.setStatus(initialStatus);
                 b.setCreatedAt(LocalDateTime.now());
                 b.setUpdatedAt(LocalDateTime.now());
-                b.setPrice(calculatePrice(court.getPricePerHour(), start, end));
+                b.setPrice(calculatePrice(court, date, start, end));
                 b.setMidnightBooking(touchesMidnight);
                 b.setWeeklyUser(effectiveAdmin);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
@@ -219,7 +224,7 @@ public class BookingService {
                 b1.setStatus(initialStatus);
                 b1.setCreatedAt(LocalDateTime.now());
                 b1.setUpdatedAt(LocalDateTime.now());
-                b1.setPrice(calculatePrice(court.getPricePerHour(), start, part1End));
+                b1.setPrice(calculatePrice(court, date, start, part1End));
                 b1.setMidnightBooking(true);
                 b1.setWeeklyUser(effectiveAdmin);
 
@@ -234,7 +239,7 @@ public class BookingService {
                 b2.setStatus(initialStatus);
                 b2.setCreatedAt(LocalDateTime.now());
                 b2.setUpdatedAt(LocalDateTime.now());
-                b2.setPrice(calculatePrice(court.getPricePerHour(), LocalTime.MIN, end));
+                b2.setPrice(calculatePrice(court, nextDate, LocalTime.MIN, end));
                 b2.setMidnightBooking(true);
                 b2.setWeeklyUser(effectiveAdmin);
 
@@ -360,12 +365,14 @@ public class BookingService {
                 sibling.setUpdatedAt(LocalDateTime.now());
             });
 
-            // Trigger notifications upon manual approval
-            taskExecutor.execute(() -> {
-                smsService.sendReservationNotifications(saved);
-                smsService.sendAdminNewBookingNotification(saved);
-                emailService.sendBookingConfirmation(saved);
-            });
+            // Trigger notifications upon manual approval, but ONLY if NOT a weekly booking
+            if (!b.isWeeklyUser()) {
+                taskExecutor.execute(() -> {
+                    smsService.sendReservationNotifications(saved);
+                    smsService.sendAdminNewBookingNotification(saved);
+                    emailService.sendBookingConfirmation(saved);
+                });
+            }
             return saved;
         }
         b.setStatus(BookingStatus.CONFIRMED);
@@ -761,7 +768,43 @@ public class BookingService {
         return t.getHour() == 23 && t.getMinute() == 59 && t.getSecond() == 0 && t.getNano() == 0;
     }
 
-    private BigDecimal calculatePrice(BigDecimal hourly, LocalTime start, LocalTime end) {
+    private BigDecimal calculatePrice(Court court, LocalDate date, LocalTime start, LocalTime end) {
+        BigDecimal hourly = court.getPricePerHour();
+        
+        // Dynamic Pricing for Tennis Outdoor (Courts 1-5) before November
+        boolean isTennisOutdoor1to5 = court.getSportType() == SportType.TENNIS 
+                                   && !court.isIndoor() 
+                                   && (court.getName().equals("1") || court.getName().equals("2") || court.getName().equals("3") || court.getName().equals("4") || court.getName().equals("5"))
+                                   && date.getMonthValue() < 11;
+
+        if (isTennisOutdoor1to5) {
+            LocalTime splitTime = LocalTime.of(20, 0);
+            
+            BigDecimal dayRate = new BigDecimal("35.00");
+            BigDecimal nightRate = new BigDecimal("50.00");
+            
+            BigDecimal total = BigDecimal.ZERO;
+            
+            // Interval before 20:00
+            if (start.isBefore(splitTime)) {
+                LocalTime dayEnd = end.isAfter(splitTime) || !end.isAfter(start) ? splitTime : end;
+                int dayMinutes = minutesSinceMidnight(dayEnd) - minutesSinceMidnight(start);
+                BigDecimal dayHours = BigDecimal.valueOf(dayMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+                total = total.add(dayRate.multiply(dayHours));
+            }
+            
+            // Interval after 20:00
+            if (end.isAfter(splitTime) || !end.isAfter(start)) {
+                LocalTime nightStart = start.isBefore(splitTime) ? splitTime : start;
+                int nightMinutes = minutesSinceMidnight(end) - minutesSinceMidnight(nightStart);
+                BigDecimal nightHours = BigDecimal.valueOf(nightMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+                total = total.add(nightRate.multiply(nightHours));
+            }
+            
+            return total.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // Default logic for other courts
         int minutes = minutesSinceMidnight(end) - minutesSinceMidnight(start);
         BigDecimal hours = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         return hourly.multiply(hours).setScale(2, RoundingMode.HALF_UP);
@@ -774,6 +817,39 @@ public class BookingService {
         return t.getHour() * 60 + t.getMinute();
     }
 
+    @Transactional
+    public void resetAllNoShows() {
+        bookingRepository.findByStatus(com.toptennis.model.BookingStatus.NO_SHOW).forEach(b -> {
+            b.setStatus(com.toptennis.model.BookingStatus.CANCELLED);
+            b.setUpdatedAt(java.time.LocalDateTime.now());
+            bookingRepository.save(b);
+        });
+    }
+
+    @Transactional
+    public void hardResetPenalties(String phone) {
+        String norm = normalizePhone(phone);
+        java.util.List<BookingStatus> penaltyStatuses = java.util.Arrays.asList(BookingStatus.CANCELLED, BookingStatus.NO_SHOW);
+        java.util.List<Booking> list = bookingRepository.findAll();
+        java.util.List<Booking> toDelete = list.stream()
+                .filter(b -> {
+                    String bp = b.getCustomerPhone() != null ? normalizePhone(b.getCustomerPhone()) : null;
+                    return norm.equals(bp) && penaltyStatuses.contains(b.getStatus());
+                })
+                .collect(java.util.stream.Collectors.toList());
+        bookingRepository.deleteAll(toDelete);
+        System.out.println("[HARD RESET] Deleted " + toDelete.size() + " records for " + norm);
+    }
+
+    @Transactional
+    public void hardResetAllPenalties() {
+        java.util.List<BookingStatus> penaltyStatuses = java.util.Arrays.asList(BookingStatus.CANCELLED, BookingStatus.NO_SHOW);
+        java.util.List<Booking> toDelete = bookingRepository.findAll().stream()
+                .filter(b -> penaltyStatuses.contains(b.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
+        bookingRepository.deleteAll(toDelete);
+        System.out.println("[HARD RESET] Deleted all " + toDelete.size() + " penalty records globally.");
+    }
 
 }
 

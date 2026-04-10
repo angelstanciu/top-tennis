@@ -78,14 +78,35 @@ export function getPricePerHour(sport: SportType, indoor: boolean, date?: string
 }
 
 export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
-  const pricePerHour = getPricePerHour(sport, indoor, date)
+  const isTennisOutdoor = sport === 'TENNIS' && !indoor
 
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
   let startMin = sh * 60 + sm
   let endMin = eh * 60 + em
   if (endMin <= startMin) endMin += 24 * 60
-  
+
+  const splitMin = 20 * 60
+  const d = date ? new Date(date) : new Date()
+  const isBeforeNovember = d.getMonth() < 10 // 0-indexed, 10 is November
+
+  if (isTennisOutdoor && isBeforeNovember) {
+    let price = 0
+    // Split interval into [start, 20:00] and [20:00, end]
+    // Part 1: before 20:00
+    if (startMin < splitMin) {
+      const dayEnd = Math.min(endMin, splitMin)
+      price += ((dayEnd - startMin) * 35) / 60
+    }
+    // Part 2: after 20:00
+    if (endMin > splitMin) {
+      const nightStart = Math.max(startMin, splitMin)
+      price += ((endMin - nightStart) * 50) / 60
+    }
+    return price
+  }
+
+  const pricePerHour = getPricePerHour(sport, indoor, date)
   const diff = endMin - startMin
   return (diff * pricePerHour) / 60
 }

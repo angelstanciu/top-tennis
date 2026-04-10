@@ -93,27 +93,6 @@ public class SmsService {
             log.warn("Customer phone is missing; SMS not sent.");
         }
 
-        String clubNumber = props.getClubNumber();
-        if (clubNumber != null && !clubNumber.isBlank()) {
-            sleepBetweenMessages();
-            String ownerText = buildOwnerMessage(booking);
-            SmsSendResult ownerResult = sendSms(clubNumber, ownerText);
-            if (!ownerResult.success) {
-                log.warn("Failed to send owner SMS. Transcript: {}", ownerResult.transcript);
-            } else {
-                log.info("Club SMS delivered for {} ({}) court={} interval={} - {} date={} price={} text=\"{}\"",
-                        safe(booking.getCustomerName()),
-                        customerNumber,
-                        booking.getCourt() != null ? booking.getCourt().getName() : "teren",
-                        formatTime(booking.getStartTime()),
-                        formatTime(booking.getEndTime()),
-                        formatDate(booking.getBookingDate()),
-                        formatPrice(booking.getPrice()),
-                        ownerText);
-            }
-        } else {
-            log.warn("Club SMS number is not configured; SMS not sent.");
-        }
     }
 
     public void sendReservationNotificationsCrossMidnight(Booking first, Booking second) {
@@ -141,27 +120,6 @@ public class SmsService {
             log.warn("Customer phone is missing; SMS not sent.");
         }
 
-        String clubNumber = props.getClubNumber();
-        if (clubNumber != null && !clubNumber.isBlank()) {
-            sleepBetweenMessages();
-            String ownerText = buildOwnerMessageCrossMidnight(first, second);
-            SmsSendResult ownerResult = sendSms(clubNumber, ownerText);
-            if (!ownerResult.success) {
-                log.warn("Failed to send owner SMS. Transcript: {}", ownerResult.transcript);
-            } else {
-                log.info("Club SMS delivered for {} ({}) court={} interval={} - {} date={} price={} text=\"{}\"",
-                        safe(first.getCustomerName()),
-                        customerNumber,
-                        first.getCourt() != null ? first.getCourt().getName() : "teren",
-                        formatTime(first.getStartTime()),
-                        formatTime(second.getEndTime()),
-                        formatDate(first.getBookingDate()),
-                        formatPrice(sumPrices(first.getPrice(), second.getPrice())),
-                        ownerText);
-            }
-        } else {
-            log.warn("Club SMS number is not configured; SMS not sent.");
-        }
     }
 
     private String executeAtWithReconnect(Duration cmdTimeout) {

@@ -127,4 +127,18 @@ public class AdminController {
             .toList();
     }
 
+    @PostMapping("/reset-no-shows")
+    public void resetNoShows() {
+        bookingService.resetAllNoShows();
+    }
+
+    @PostMapping("/hard-reset-penalties")
+    public void hardResetPenalties(@RequestParam(required = false) String phone) {
+        if (phone != null && !phone.isBlank()) {
+            bookingService.hardResetPenalties(phone);
+        } else {
+            bookingService.hardResetAllPenalties();
+        }
+    }
+
 }
