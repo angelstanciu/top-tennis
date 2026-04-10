@@ -97,6 +97,12 @@ export default function App() {
   const initialSport = paramSport || lsSport || 'TENNIS'
   const initialDate = paramDate || todayISO()
   const [sport, setSport] = useState<SportType>(initialSport)
+  const [padelBannerDismissed, setPadelBannerDismissed] = useState(false)
+
+  // Reset coming-soon banner every time user switches to PADEL
+  useEffect(() => {
+    if (sport === 'PADEL') setPadelBannerDismissed(false)
+  }, [sport])
 
   // React to sport query parameter changes from external navigation (e.g. homepage cards)
   useEffect(() => {
@@ -649,30 +655,29 @@ export default function App() {
                       <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} player={player} />
                     </div>
                     {hasSeasonalOutdoor && (
-                      <div className="mx-1 mt-1.5 px-4 py-2.5 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-2xl flex items-center gap-3">
-                        <span className="text-xl">🌿</span>
-                        <div>
-                          <div className="font-bold text-sm text-amber-800">Terenuri Exterioare</div>
-                          <div className="text-xs text-amber-600">Disponibile din <span className="font-semibold">15 Aprilie 2026</span></div>
-                        </div>
+                      <div className="mx-1 mt-1.5 px-3 py-2 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-xl flex items-center gap-2">
+                        <span className="text-base">🌿</span>
+                        <div className="font-bold text-xs text-amber-800">Terenuri Exterioare</div>
                       </div>
                     )}
-                    {sport === 'PADEL' && date < '2026-05-05' && (
-                      <div className="mx-1 mt-1.5 px-4 py-3 bg-emerald-950/60 backdrop-blur-sm border border-emerald-500/40 rounded-2xl">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-lg">🏗️</span>
-                          <span className="font-bold text-sm text-emerald-300">Terenuri Noi Outdoor Padel</span>
+                    {sport === 'PADEL' && date < '2026-05-05' && !padelBannerDismissed && (
+                      <div className="mx-1 mt-1.5 px-3 py-2 bg-emerald-950/60 backdrop-blur-sm border border-emerald-500/40 rounded-xl">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">🏗️ Terenuri Noi Outdoor Padel</span>
+                          <button onClick={() => setPadelBannerDismissed(true)} className="text-emerald-500/60 hover:text-emerald-300 transition-colors p-0.5 -mr-0.5" aria-label="Închide">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
                         </div>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
                           {(['4', '5'] as const).map(n => (
-                            <div key={n} className="flex items-center justify-between px-3 py-2 bg-emerald-900/40 rounded-xl border border-emerald-500/20">
-                              <span className="text-sm font-semibold text-white">Teren {n} <span className="text-emerald-400/70 font-normal text-xs">(outdoor)</span></span>
-                              <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 uppercase tracking-wider">
-                                <span className="relative flex h-2 w-2">
+                            <div key={n} className="flex items-center justify-between px-2 py-1.5 bg-emerald-900/40 rounded-lg border border-emerald-500/20">
+                              <span className="text-xs font-semibold text-white">Teren {n} <span className="text-emerald-400/60 font-normal">(outdoor)</span></span>
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-300 uppercase tracking-wider">
+                                <span className="relative flex h-1.5 w-1.5">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
-                                Disponibil din 5 Mai
+                                Din 5 Mai
                               </span>
                             </div>
                           ))}
