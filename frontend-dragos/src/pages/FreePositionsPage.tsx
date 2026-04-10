@@ -142,7 +142,8 @@ export default function FreePositionsPage() {
       .then(async all => {
          const fresh = all.filter((d: any) => {
            if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-           if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+           // Hide only the INDOOR padel court named "4" (different location)
+           if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4' && d.court.indoor) return false
            return true
          })
          setData(fresh)
@@ -244,8 +245,8 @@ export default function FreePositionsPage() {
   const filteredData = useMemo(() => {
     return data.filter(d => {
       if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-      // Padel court 4 not open yet
-      if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4') return false
+      // Hide only the INDOOR padel court named "4" (different location)
+      if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4' && d.court.indoor) return false
       return true
     })
   }, [data])

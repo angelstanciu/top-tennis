@@ -119,7 +119,7 @@ export default function HomePageD() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Câmp</span>
-                  <span className="text-white font-black">de la 40 LEI/H</span>
+                  <span className="text-white font-black">de la 35 LEI/H</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Picior</span>

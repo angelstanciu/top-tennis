@@ -181,11 +181,13 @@ export default function App() {
     fetchAvailability(date, sport)
       .then(originalData => {
         // Apply seasonal rules, price overrides and sort by availability
+        // Outdoor padel courts 4 & 5 are available for booking starting May 5, 2026
+        const PADEL_NEW_COURTS_DATE = '2026-05-05'
         const filteredData = originalData.filter(row => {
           const isPadel = row.court.sportType === 'PADEL'
           const courtName = row.court.name.trim()
-          // Padel Teren 4 is removed as per user request
-          if (isPadel && courtName === '4') return false
+          // Hide INDOOR padel court named "4" (the one at the different location)
+          if (isPadel && courtName === '4' && row.court.indoor) return false
           // Support only 1 Basketball court as per user request (Round 21.5)
           if (row.court.sportType === 'BASKETBALL' && courtName !== '1') return false
           return true
@@ -208,6 +210,14 @@ export default function App() {
           let forceUnavailable = false
           if (isOutdoor && isTennis && date < '2026-04-01') {
              forceUnavailable = true
+          }
+
+          // New outdoor padel courts 4 & 5 - coming soon until May 5, 2026
+          const courtName = row.court.name.trim()
+          const isNewOutdoorPadel = isPadel && !row.court.indoor && (courtName === '4' || courtName === '5')
+          if (isNewOutdoorPadel && date < PADEL_NEW_COURTS_DATE) {
+            forceUnavailable = true
+            ;(newRow.court as any).comingSoon = true
           }
 
           if (forceUnavailable) {
@@ -644,6 +654,28 @@ export default function App() {
                         <div>
                           <div className="font-bold text-sm text-amber-800">Terenuri Exterioare</div>
                           <div className="text-xs text-amber-600">Disponibile din <span className="font-semibold">15 Aprilie 2026</span></div>
+                        </div>
+                      </div>
+                    )}
+                    {sport === 'PADEL' && date < '2026-05-05' && (
+                      <div className="mx-1 mt-1.5 px-4 py-3 bg-emerald-950/60 backdrop-blur-sm border border-emerald-500/40 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-lg">🏗️</span>
+                          <span className="font-bold text-sm text-emerald-300">Terenuri Noi Outdoor Padel</span>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {(['4', '5'] as const).map(n => (
+                            <div key={n} className="flex items-center justify-between px-3 py-2 bg-emerald-900/40 rounded-xl border border-emerald-500/20">
+                              <span className="text-sm font-semibold text-white">Teren {n} <span className="text-emerald-400/70 font-normal text-xs">(outdoor)</span></span>
+                              <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 uppercase tracking-wider">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Disponibil din 5 Mai
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

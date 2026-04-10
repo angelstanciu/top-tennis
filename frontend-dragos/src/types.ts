@@ -67,7 +67,7 @@ export interface PlayerUser {
 export function getPricePerHour(sport: SportType, indoor: boolean, date?: string): number {
   const isOutdoor = !indoor
   if (sport === 'TENNIS' && indoor) return 60
-  if (sport === 'TENNIS' && isOutdoor) return 40
+  if (sport === 'TENNIS' && isOutdoor) return 35
   if (sport === 'FOOTVOLLEY') return 75
   if (sport === 'PADEL' && isOutdoor) return 80
   if (sport === 'PADEL' && indoor) return 150
@@ -77,15 +77,26 @@ export function getPricePerHour(sport: SportType, indoor: boolean, date?: string
   return 0
 }
 
-export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
-  const pricePerHour = getPricePerHour(sport, indoor, date)
+// FOOTVOLLEY: 75 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
+const FOOTVOLLEY_NIGHT_HOUR = 20
+const FOOTVOLLEY_DAY_PRICE = 75
+const FOOTVOLLEY_NIGHT_PRICE = 100
 
+export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
   let startMin = sh * 60 + sm
   let endMin = eh * 60 + em
   if (endMin <= startMin) endMin += 24 * 60
-  
+
+  if (sport === 'FOOTVOLLEY') {
+    const nightStartMin = FOOTVOLLEY_NIGHT_HOUR * 60
+    const dayMinutes = Math.max(0, Math.min(endMin, nightStartMin) - startMin)
+    const nightMinutes = Math.max(0, endMin - Math.max(startMin, nightStartMin))
+    return (dayMinutes * FOOTVOLLEY_DAY_PRICE + nightMinutes * FOOTVOLLEY_NIGHT_PRICE) / 60
+  }
+
+  const pricePerHour = getPricePerHour(sport, indoor, date)
   const diff = endMin - startMin
   return (diff * pricePerHour) / 60
 }
