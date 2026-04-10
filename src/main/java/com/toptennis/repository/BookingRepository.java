@@ -62,8 +62,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                        @Param("today") LocalDate today,
                                        @Param("now") LocalTime now);
     long countByPlayerUserIdAndStatus(Long playerUserId, BookingStatus status);
-    
+
     long countByCustomerPhoneAndStatus(String customerPhone, BookingStatus status);
+
+    // Penalty-aware counts: excludes bookings marked as exempt (e.g. after amnesty reset)
+    long countByPlayerUserIdAndStatusAndPenaltyExemptFalse(Long playerUserId, BookingStatus status);
+
+    long countByCustomerPhoneAndStatusAndPenaltyExemptFalse(String customerPhone, BookingStatus status);
 
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, java.time.LocalDateTime createdAt);
     List<Booking> findByStatus(BookingStatus status);

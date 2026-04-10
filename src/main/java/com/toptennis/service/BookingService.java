@@ -133,15 +133,16 @@ public class BookingService {
         }
         
         // PENALTY SYSTEM: Require manual approval if the user has > 5 cancellations
+        // Only counts non-exempt cancellations (exempt = amnesty reset applied)
         long cancelCount = 0;
         if (normPhone != null && !normPhone.isBlank()) {
-            long standardCancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
-            long noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
+            long standardCancels = bookingRepository.countByCustomerPhoneAndStatusAndPenaltyExemptFalse(normPhone, BookingStatus.CANCELLED);
+            long noShows = bookingRepository.countByCustomerPhoneAndStatusAndPenaltyExemptFalse(normPhone, BookingStatus.NO_SHOW);
             cancelCount = standardCancels + (10 * noShows);
         }
         if (playerFromToken != null) {
-            long playerStandardCancels = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.CANCELLED);
-            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(playerFromToken.getId(), BookingStatus.NO_SHOW);
+            long playerStandardCancels = bookingRepository.countByPlayerUserIdAndStatusAndPenaltyExemptFalse(playerFromToken.getId(), BookingStatus.CANCELLED);
+            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatusAndPenaltyExemptFalse(playerFromToken.getId(), BookingStatus.NO_SHOW);
             long playerCancelCount = playerStandardCancels + (10 * playerNoShows);
             cancelCount = Math.max(cancelCount, playerCancelCount);
         }
@@ -449,10 +450,10 @@ public class BookingService {
         long cancels = 0;
         String normPhone = normalizePhone(b.getCustomerPhone());
         if (normPhone != null && !normPhone.isBlank()) {
-            cancels = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.CANCELLED);
+            cancels = bookingRepository.countByCustomerPhoneAndStatusAndPenaltyExemptFalse(normPhone, BookingStatus.CANCELLED);
         }
         if (b.getPlayerUser() != null) {
-            long playerCancels = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.CANCELLED);
+            long playerCancels = bookingRepository.countByPlayerUserIdAndStatusAndPenaltyExemptFalse(b.getPlayerUser().getId(), BookingStatus.CANCELLED);
             cancels = Math.max(cancels, playerCancels);
         }
         return (int) cancels;
@@ -462,10 +463,10 @@ public class BookingService {
         long noShows = 0;
         String normPhone = normalizePhone(b.getCustomerPhone());
         if (normPhone != null && !normPhone.isBlank()) {
-            noShows = bookingRepository.countByCustomerPhoneAndStatus(normPhone, BookingStatus.NO_SHOW);
+            noShows = bookingRepository.countByCustomerPhoneAndStatusAndPenaltyExemptFalse(normPhone, BookingStatus.NO_SHOW);
         }
         if (b.getPlayerUser() != null) {
-            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatus(b.getPlayerUser().getId(), BookingStatus.NO_SHOW);
+            long playerNoShows = bookingRepository.countByPlayerUserIdAndStatusAndPenaltyExemptFalse(b.getPlayerUser().getId(), BookingStatus.NO_SHOW);
             noShows = Math.max(noShows, playerNoShows);
         }
         return (int) noShows;

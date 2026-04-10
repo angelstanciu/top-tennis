@@ -56,6 +56,9 @@ public class Booking {
 
     @Column(nullable = false)
     private boolean weeklyUser = false;
+
+    @Column(nullable = false)
+    private boolean penaltyExempt = false;
     
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -94,6 +97,9 @@ public class Booking {
     public void setMidnightBooking(boolean midnightBooking) { this.isMidnightBooking = midnightBooking; }
     public boolean isWeeklyUser() { return weeklyUser; }
     public void setWeeklyUser(boolean weeklyUser) { this.weeklyUser = weeklyUser; }
+
+    public boolean isPenaltyExempt() { return penaltyExempt; }
+    public void setPenaltyExempt(boolean penaltyExempt) { this.penaltyExempt = penaltyExempt; }
 
 }
 
