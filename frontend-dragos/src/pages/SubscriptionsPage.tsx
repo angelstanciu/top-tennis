@@ -29,7 +29,7 @@ export default function SubscriptionsPage() {
       title: "Abonament 1 Lună",
       subtitle: "Echilibru și performanță",
       price: "70/80",
-      features: ["60 LEI - Ziua", "80 LEI - Seara/Nocturnă", "Flexibilitate maximă", "Program stabilit cu admin-ul"],
+      features: ["70 LEI - Ziua (Lumină naturală)", "80 LEI - Seara/Nocturnă", "Flexibilitate maximă", "Program stabilit cu admin-ul"],
       color: "from-amber-600 to-orange-600",
       bg: "bg-amber-500/10",
       requestOnly: true
