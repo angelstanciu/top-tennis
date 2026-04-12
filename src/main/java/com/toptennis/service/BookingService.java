@@ -117,7 +117,8 @@ public class BookingService {
         }
 
         // Task 5: Double Booking Prevention (same user/phone, same interval, any court)
-        if (!bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
+        // Admin bypasses this check — they intentionally assign different clients on different courts at the same time
+        if (!effectiveAdmin && !bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
             if (Boolean.TRUE.equals(bypassDoubleBooking)) {
                 System.out.println("[BYPASS] User bypassed double booking check. Forcing PENDING_APPROVAL.");
             } else {
