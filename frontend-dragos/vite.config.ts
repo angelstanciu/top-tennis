@@ -8,7 +8,7 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.png'],
+            includeAssets: ['favicon.png', 'robots.txt', 'sitemap.xml'],
             devOptions: {
                 enabled: false
             },
@@ -18,6 +18,8 @@ export default defineConfig({
                 cleanupOutdatedCaches: true,
                 navigateFallback: '/index.html',
                 navigateFallbackDenylist: [/^\/api/, /^\/h2-console/, /^\/admin/],
+                // Nu cache-uim chunk-urile JS cu strategie NetworkFirst
+                // pentru a ne asigura că userul primește mereu ultima versiune
                 runtimeCaching: [
                     {
                         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -40,24 +42,52 @@ export default defineConfig({
             manifest: {
                 name: 'Star Arena',
                 short_name: 'Star Arena',
-                description: 'Rezervari terenuri sport',
+                description: 'Rezervări terenuri sport – Pitești, Bascov, Argeș',
                 start_url: '/',
                 display: 'standalone',
-                background_color: '#f0f9ff',
-                theme_color: '#0ea5e9',
+                background_color: '#0f172a',
+                theme_color: '#0f172a',
                 icons: [
                     {
                         src: '/favicon.png',
                         sizes: '1024x1024',
                         type: 'image/png',
-                        purpose: 'any'
+                        purpose: 'any maskable'
                     }
                 ]
             }
         })
     ],
+    build: {
+        // Target modern browsers — output mai mic, fără polyfills inutile
+        target: 'es2020',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // React core — cel mai utilizat, se cache-uiește separat
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    // UI libraries
+                    'vendor-ui': ['lucide-react', 'framer-motion', 'sonner', 'clsx', 'tailwind-merge'],
+                    // Date/Calendar — folosit doar pe pagini specifice
+                    'vendor-date': ['date-fns', 'react-day-picker'],
+                    // Charts — folosit doar în admin
+                    'vendor-charts': ['recharts'],
+                    // Google OAuth — chunk separat, încărcat lazy
+                    'vendor-google': ['@react-oauth/google'],
+                    // Radix UI components
+                    'vendor-radix': [
+                        '@radix-ui/react-popover',
+                        '@radix-ui/react-scroll-area',
+                        '@radix-ui/react-select',
+                        '@radix-ui/react-separator',
+                        '@radix-ui/react-slot',
+                    ],
+                }
+            }
+        }
+    },
     server: {
-        host: '0.0.0.0', // permite acces extern prin IP sau tunnel
+        host: '0.0.0.0',
         port: 5174,
         strictPort: true,
         allowedHosts: true,
@@ -81,7 +111,6 @@ export default defineConfig({
         }
     },
     optimizeDeps: {
-        // Force re-optimization on dev start to avoid stale cache errors
         force: true,
     },
     resolve: {

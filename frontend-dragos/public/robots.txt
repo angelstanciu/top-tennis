@@ -1,0 +1,24 @@
+# Star Arena – Complex Sportiv Pitești / Bascov, Argeș
+# https://star-arena.ro
+
+User-agent: *
+
+# Pagini publice – indexează tot
+Allow: /
+Allow: /rezerva
+Allow: /abonamente
+Allow: /cont
+Allow: /termeni
+Allow: /confidentialitate
+Allow: /privacy
+Allow: /cookies
+Allow: /securitate
+
+# Zone private – nu indexa
+Disallow: /admin
+Disallow: /api/
+Disallow: /h2-console
+Disallow: /anulare/
+
+# Sitemap
+Sitemap: https://star-arena.ro/sitemap.xml

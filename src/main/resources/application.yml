@@ -61,6 +61,13 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:604800000}
 
+# Credențiale admin panel – setează ADMIN_USERNAME și ADMIN_PASSWORD
+# ca variabile de mediu pe server pentru securitate maximă.
+# Valorile de mai jos sunt folosite doar dacă variabilele nu sunt setate.
+admin:
+  username: ${ADMIN_USERNAME:cosmin}
+  password: ${ADMIN_PASSWORD:Cosmin123}
+
 server:
   port: 8080
   forward-headers-strategy: framework
