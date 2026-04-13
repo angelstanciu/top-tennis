@@ -376,7 +376,7 @@ public class PlayerAuthService {
                 otherUser.setPhoneNumber("UNLINKED_" + java.util.UUID.randomUUID().toString().substring(0, 8));
                 playerUserRepository.saveAndFlush(otherUser);
                 
-                System.out.println("[CLAIM] Soft-unlinked old user ID " + otherUser.getId() + " and transferred " + oldBookings.size() + " bookings.");
+                log.info("[CLAIM] Soft-unlinked old user ID {} and transferred {} bookings.", otherUser.getId(), oldBookings.size());
             }
         }
 

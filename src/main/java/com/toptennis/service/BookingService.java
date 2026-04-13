@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
@@ -21,6 +24,8 @@ import java.util.List;
 
 @Service
 public class BookingService {
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
+
     private final BookingRepository bookingRepository;
     private final CourtRepository courtRepository;
     private final SmsService smsService;
@@ -120,7 +125,7 @@ public class BookingService {
         // Admin bypasses this check — they intentionally assign different clients on different courts at the same time
         if (!effectiveAdmin && !bookingRepository.findOverlappingByPhone(normPhone, date, start, end, activeStatuses).isEmpty()) {
             if (Boolean.TRUE.equals(bypassDoubleBooking)) {
-                System.out.println("[BYPASS] User bypassed double booking check. Forcing PENDING_APPROVAL.");
+                log.warn("[BYPASS] User bypassed double booking check. Forcing PENDING_APPROVAL.");
             } else {
                 throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Ai deja o altă rezervare confirmată sau în așteptare în acest interval orar.");
             }
@@ -150,7 +155,7 @@ public class BookingService {
         
         if (cancelCount > 5) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
-            System.out.println("[PENALTY] User/Phone has " + cancelCount + " cancellations (" + (cancelCount/10) + " no-shows). Forcing PENDING_APPROVAL.");
+            log.warn("[PENALTY] User/Phone has {} cancellations ({} no-shows). Forcing PENDING_APPROVAL.", cancelCount, cancelCount / 10);
         }
 
             if (!crossesMidnight) {
@@ -297,24 +302,23 @@ public class BookingService {
         List<Booking> result = new java.util.ArrayList<>(bookingRepository.findByPlayerUserIdOrderByBookingDateDesc(userId));
         java.util.Set<Long> seenIds = result.stream().map(Booking::getId).collect(java.util.stream.Collectors.toSet());
 
-        System.out.println("[HISTORY] userId=" + userId + " direct=" + result.size()
-            + " phone=" + (user != null ? user.getPhoneNumber() : "N/A")
+        log.debug("[HISTORY] userId={} direct={} phone={}", userId, result.size(), (user != null ? user.getPhoneNumber() : "N/A")
             + " email=" + (user != null ? user.getEmail() : "N/A"));
 
         if (user != null) {
             if (user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
                 List<Booking> byPhone = bookingRepository.findByCustomerPhoneOrderByBookingDateDesc(user.getPhoneNumber());
-                System.out.println("[HISTORY] byPhone=" + byPhone.size());
+                log.debug("[HISTORY] byPhone={}", byPhone.size());
                 byPhone.forEach(b -> { if (seenIds.add(b.getId())) result.add(b); });
             }
             if (user.getEmail() != null && !user.getEmail().isBlank()) {
                 List<Booking> byEmail = bookingRepository.findByCustomerEmailOrderByBookingDateDesc(user.getEmail());
-                System.out.println("[HISTORY] byEmail=" + byEmail.size() + " for email=" + user.getEmail());
+                log.debug("[HISTORY] byEmail={} for email={}", byEmail.size(), user.getEmail());
                 byEmail.forEach(b -> { if (seenIds.add(b.getId())) result.add(b); });
             }
         }
 
-        System.out.println("[HISTORY] total=" + result.size());
+        log.debug("[HISTORY] total={}", result.size());
         result.sort((a, b) -> {
             int dateCmp = b.getBookingDate().compareTo(a.getBookingDate());
             return dateCmp != 0 ? dateCmp : b.getStartTime().compareTo(a.getStartTime());
@@ -539,7 +543,7 @@ public class BookingService {
         int durMin = endMin - startMin;
         if (end.isBefore(start) && !end.equals(LocalTime.MIN) && !end.equals(LocalTime.of(23, 59))) {
             // allow cross midnight booking
-            System.out.println("Booking crosses midnight. Allowed.");
+            log.debug("Booking crosses midnight. Allowed.");
             durMin += 24 * 60; // Add 24 hours for cross-midnight duration calculation
         }
         
@@ -666,7 +670,7 @@ public class BookingService {
         int gapAfter = blockEndMin - bookingEndMin;
         int bookingDuration = bookingEndMin - bookingStartMin;
 
-        System.out.println("[GAP_LOG] court=" + court.getId() + " isTennis=" + isTennis + " start=" + start + " gapBefore=" + gapBefore + " gapAfter=" + gapAfter);
+        log.debug("[GAP_LOG] court={} isTennis={} start={} gapBefore={} gapAfter={}", court.getId(), isTennis, start, gapBefore, gapAfter);
 
         // --- FINAL REWARD LOGIC ---
         // CRITICAL: Any booking that "snaps" to an existing one or boundary is VALID.
@@ -840,7 +844,7 @@ public class BookingService {
                 })
                 .collect(java.util.stream.Collectors.toList());
         bookingRepository.deleteAll(toDelete);
-        System.out.println("[HARD RESET] Deleted " + toDelete.size() + " records for " + norm);
+        log.info("[HARD RESET] Deleted {} records for phone={}", toDelete.size(), norm);
     }
 
     @Transactional
@@ -850,7 +854,7 @@ public class BookingService {
                 .filter(b -> penaltyStatuses.contains(b.getStatus()))
                 .collect(java.util.stream.Collectors.toList());
         bookingRepository.deleteAll(toDelete);
-        System.out.println("[HARD RESET] Deleted all " + toDelete.size() + " penalty records globally.");
+        log.info("[HARD RESET] Deleted all {} penalty records globally.", toDelete.size());
     }
 
 }

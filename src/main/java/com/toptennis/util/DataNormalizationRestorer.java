@@ -4,13 +4,16 @@ import com.toptennis.model.Booking;
 import com.toptennis.model.PlayerUser;
 import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.PlayerUserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-// @Component
+// @Component — dezactivat, folosit doar pentru migrări manuale punctuale
 public class DataNormalizationRestorer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataNormalizationRestorer.class);
 
     private final PlayerUserRepository playerUserRepository;
     private final BookingRepository bookingRepository;
@@ -22,12 +25,10 @@ public class DataNormalizationRestorer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        System.out.println("Starting phone number normalization cleanup...");
-        
+        log.info("Starting phone number normalization cleanup...");
         normalizePlayers();
         normalizeBookings();
-        
-        System.out.println("Phone number normalization cleanup complete.");
+        log.info("Phone number normalization cleanup complete.");
     }
 
     private void normalizePlayers() {
@@ -36,7 +37,7 @@ public class DataNormalizationRestorer implements CommandLineRunner {
             if (player.getPhoneNumber() != null) {
                 String normalized = normalize(player.getPhoneNumber());
                 if (!normalized.equals(player.getPhoneNumber())) {
-                    System.out.println("Normalizing Player: " + player.getPhoneNumber() + " -> " + normalized);
+                    log.info("Normalizing Player: {} -> {}", player.getPhoneNumber(), normalized);
                     player.setPhoneNumber(normalized);
                     playerUserRepository.save(player);
                 }
@@ -50,7 +51,7 @@ public class DataNormalizationRestorer implements CommandLineRunner {
             if (booking.getCustomerPhone() != null) {
                 String normalized = normalize(booking.getCustomerPhone());
                 if (!normalized.equals(booking.getCustomerPhone())) {
-                    System.out.println("Normalizing Booking " + booking.getId() + ": " + booking.getCustomerPhone() + " -> " + normalized);
+                    log.info("Normalizing Booking {}: {} -> {}", booking.getId(), booking.getCustomerPhone(), normalized);
                     booking.setCustomerPhone(normalized);
                     bookingRepository.save(booking);
                 }
@@ -65,7 +66,7 @@ public class DataNormalizationRestorer implements CommandLineRunner {
         else if (stripped.startsWith("+4")) stripped = stripped.substring(2);
         else if (stripped.startsWith("40") && stripped.length() >= 11) stripped = stripped.substring(2);
         else if (stripped.startsWith("0040")) stripped = stripped.substring(4);
-        
+
         if (stripped.startsWith("7") && stripped.length() == 9) {
             stripped = "0" + stripped;
         }
