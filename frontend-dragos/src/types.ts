@@ -66,54 +66,55 @@ export interface PlayerUser {
 
 export function getPricePerHour(sport: SportType, indoor: boolean, date?: string): number {
   const isOutdoor = !indoor
-  if (sport === 'TENNIS' && indoor) return 60
+  if (sport === 'TENNIS' && indoor) return 50
   if (sport === 'TENNIS' && isOutdoor) return 35
   if (sport === 'FOOTVOLLEY') return 75
   if (sport === 'PADEL' && isOutdoor) return 80
   if (sport === 'PADEL' && indoor) return 150
   if (sport === 'BASKETBALL') return 80
   if (sport === 'TABLE_TENNIS') return 35
-  if (sport === 'BEACH_VOLLEY') return 100
+  if (sport === 'BEACH_VOLLEY') return 90
   return 0
 }
 
-// FOOTVOLLEY: 75 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
-const FOOTVOLLEY_NIGHT_HOUR = 20
-const FOOTVOLLEY_DAY_PRICE = 75
-const FOOTVOLLEY_NIGHT_PRICE = 100
+const NIGHT_SPLIT_MIN = 20 * 60
 
 export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
-  const isTennisOutdoor = sport === 'TENNIS' && !indoor
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
   let startMin = sh * 60 + sm
   let endMin = eh * 60 + em
   if (endMin <= startMin) endMin += 24 * 60
 
-  const splitMin = 20 * 60
   const d = date ? new Date(date) : new Date()
   const isBeforeNovember = d.getMonth() < 10 // 0-indexed, 10 is November
 
-  // Tennis outdoor: 35 lei/h ziua, 50 lei/h dupa 20:00 (nocturna)
-  if (isTennisOutdoor && isBeforeNovember) {
+  function splitDayNight(dayRate: number, nightRate: number): number {
     let price = 0
-    if (startMin < splitMin) {
-      const dayEnd = Math.min(endMin, splitMin)
-      price += ((dayEnd - startMin) * 35) / 60
+    if (startMin < NIGHT_SPLIT_MIN) {
+      const dayEnd = Math.min(endMin, NIGHT_SPLIT_MIN)
+      price += ((dayEnd - startMin) * dayRate) / 60
     }
-    if (endMin > splitMin) {
-      const nightStart = Math.max(startMin, splitMin)
-      price += ((endMin - nightStart) * 50) / 60
+    if (endMin > NIGHT_SPLIT_MIN) {
+      const nightStart = Math.max(startMin, NIGHT_SPLIT_MIN)
+      price += ((endMin - nightStart) * nightRate) / 60
     }
     return price
   }
 
+  // Tennis outdoor: 35 lei/h ziua, 50 lei/h dupa 20:00 (nocturna) — doar inainte de noiembrie
+  if (sport === 'TENNIS' && !indoor && isBeforeNovember) {
+    return splitDayNight(35, 50)
+  }
+
+  // Padel outdoor: 80 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
+  if (sport === 'PADEL' && !indoor) {
+    return splitDayNight(80, 100)
+  }
+
   // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
   if (sport === 'FOOTVOLLEY') {
-    const nightStartMin = FOOTVOLLEY_NIGHT_HOUR * 60
-    const dayMinutes = Math.max(0, Math.min(endMin, nightStartMin) - startMin)
-    const nightMinutes = Math.max(0, endMin - Math.max(startMin, nightStartMin))
-    return (dayMinutes * FOOTVOLLEY_DAY_PRICE + nightMinutes * FOOTVOLLEY_NIGHT_PRICE) / 60
+    return splitDayNight(75, 100)
   }
 
   const pricePerHour = getPricePerHour(sport, indoor, date)

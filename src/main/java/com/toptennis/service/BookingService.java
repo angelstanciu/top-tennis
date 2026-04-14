@@ -775,45 +775,51 @@ public class BookingService {
     }
 
     private BigDecimal calculatePrice(Court court, LocalDate date, LocalTime start, LocalTime end) {
-        BigDecimal hourly = court.getPricePerHour();
-        
-        // Dynamic Pricing for Tennis Outdoor (Courts 1-5) before November
-        boolean isTennisOutdoor1to5 = court.getSportType() == SportType.TENNIS 
-                                   && !court.isIndoor() 
-                                   && (court.getName().equals("1") || court.getName().equals("2") || court.getName().equals("3") || court.getName().equals("4") || court.getName().equals("5"))
-                                   && date.getMonthValue() < 11;
+        LocalTime splitTime = LocalTime.of(20, 0);
+        SportType sport = court.getSportType();
+        boolean isIndoor = court.isIndoor();
 
-        if (isTennisOutdoor1to5) {
-            LocalTime splitTime = LocalTime.of(20, 0);
-            
-            BigDecimal dayRate = new BigDecimal("35.00");
-            BigDecimal nightRate = new BigDecimal("50.00");
-            
-            BigDecimal total = BigDecimal.ZERO;
-            
-            // Interval before 20:00
-            if (start.isBefore(splitTime)) {
-                LocalTime dayEnd = end.isAfter(splitTime) || !end.isAfter(start) ? splitTime : end;
-                int dayMinutes = minutesSinceMidnight(dayEnd) - minutesSinceMidnight(start);
-                BigDecimal dayHours = BigDecimal.valueOf(dayMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-                total = total.add(dayRate.multiply(dayHours));
-            }
-            
-            // Interval after 20:00
-            if (end.isAfter(splitTime) || !end.isAfter(start)) {
-                LocalTime nightStart = start.isBefore(splitTime) ? splitTime : start;
-                int nightMinutes = minutesSinceMidnight(end) - minutesSinceMidnight(nightStart);
-                BigDecimal nightHours = BigDecimal.valueOf(nightMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-                total = total.add(nightRate.multiply(nightHours));
-            }
-            
-            return total.setScale(2, RoundingMode.HALF_UP);
+        // Tennis outdoor (courts 1-5) before November: 35 lei/h ziua, 50 lei/h dupa 20:00
+        if (sport == SportType.TENNIS && !isIndoor && date.getMonthValue() < 11) {
+            return splitDayNightPrice(start, end, splitTime, new BigDecimal("35.00"), new BigDecimal("50.00"));
         }
 
-        // Default logic for other courts
+        // Padel outdoor: 80 lei/h ziua, 100 lei/h dupa 20:00
+        if (sport == SportType.PADEL && !isIndoor) {
+            return splitDayNightPrice(start, end, splitTime, new BigDecimal("80.00"), new BigDecimal("100.00"));
+        }
+
+        // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00
+        if (sport == SportType.FOOTVOLLEY) {
+            return splitDayNightPrice(start, end, splitTime, new BigDecimal("75.00"), new BigDecimal("100.00"));
+        }
+
+        // Default: tarif fix din baza de date
+        BigDecimal hourly = court.getPricePerHour();
         int minutes = minutesSinceMidnight(end) - minutesSinceMidnight(start);
         BigDecimal hours = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         return hourly.multiply(hours).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal splitDayNightPrice(LocalTime start, LocalTime end, LocalTime splitTime,
+                                          BigDecimal dayRate, BigDecimal nightRate) {
+        BigDecimal total = BigDecimal.ZERO;
+
+        if (start.isBefore(splitTime)) {
+            LocalTime dayEnd = end.isAfter(splitTime) || !end.isAfter(start) ? splitTime : end;
+            int dayMinutes = minutesSinceMidnight(dayEnd) - minutesSinceMidnight(start);
+            BigDecimal dayHours = BigDecimal.valueOf(dayMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+            total = total.add(dayRate.multiply(dayHours));
+        }
+
+        if (end.isAfter(splitTime) || !end.isAfter(start)) {
+            LocalTime nightStart = start.isBefore(splitTime) ? splitTime : start;
+            int nightMinutes = minutesSinceMidnight(end) - minutesSinceMidnight(nightStart);
+            BigDecimal nightHours = BigDecimal.valueOf(nightMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+            total = total.add(nightRate.multiply(nightHours));
+        }
+
+        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
     private int minutesSinceMidnight(LocalTime t) {
