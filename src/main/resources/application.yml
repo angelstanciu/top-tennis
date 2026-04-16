@@ -39,7 +39,7 @@ app:
 
 sms:
   mode: ${SMS_MODE:production}
-  port: ${SMS_PORT:/dev/ttyUSB0}
+  port: ${SMS_PORT:/dev/serial/by-id/usb-HUAWEI_Technology_HUAWEI_Mobile-if00-port0}
   baud: 115200
   clubNumber: ${SMS_CLUB_NUMBER:+40742197487}
   adminNotificationNumber: ${SMS_ADMIN_NUMBER:+40742197487}
