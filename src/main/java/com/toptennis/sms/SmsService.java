@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -269,80 +270,102 @@ public class SmsService {
                 ? booking.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare noua Star Arena!\n" +
+        return "Rezervare noua!\n\n" +
                 customer + " / " + customerPhone + "\n" +
                 sportLabel + " - Teren " + courtNumber + "\n" +
                 date + " - " + start + " - " + end;
     }
 
     private String buildCustomerMessage(Booking booking) {
+        String relDate = formatRelativeDate(booking.getBookingDate());
         String start = formatTime(booking.getStartTime());
         String end = formatTime(booking.getEndTime());
-        String date = formatDate(booking.getBookingDate());
         String price = formatPrice(booking.getPrice());
         String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
         String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
-                ? booking.getCourt().getSportType().name()
-                : "";
+                ? booking.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata! " + sportLabel + " - Teren " + courtNumber +
-                " - " + date + " - " + start + " - " + end +
-                " - " + price + " RON." +
-                AUTOMAT_FOOTER;
+        return "Rezervare confirmata, " + relDate + ", la Star Arena.\n\n" +
+                "Sport: " + sportLabel + "\n" +
+                "Teren: " + courtNumber + "  ->  Ora: " + start + " - " + end + "\n" +
+                "De achitat: " + price + " RON\n\n" +
+                "Ne vedem pe teren!\n\n" +
+                locationBlock(booking);
     }
 
     private String buildCustomerMessageCrossMidnight(Booking first, Booking second) {
+        String relDate = formatRelativeDate(first.getBookingDate());
         String start = formatTime(first.getStartTime());
         String end = formatTime(second.getEndTime());
-        String date = formatDate(first.getBookingDate());
         String price = formatPrice(sumPrices(first.getPrice(), second.getPrice()));
         String court = first.getCourt() != null ? first.getCourt().getName() : "teren";
         String sport = first.getCourt() != null && first.getCourt().getSportType() != null
-                ? first.getCourt().getSportType().name()
-                : "";
+                ? first.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata! " + sportLabel + " - Teren " + courtNumber +
-                " - " + date + " - " + start + " - " + end +
-                " - " + price + " RON." +
-                AUTOMAT_FOOTER;
+        return "Rezervare confirmata, " + relDate + ", la Star Arena.\n\n" +
+                "Sport: " + sportLabel + "\n" +
+                "Teren: " + courtNumber + "  ->  Ora: " + start + " - " + end + "\n" +
+                "De achitat: " + price + " RON\n\n" +
+                "Ne vedem pe teren!\n\n" +
+                locationBlock(first);
     }
 
     private String buildOwnerMessage(Booking booking) {
         String start = formatTime(booking.getStartTime());
         String end = formatTime(booking.getEndTime());
-        String date = formatDateDashed(booking.getBookingDate());
+        String date = formatDate(booking.getBookingDate());
         String customer = booking.getCustomerName() == null ? "Client" : booking.getCustomerName();
         String customerPhone = booking.getCustomerPhone() == null ? "" : booking.getCustomerPhone();
         String court = booking.getCourt() != null ? booking.getCourt().getName() : "teren";
         String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
-                ? booking.getCourt().getSportType().name()
-                : "";
+                ? booking.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare noua:\n" +
+        return "Rezervare noua!\n\n" +
+                customer + " / " + customerPhone + "\n" +
                 sportLabel + " - Teren " + courtNumber + "\n" +
-                date + " - " + start + " - " + end + "\n" +
-                customer + " / " + customerPhone;
+                date + " - " + start + " - " + end;
     }
 
     private String buildOwnerMessageCrossMidnight(Booking first, Booking second) {
         String start = formatTime(first.getStartTime());
         String end = formatTime(second.getEndTime());
-        String date = formatDateDashed(first.getBookingDate());
+        String date = formatDate(first.getBookingDate());
         String customer = first.getCustomerName() == null ? "Client" : first.getCustomerName();
         String customerPhone = first.getCustomerPhone() == null ? "" : first.getCustomerPhone();
         String court = first.getCourt() != null ? first.getCourt().getName() : "teren";
         String sport = first.getCourt() != null && first.getCourt().getSportType() != null
-                ? first.getCourt().getSportType().name()
-                : "";
+                ? first.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare noua:\n" +
+        return "Rezervare noua!\n\n" +
+                customer + " / " + customerPhone + "\n" +
                 sportLabel + " - Teren " + courtNumber + "\n" +
-                date + " - " + start + " - " + end + "\n" +
-                customer + " / " + customerPhone;
+                date + " - " + start + " - " + end;
+    }
+
+    private String formatRelativeDate(LocalDate date) {
+        if (date == null) return "";
+        LocalDate today = LocalDate.now(ZoneId.of("Europe/Bucharest"));
+        if (date.equals(today)) return "astazi";
+        if (date.equals(today.plusDays(1))) return "maine";
+        String[] days = {"luni", "marti", "miercuri", "joi", "vineri", "sambata", "duminica"};
+        String[] months = {"ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"};
+        String day = days[date.getDayOfWeek().getValue() - 1];
+        String month = months[date.getMonthValue() - 1];
+        return day + ", " + date.getDayOfMonth() + " " + month + ".";
+    }
+
+    private String locationBlock(Booking booking) {
+        boolean indoorPadel = booking.getCourt() != null
+                && booking.getCourt().getSportType() == com.toptennis.model.SportType.PADEL
+                && booking.getCourt().isIndoor();
+        if (indoorPadel) {
+            return "Star Arena Padel Maracineni\nhttps://maps.app.goo.gl/saPNV5271ff6UyE89";
+        }
+        return "Star Arena Bascov\nhttps://maps.app.goo.gl/zrjTZd6DbZJwerJaA";
     }
 
     private String formatDate(LocalDate date) {
@@ -443,6 +466,7 @@ public class SmsService {
                 .replace('ü', 'u').replace('Ü', 'U')
                 .replace('ú', 'u').replace('Ú', 'U')
                 .replace('ñ', 'n').replace('Ñ', 'N')
+                .replace('|', '-')
                 .replace('\n', '\r');
     }
 

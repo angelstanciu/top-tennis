@@ -44,6 +44,13 @@ export default function PrivacyPage() {
               <p>Vă puteți exercita în orice moment dreptul la:"Uitare" (stergerea datelor), modificarea acestora, sau restricționarea prelucrării adresându-vă recepției Star Arena conform datelor publice de contact din homepage.</p>
             </section>
 
+            <section>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">5. Vizibilitatea Prenumelui în Calendar</h3>
+              <p>Pentru a facilita transparența disponibilității terenurilor, <strong>prenumele dumneavoastră</strong> va fi afișat celorlalți utilizatori înregistrați ai platformei în calendarul de rezervări, atunci când aveți o rezervare activă. Datele complete (nume complet, telefon, email) rămân vizibile exclusiv administratorilor bazei sportive și nu sunt accesibile altor utilizatori.</p>
+              <p className="mt-2">Această prelucrare se întemeiază pe <strong>interesul legitim</strong> al operatorului conform art. 6 alin. (1) lit. (f) din Regulamentul (UE) 2016/679 (GDPR), constând în asigurarea transparenței și funcționalității platformei de rezervări sportive. Afișarea exclusiv a prenumelui reprezintă o măsură proporțională, minimă și necesară scopului urmărit, fără a aduce atingere drepturilor și libertăților fundamentale ale utilizatorilor.</p>
+              <p className="mt-2">Vă puteți opune acestei prelucrări în orice moment, adresându-vă recepției Star Arena conform datelor de contact din homepage.</p>
+            </section>
+
             <p className="text-sm text-slate-400 mt-10 pt-6 border-t border-slate-100 italic">Prezenta politică poate suferi modificări, vă recomandăm consultarea ei periodică.</p>
           </div>
         </div>

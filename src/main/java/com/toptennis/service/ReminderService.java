@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -123,12 +124,31 @@ public class ReminderService {
     private String buildReminderMessage(Booking booking) {
         String firstName = firstNameOf(booking.getCustomerName());
         String start = formatTime(booking.getStartTime());
+        String end = formatTime(booking.getEndTime());
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
-        return firstName + ", ai rezervare astazi la Star Arena Bascov!" +
-                " Ora " + start + " | " + sport + " | Teren " + court + "." +
-                " Te asteptam!" +
-                SmsService.AUTOMAT_FOOTER;
+        String price = formatPrice(booking.getPrice());
+        return firstName + ", rezervare astazi la Star Arena.\n\n" +
+                "Sport: " + sport + "\n" +
+                "Teren: " + court + "  ->  Ora: " + start + " - " + end + "\n" +
+                "De achitat: " + price + " RON\n\n" +
+                "Ne vedem pe teren!\n\n" +
+                locationBlock(booking);
+    }
+
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0";
+        return price.stripTrailingZeros().toPlainString();
+    }
+
+    private String locationBlock(Booking booking) {
+        boolean indoorPadel = booking.getCourt() != null
+                && booking.getCourt().getSportType() == SportType.PADEL
+                && booking.getCourt().isIndoor();
+        if (indoorPadel) {
+            return "Star Arena Padel Maracineni\nhttps://maps.app.goo.gl/saPNV5271ff6UyE89";
+        }
+        return "Star Arena Bascov\nhttps://maps.app.goo.gl/zrjTZd6DbZJwerJaA";
     }
 
     private String firstNameOf(String fullName) {

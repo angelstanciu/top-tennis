@@ -65,7 +65,14 @@ public class AvailabilityService {
                 tr.status = b.getStatus().name();
                 boolean isOwner = currentUser != null && b.getPlayerUser() != null && b.getPlayerUser().getId().equals(currentUser.getId());
                 boolean canViewPii = isAdmin || isOwner || b.getStatus() == com.toptennis.model.BookingStatus.BLOCKED;
-                tr.customerName = canViewPii ? b.getCustomerName() : "Ocupat";
+                if (canViewPii) {
+                    tr.customerName = b.getCustomerName();
+                } else {
+                    String fullName = b.getCustomerName();
+                    tr.customerName = (fullName != null && !fullName.isBlank())
+                        ? fullName.trim().split("\\s+")[0]
+                        : "Rezervat";
+                }
                 if (b.getPlayerUser() != null) {
                     tr.playerMatchesCount = b.getPlayerUser().getMatchesPlayed();
                 }

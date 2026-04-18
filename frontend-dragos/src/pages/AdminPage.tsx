@@ -972,9 +972,10 @@ export default function AdminPage() {
                     Apasă pe o rezervare pentru Control
                   </div>
                </div>
-               <TimelineGrid 
-                  data={availabilityData} 
-                  date={date} 
+               <TimelineGrid
+                  data={availabilityData}
+                  date={date}
+                  isAdmin={true}
                   onAdminClick={(courtId, start, end, booking) => {
                     if (booking) {
                       const fullB = bookings.find(b => b.court.id === courtId && b.startTime <= start && b.endTime >= end && b.status !== 'CANCELLED')

@@ -49,6 +49,7 @@ type TimelineGridProps = {
   scrollContainerRef?: React.RefObject<HTMLDivElement>
   onAdminClick?: (courtId: number, startTime: string, endTime: string, booking?: any) => void
   player?: any // ADDED: to know if user is logged in
+  isAdmin?: boolean
 }
 
 function sportLabel(s: string) {
@@ -79,7 +80,7 @@ type BookingBlock = {
 }
 
 
-function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string }[], tickIndex: Map<string, number>): BookingBlock[] {
+function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string }[], tickIndex: Map<string, number>, isAdmin?: boolean): BookingBlock[] {
   const blocks: BookingBlock[] = []
   const maxIdx = tickIndex.get('24:00') || 48
   const minIdx = tickIndex.get('00:00') || 0
@@ -91,9 +92,8 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
     
     if (startIndex === undefined || endIndex === undefined) continue
     
-    // If blocked, use the full customerName as the primary label to avoid truncation
     const isBlocked = b.status === 'BLOCKED'
-    const label = isBlocked && b.customerName ? b.customerName : getDisplayName(b as any)
+    const label = (isAdmin || isBlocked) && b.customerName ? b.customerName : getDisplayName(b as any)
 
     if (endIndex <= startIndex && normalizedEnd !== '00:00' && normalizedEnd !== '24:00') {
       // Over midnight booking - create TWO blocks
@@ -211,7 +211,8 @@ function BookingLabelBlock({
 export default function TimelineGrid({
   data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef,
   onAdminClick,
-  player
+  player,
+  isAdmin
 }: TimelineGridProps) {
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
@@ -669,7 +670,7 @@ export default function TimelineGrid({
                 })()}
                 {sortedData.map((row, rowIndex) => {
                   const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
-                  const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex) : []
+                  const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex, isAdmin) : []
                   return (
                     <div key={row.court.id} className="relative h-[56px]">
                       <div className="grid h-full items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
@@ -760,7 +761,7 @@ export default function TimelineGrid({
       ? (ticks.length - 1)
       : (date === todayStr ? ticks.slice(0, -1).filter(t => t < nowTime).length : 0)
     const blocksByCourt = SHOW_BOOKING_LABELS
-      ? sortedDataList.map(row => computeBookingBlocks(row.booked as any, tickIndex))
+      ? sortedDataList.map(row => computeBookingBlocks(row.booked as any, tickIndex, isAdmin))
       : []
 
     return (

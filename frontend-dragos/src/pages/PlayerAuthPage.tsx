@@ -541,6 +541,18 @@ export default function PlayerAuthPage() {
                      </div>
                    )}
 
+                   {authMode === 'signup' && (
+                     <div className="flex items-start gap-3 rounded-xl bg-slate-800/60 border border-white/5 px-4 py-3">
+                       <svg className="w-4 h-4 text-lime-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                       <span className="text-[11px] text-slate-400 leading-relaxed">
+                         Prin crearea contului, ești informat că{' '}
+                         <strong className="text-slate-300">prenumele tău va fi vizibil altor utilizatori</strong>
+                         {' '}în calendarul de rezervări (interes legitim conform GDPR). Detalii în{' '}
+                         <a href="/confidentialitate" target="_blank" className="text-lime-400 hover:text-lime-300 underline underline-offset-2">Politica de Confidențialitate</a>.
+                       </span>
+                     </div>
+                   )}
+
                    {authMode !== 'forgot' && (
                      <div className="space-y-1.5">
                         <div className="flex justify-between items-center ml-1">
