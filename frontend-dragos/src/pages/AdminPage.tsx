@@ -212,9 +212,6 @@ export default function AdminPage() {
         let items = res.filter(r => r.court.active !== false)
         // Task 1: Remove Padel Court 4 if it exists and clean labels
         items = items.filter(r => !(r.court.sportType === 'PADEL' && r.court.name === '4'))
-        // Hide Temporarily TENNIS 1-5
-        items = items.filter(r => !(r.court.sportType === 'TENNIS' && ['1', '2', '3', '4', '5'].includes(r.court.name)))
-        
         items.forEach(item => {
           if (item.court.sportType === 'PADEL' && (item.court.name === '2' || item.court.name === '3')) {
             // Force only Indoor label
