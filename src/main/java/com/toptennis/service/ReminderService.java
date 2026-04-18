@@ -128,11 +128,9 @@ public class ReminderService {
         String sport = mapSportLabel(booking.getCourt() != null ? booking.getCourt().getSportType() : null);
         String court = formatCourt(booking);
         String price = formatPrice(booking.getPrice());
-        return firstName + ", rezervare astazi la Star Arena.\n\n" +
-                "Sport: " + sport + "\n" +
-                "Teren: " + court + "  ->  Ora: " + start + " - " + end + "\n" +
+        return firstName + ", rezervare astazi la Star Arena\n" +
+                sport + " - Teren " + court + " - " + start + "-" + end + "\n" +
                 "De achitat: " + price + " RON\n\n" +
-                "Ne vedem pe teren!\n\n" +
                 locationBlock(booking);
     }
 

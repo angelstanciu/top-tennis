@@ -286,11 +286,9 @@ public class SmsService {
                 ? booking.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata, " + relDate + ", la Star Arena.\n\n" +
-                "Sport: " + sportLabel + "\n" +
-                "Teren: " + courtNumber + "  ->  Ora: " + start + " - " + end + "\n" +
+        return "Rezervare confirmata, " + relDate + "\n" +
+                sportLabel + " - Teren " + courtNumber + " - " + start + "-" + end + "\n" +
                 "De achitat: " + price + " RON\n\n" +
-                "Ne vedem pe teren!\n\n" +
                 locationBlock(booking);
     }
 
@@ -304,11 +302,9 @@ public class SmsService {
                 ? first.getCourt().getSportType().name() : "";
         String courtNumber = extractCourtNumber(court);
         String sportLabel = mapSportLabel(sport);
-        return "Rezervare confirmata, " + relDate + ", la Star Arena.\n\n" +
-                "Sport: " + sportLabel + "\n" +
-                "Teren: " + courtNumber + "  ->  Ora: " + start + " - " + end + "\n" +
+        return "Rezervare confirmata, " + relDate + "\n" +
+                sportLabel + " - Teren " + courtNumber + " - " + start + "-" + end + "\n" +
                 "De achitat: " + price + " RON\n\n" +
-                "Ne vedem pe teren!\n\n" +
                 locationBlock(first);
     }
 
@@ -355,7 +351,7 @@ public class SmsService {
         String[] months = {"ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"};
         String day = days[date.getDayOfWeek().getValue() - 1];
         String month = months[date.getMonthValue() - 1];
-        return day + ", " + date.getDayOfMonth() + " " + month + ".";
+        return day + ", " + date.getDayOfMonth() + " " + month;
     }
 
     private String locationBlock(Booking booking) {
