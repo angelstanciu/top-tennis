@@ -43,6 +43,13 @@ public class AdminController {
         return BookingMapper.toDto(bookingService.confirm(id));
     }
 
+    @PostMapping("/bookings/approve-all")
+    public java.util.Map<String, Integer> approveAll(
+            @RequestParam(required = false) SportType sportType) {
+        int count = bookingService.approveAllPending(sportType);
+        return java.util.Map.of("approved", count);
+    }
+
     @PatchMapping("/bookings/{id}/reject")
     public BookingDto reject(@PathVariable Long id) {
         return BookingMapper.toDto(bookingService.cancel(id));

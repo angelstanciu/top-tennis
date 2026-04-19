@@ -392,6 +392,23 @@ public class BookingService {
     }
 
     @Transactional
+    public int approveAllPending(SportType sportType) {
+        LocalDate today = LocalDate.now();
+        LocalDate limit = today.plusMonths(13);
+        List<Booking> pending = bookingRepository.findByStatus(BookingStatus.PENDING_APPROVAL)
+                .stream()
+                .filter(b -> !b.getBookingDate().isBefore(today) && !b.getBookingDate().isAfter(limit))
+                .filter(b -> sportType == null || (b.getCourt() != null && b.getCourt().getSportType() == sportType))
+                .toList();
+        for (Booking b : pending) {
+            b.setStatus(BookingStatus.CONFIRMED);
+            b.setUpdatedAt(LocalDateTime.now());
+            bookingRepository.save(b);
+        }
+        return pending.size();
+    }
+
+    @Transactional
     public int cancelAllFutureBookings() {
         LocalDate today = LocalDate.now();
         List<Booking> all = bookingRepository.findAll();

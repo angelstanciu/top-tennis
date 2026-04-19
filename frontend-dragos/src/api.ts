@@ -339,6 +339,18 @@ export async function approveBooking(id: number, auth: string): Promise<void> {
   if (!res.ok) throw new Error(await parseError(res))
 }
 
+export async function approveAllPending(auth: string, sportType?: string): Promise<number> {
+  const url = new URL(`${BASE_URL}/admin/bookings/approve-all`, window.location.origin)
+  if (sportType) url.searchParams.set('sportType', sportType)
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { Authorization: `Basic ${auth}` }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  const data = await res.json()
+  return data.approved as number
+}
+
 export async function rejectBooking(id: number, auth: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/admin/bookings/${id}/reject`, {
     method: 'PATCH',
