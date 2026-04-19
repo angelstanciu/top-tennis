@@ -807,65 +807,69 @@ export default function AdminPage() {
                        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                        {formatTime(b.startTime)} — {formatTime(b.endTime)}
                     </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-3">
+                    <div className="mt-3 border-t border-slate-50 pt-3 space-y-2">
                       <div className="text-sm font-black text-emerald-700 italic">{(b.price as unknown as number)?.toFixed?.(0)} RON</div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 items-center">
                         {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
                           <button
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${restoringIds.has(b.id) ? 'opacity-50' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95'}`}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${restoringIds.has(b.id) ? 'opacity-50' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-95'}`}
                             onClick={() => { setConfirmId(b.id); setConfirmAction('restore') }}
                             disabled={restoringIds.has(b.id)}
                           >
                             Restabileste
                           </button>
+                        ) : b.status === 'PENDING_APPROVAL' ? (
+                          <div className="w-full space-y-2">
+                            <div className="flex gap-2">
+                              <button onClick={() => approve(b.id)} className="flex-1 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest gap-1">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                Aprobă
+                              </button>
+                              <button onClick={() => reject(b.id)} className="flex-1 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest gap-1">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                                Respinge
+                              </button>
+                            </div>
+                            {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
+                              <div className="flex gap-2 flex-wrap">
+                                {(b.playerCancellationsCount ?? 0) > 0 && (
+                                  <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                    {b.playerCancellationsCount} ANULĂRI
+                                  </div>
+                                )}
+                                {(b.playerNoShowCount ?? 0) > 0 && (
+                                  <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                    {b.playerNoShowCount} NEPREZENTĂRI
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <>
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm select-none">
+                            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm select-none">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                               Aprobat
                             </div>
                             {!isOld && (
                               <button
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95'}`}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 active:scale-95'}`}
                                 onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
                                 disabled={cancellingIds.has(b.id)}
                               >
-                                Anuleaza
+                                Anulează
                               </button>
                             )}
                             {(b.status === 'CONFIRMED' || isPassed) && (
-                               <button
-                                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95'}`}
-                                 onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
-                                 disabled={cancellingIds.has(b.id)}
-                               >
-                                 Neprezentat
-                               </button>
+                              <button
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-slate-800 text-white shadow-lg shadow-slate-800/20 active:scale-95'}`}
+                                onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
+                                disabled={cancellingIds.has(b.id)}
+                              >
+                                Neprezentat
+                              </button>
                             )}
                           </>
-                        )}
-                         {!b.status.includes('CANCELLED') && b.status !== 'PENDING_APPROVAL' && b.status !== 'NO_SHOW' && <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>}
-                        {b.status === 'PENDING_APPROVAL' && (
-                          <div className="flex flex-col gap-2 items-end">
-                            <div className="flex gap-1">
-                               <button onClick={() => approve(b.id)} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all font-bold">✓</button>
-                               <button onClick={() => reject(b.id)} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-90 transition-all font-bold">✗</button>
-                            </div>
-                            {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
-                               <div className="flex gap-2">
-                                 {(b.playerCancellationsCount ?? 0) > 0 && (
-                                   <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                     {b.playerCancellationsCount} ANULĂRI
-                                   </div>
-                                 )}
-                                 {(b.playerNoShowCount ?? 0) > 0 && (
-                                   <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                     {b.playerNoShowCount} NEPREZENTĂRI
-                                   </div>
-                                 )}
-                               </div>
-                            )}
-                          </div>
                         )}
                       </div>
                     </div>
