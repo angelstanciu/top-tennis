@@ -107,6 +107,21 @@ export function calculateGranularPrice(sport: SportType, indoor: boolean, start:
     return splitDayNight(35, 50)
   }
 
+  // Padel indoor: 100 lei/h intre 08:00-14:00, 150 lei/h dupa 14:00
+  if (sport === 'PADEL' && indoor) {
+    const PADEL_INDOOR_SPLIT = 14 * 60
+    let price = 0
+    if (startMin < PADEL_INDOOR_SPLIT) {
+      const dayEnd = Math.min(endMin, PADEL_INDOOR_SPLIT)
+      price += ((dayEnd - startMin) * 100) / 60
+    }
+    if (endMin > PADEL_INDOOR_SPLIT) {
+      const nightStart = Math.max(startMin, PADEL_INDOOR_SPLIT)
+      price += ((endMin - nightStart) * 150) / 60
+    }
+    return price
+  }
+
   // Padel outdoor: 80 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
   if (sport === 'PADEL' && !indoor) {
     return splitDayNight(80, 100)
