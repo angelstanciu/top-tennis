@@ -133,7 +133,8 @@ public class BookingService {
 
         boolean crossesMidnight = !end.isAfter(start);
         boolean touchesMidnight = start.equals(LocalTime.MIN) || end.equals(LocalTime.of(23, 59)) || end.equals(LocalTime.MIN);
-        BookingStatus initialStatus = crossesMidnight ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
+        boolean touchesNightHours = !effectiveAdmin && start.isBefore(LocalTime.of(8, 0));
+        BookingStatus initialStatus = (crossesMidnight || touchesNightHours) ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
         if (Boolean.TRUE.equals(bypassDoubleBooking)) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
         }
@@ -809,6 +810,11 @@ public class BookingService {
         // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00
         if (sport == SportType.FOOTVOLLEY) {
             return splitDayNightPrice(start, end, splitTime, new BigDecimal("75.00"), new BigDecimal("100.00"));
+        }
+
+        // Padel indoor: 100 lei/h intre 08:00-14:00, 150 lei/h dupa 14:00
+        if (sport == SportType.PADEL && isIndoor) {
+            return splitDayNightPrice(start, end, LocalTime.of(14, 0), new BigDecimal("100.00"), new BigDecimal("150.00"));
         }
 
         // Default: tarif fix din baza de date
