@@ -107,17 +107,31 @@ export function calculateGranularPrice(sport: SportType, indoor: boolean, start:
     return splitDayNight(35, 50)
   }
 
-  // Padel indoor: 100 lei/h intre 08:00-14:00, 150 lei/h dupa 14:00
+  // Padel indoor: tarif variabil dupa zi (L-V vs S-D) si data (inainte/dupa 1 mai 2026)
+  // Pana la 1 mai 2026: L-V 100/h<14:00 + 150/h>=14:00; S-D 150/h tot
+  // Dupa 1 mai 2026:    L-V 100/h<14:00 + 120/h>=14:00; S-D 120/h tot
   if (sport === 'PADEL' && indoor) {
-    const PADEL_INDOOR_SPLIT = 14 * 60
-    let price = 0
-    if (startMin < PADEL_INDOOR_SPLIT) {
-      const dayEnd = Math.min(endMin, PADEL_INDOOR_SPLIT)
-      price += ((dayEnd - startMin) * 100) / 60
+    const bookingDate = date ? new Date(date + 'T00:00:00') : new Date()
+    const dayOfWeek = bookingDate.getDay() // 0=Dum, 6=Sam
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const isAfterMay1 = bookingDate >= new Date('2026-05-01T00:00:00')
+    const SPLIT = 14 * 60
+    let morningRate: number
+    let afternoonRate: number
+    if (isWeekend) {
+      morningRate = afternoonRate = isAfterMay1 ? 120 : 150
+    } else {
+      morningRate = 100
+      afternoonRate = isAfterMay1 ? 120 : 150
     }
-    if (endMin > PADEL_INDOOR_SPLIT) {
-      const nightStart = Math.max(startMin, PADEL_INDOOR_SPLIT)
-      price += ((endMin - nightStart) * 150) / 60
+    let price = 0
+    if (startMin < SPLIT) {
+      const dayEnd = Math.min(endMin, SPLIT)
+      price += ((dayEnd - startMin) * morningRate) / 60
+    }
+    if (endMin > SPLIT) {
+      const nightStart = Math.max(startMin, SPLIT)
+      price += ((endMin - nightStart) * afternoonRate) / 60
     }
     return price
   }

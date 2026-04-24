@@ -690,19 +690,8 @@ public class BookingService {
 
         log.debug("[GAP_LOG] court={} isTennis={} start={} gapBefore={} gapAfter={}", court.getId(), isTennis, start, gapBefore, gapAfter);
 
-        // --- FINAL REWARD LOGIC ---
-        // CRITICAL: Any booking that "snaps" to an existing one or boundary is VALID.
-        if (gapBefore == 0 || gapAfter == 0) {
-            return; // Perfectly snapped
-        }
-
-        // TENNIS EXCEPTION
-        // Regula din stânga conectată de timpul curent (isLeftEdge) rămâne permisivă.
         boolean isLeftEdge = false;
         if (date.equals(LocalDate.now())) {
-            // If the booking is made today, and the gap between the present moment and the booking start time
-            // is effectively ~30 minutes (or less, given time passes between reading the grid and clicking),
-            // we consider it a 'Left Edge' meaning they are booking right after the "hashed" out expired time.
             int nowMin = minutesSinceMidnight(LocalTime.now());
             if (bookingStartMin - nowMin <= 65 && bookingStartMin >= nowMin) {
                 isLeftEdge = true;
@@ -711,56 +700,52 @@ public class BookingService {
         if (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart)) {
             isLeftEdge = true;
         }
-        
-        // Regula din dreapta conectată de sfârșitul zilei
-        boolean isRightEdge = false;
-        if (blockEndMin >= 23 * 60 + 59) {
-            isRightEdge = true; // Block touches the very end of the court operating hours (e.g. 23:59/24:00)
-        }
-        
-        if (isTennis) {
+        boolean isRightEdge = blockEndMin >= 23 * 60 + 59;
+
+        boolean isPadel = court.getSportType() == SportType.PADEL;
+
+        // Tennis si Padel: rezervarile consecutive (0 min pauza) SAU minim 90 min pauza.
+        // Margine stanga (ora curenta) si dreapta (sfarsit de zi): se permit goluri de 30 sau 60 min.
+        if (isTennis || isPadel) {
             boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && (gapBefore == 30 || gapBefore == 60));
             boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter == 30 || gapAfter == 60));
-            
             if (isBeforeValid && isAfterValid) {
-                return; // Valid reservation, terminate early!
-            } else {
-                throw new IllegalArgumentException("La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).");
+                return;
             }
+            String sport = isTennis ? "Tenis" : "Padel";
+            throw new IllegalArgumentException("La " + sport + ", intervalul liber dintre rezervări trebuie să fie 0 (consecutive) sau minim 1h 30m. Te rugăm să lipești rezervarea de meciul vecin sau să lași minim 1h 30m distanță.");
         }
 
-        // PADEL / OTHER SPORTS EXCEPTIONS
-        // ALLOW 1.5h Exception: if the space between existing bookings is exactly 90 mins, and we book 60 mins, leaving 30 mins rest.
-        // (gapBefore == 30 && gapAfter == 0) -> this is picked up by "gapAfter == 0 Perfectly snapped" rule above.
-        // What if they leave 30m gapBefore AND some huge array gapAfter? Then we force snapping.
-        
+        // Alte sporturi: nu se lasa goluri de exact 30 de minute
+        if (gapBefore == 0 || gapAfter == 0) {
+            return; // Snapped perfect
+        }
+
         if (gapBefore == 30 && gapAfter == 30) {
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
         if ((gapBefore == 30 || gapBefore == 60) && gapAfter >= 60) {
             if (isLeftEdge) {
-                return; // Left edge allows 30m/60m gaps from current time
+                return;
             }
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
-        
+
         if (gapAfter == 30 && gapBefore >= 60) {
             if (isRightEdge) {
-                return; // Right edge allows 30m gaps towards the end of the day
+                return;
             }
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
 
-        // ALLOW if gaps on both sides are large enough (>= 60m)
         if (gapBefore >= 60 && gapAfter >= 60) {
-            return; // Independent block
+            return;
         }
 
-        // Fallback catch-all for remaining 30m gaps
         if (gapBefore == 30 || gapAfter == 30) {
             if ((gapBefore == 30 && isLeftEdge) || (gapAfter == 30 && isRightEdge)) {
-                return; // Allowed due to edge proximity
+                return;
             }
             throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
         }
@@ -812,9 +797,21 @@ public class BookingService {
             return splitDayNightPrice(start, end, splitTime, new BigDecimal("75.00"), new BigDecimal("100.00"));
         }
 
-        // Padel indoor: 100 lei/h intre 08:00-14:00, 150 lei/h dupa 14:00
+        // Padel indoor: tarif variabil dupa zi (L-V vs S-D) si data (inainte/dupa 1 mai 2026)
+        // Pana la 1 mai 2026: L-V 100/h<14:00 + 150/h>=14:00; S-D 150/h tot
+        // Dupa 1 mai 2026:    L-V 100/h<14:00 + 120/h>=14:00; S-D 120/h tot
         if (sport == SportType.PADEL && isIndoor) {
-            return splitDayNightPrice(start, end, LocalTime.of(14, 0), new BigDecimal("100.00"), new BigDecimal("150.00"));
+            boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isAfterMay1 = !date.isBefore(LocalDate.of(2026, 5, 1));
+            BigDecimal morningRate;
+            BigDecimal afternoonRate;
+            if (isWeekend) {
+                morningRate = afternoonRate = isAfterMay1 ? new BigDecimal("120.00") : new BigDecimal("150.00");
+            } else {
+                morningRate = new BigDecimal("100.00");
+                afternoonRate = isAfterMay1 ? new BigDecimal("120.00") : new BigDecimal("150.00");
+            }
+            return splitDayNightPrice(start, end, LocalTime.of(14, 0), morningRate, afternoonRate);
         }
 
         // Default: tarif fix din baza de date

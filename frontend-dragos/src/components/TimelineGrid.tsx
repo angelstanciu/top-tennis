@@ -371,54 +371,30 @@ export default function TimelineGrid({
 
     const gapBefore = startMin - blockStart
     const gapAfter = blockEnd - endMin
-    const duration = endMin - startMin
-
-    if (gapBefore === 0 || gapAfter === 0) return false; // perfectly snapped
 
     const isTennis = sportType === 'TENNIS'
-    // Calculate precise LeftEdge by matching the exact present time boundary.
-    const nowHHMM = new Date().toTimeString().slice(0,5)
-    let isLeftEdge = gapBefore >= 10 * 60; // fallback UI proxy
-    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) {
-       // if the free block essentially starts right around 'now' (up to 65 mins ago), treat as left edge
-       isLeftEdge = true;
-    }
-    
-    // Right Edge calculation (court bounds)
-    const isRightEdge = blockEnd >= 24 * 60 - 2; // ~1438..1440
-    
-    if (isTennis) {
-        if (isLeftEdge && gapBefore === 30) {
-           // ALLOW left edge 30-min gap for tennis
-           // Implicitly continue
-        } else if (gapBefore > 0 && gapBefore < 90) {
-            return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
-        }
-        
-        if (isRightEdge && (gapAfter === 30 || gapAfter === 60)) {
-           // ALLOW right edge gap for tennis
-        } else if (gapAfter > 0 && gapAfter < 90) {
-            return "La Tenis, te rugăm să lași un spațiu liber de minim 1h 30m între rezervări, sau să le programezi una după alta (0 minute pauză).";
-        }
-        return false;
+    const isPadel = sportType === 'PADEL'
+    const nowHHMM = new Date().toTimeString().slice(0, 5)
+    let isLeftEdge = gapBefore >= 10 * 60
+    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) isLeftEdge = true
+    const isRightEdge = blockEnd >= 24 * 60 - 2
+
+    // Tennis si Padel: 0 min pauza (consecutive) SAU minim 90 min pauza
+    // Margine stanga (ora curenta) si dreapta (sfarsit de zi): 30 sau 60 min permise
+    if (isTennis || isPadel) {
+      const isBeforeValid = (gapBefore === 0) || (gapBefore >= 90) || (isLeftEdge && (gapBefore === 30 || gapBefore === 60))
+      const isAfterValid = (gapAfter === 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter === 30 || gapAfter === 60))
+      if (isBeforeValid && isAfterValid) return false
+      const sportName = isTennis ? 'Tenis' : 'Padel'
+      return `La ${sportName}, intervalul liber trebuie să fie 0 (consecutive) sau minim 1h 30m. Lipeste rezervarea de meciul vecin sau lasă minim 1h 30m distanță.`
     }
 
-    const standardErrorMsg = "Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.";
-
-    // Logic aligned with Backend (BookingService.java):
-    // REJECT ONLY IF:
-    // 1. Fragmented in the middle (30m on BOTH sides)
+    // Alte sporturi: nu se lasa goluri de exact 30 min
+    if (gapBefore === 0 || gapAfter === 0) return false
+    const standardErrorMsg = "Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora."
     if (gapBefore === 30 && gapAfter === 30) return standardErrorMsg
-
-    // 2. Fragmented on one side and NOT snapped to the other (Force snapping)
     if ((gapBefore === 30 || gapBefore === 60) && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
     if (gapAfter === 30 && gapBefore >= 60 && !isRightEdge) return standardErrorMsg
-
-    // ALLOW ALL OTHER CASES:
-    // - Snapped to either side (gapBefore == 0 or gapAfter == 0)
-    // - Large gaps on both sides (gapBefore >= 60 and gapAfter >= 60)
-    // - 30m gaps on permitted edges
-    
     return false
   }
 
@@ -1002,8 +978,9 @@ export default function TimelineGrid({
        if (gap < 60) return "Vă informăm că spațiul disponibil aici este prea scurt pentru o rezervare de minim 1 oră.";
 
        const isTennis = row.court.sportType === 'TENNIS';
-       
-       if (isTennis) {
+       const isPadel = row.court.sportType === 'PADEL';
+
+       if (isTennis || isPadel) {
            const nextValidLeft = blockStart + 90;
            const nextLeftStr = nextValidLeft + 60 <= blockEnd ? ` sau de la ${formatTime(nextValidLeft)}` : '';
            const leftStr = `💡 Sfat: Pentru a respecta regula de pauză, poți începe rezervarea exact de la ${bStartStr}${nextLeftStr}.`;
@@ -1108,7 +1085,10 @@ export default function TimelineGrid({
                   <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
                     <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
                     <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
-                      La <strong>{sportLabel(row.court.sportType)}</strong>, regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări. 
+                      La <strong>{sportLabel(row.court.sportType)}</strong>,{' '}
+                      {(row.court.sportType === 'TENNIS' || row.court.sportType === 'PADEL')
+                        ? 'intervalul liber dintre rezervări trebuie să fie 0 (consecutive) sau minim 1h 30m.'
+                        : 'regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări.'}
                     </p>
                     <div className="bg-white/60 p-3 rounded-2xl border border-rose-200/50 text-[13px] text-rose-800 leading-snug w-full">
                       {getSuggestionText()}
