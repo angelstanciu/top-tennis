@@ -1093,14 +1093,15 @@ export default function TimelineGrid({
                   <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
                     <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
                     <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
-                      La <strong>{sportLabel(row.court.sportType)}</strong>,{' '}
                       {(row.court.sportType === 'TENNIS' || row.court.sportType === 'PADEL')
-                        ? 'intervalul liber dintre rezervări trebuie să fie 0 (consecutive) sau minim 1h 30m.'
-                        : 'regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări.'}
+                        ? <>La <strong>{sportLabel(row.court.sportType)}</strong>, rezervările trebuie să fie una după alta (fără pauză) sau să lase cel puțin <strong>1 oră și 30 de minute</strong> libere între ele.</>
+                        : <>La <strong>{sportLabel(row.court.sportType)}</strong>, regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări.</>}
                     </p>
-                    <div className="bg-white/60 p-3 rounded-2xl border border-rose-200/50 text-[13px] text-rose-800 leading-snug w-full">
-                      {getSuggestionText()}
-                    </div>
+                    {(row.court.sportType !== 'TENNIS' && row.court.sportType !== 'PADEL') && (
+                      <div className="bg-white/60 p-3 rounded-2xl border border-rose-200/50 text-[13px] text-rose-800 leading-snug w-full">
+                        {getSuggestionText()}
+                      </div>
+                    )}
                     <button 
                       onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }} 
                       className="mt-2 w-full px-4 py-3 bg-white text-rose-700 font-black uppercase text-[11px] tracking-widest rounded-2xl border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
