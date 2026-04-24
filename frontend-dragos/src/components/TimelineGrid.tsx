@@ -374,9 +374,16 @@ export default function TimelineGrid({
 
     const isTennis = sportType === 'TENNIS'
     const isPadel = sportType === 'PADEL'
-    const nowHHMM = new Date().toTimeString().slice(0, 5)
-    let isLeftEdge = gapBefore >= 10 * 60
-    if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) isLeftEdge = true
+    const isToday = date === todayISO()
+    let isLeftEdge: boolean
+    if (isToday) {
+      const nowHHMM = new Date().toTimeString().slice(0, 5)
+      isLeftEdge = gapBefore >= 10 * 60
+      if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) isLeftEdge = true
+    } else {
+      // Data viitoare: left edge doar daca nu exista rezervare anterioara (blockStart = 0)
+      isLeftEdge = blockStart === 0
+    }
     const isRightEdge = blockEnd >= 24 * 60 - 2
 
     // Tennis si Padel: 0 min pauza (consecutive) SAU minim 90 min pauza
