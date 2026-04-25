@@ -344,7 +344,8 @@ export default function TimelineGrid({
     return t >= selStart
   }
 
-  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string, sportType?: string, isValidationOnly: boolean = false, clickStartCell?: string): string | false {
+  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string, sportType?: string, isValidationOnly: boolean = false, clickStartCell?: string, adminOverride: boolean = false): string | false {
+    if (adminOverride) return false
     const active = booked.filter(b => b.status !== 'CANCELLED')
     
     const startMin = minutesSinceMidnightStr(selStart)
@@ -895,7 +896,7 @@ export default function TimelineGrid({
     const selectedIntervalText = (selCourtId === courtId && selStart === startTime && selEnd)
       ? `${selStart} - ${selEnd}`
       : '—'
-    const selectionValid = !!(selCourtId === courtId && selStart && selEnd && minutesBetween(selStart, selEnd) >= 60 && !leavesThirtyMinuteGap(booked, selStart, selEnd, row.court.sportType))
+    const selectionValid = !!(selCourtId === courtId && selStart && selEnd && minutesBetween(selStart, selEnd) >= 60 && !leavesThirtyMinuteGap(booked, selStart, selEnd, row.court.sportType, false, undefined, !!isAdmin))
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
@@ -913,7 +914,7 @@ export default function TimelineGrid({
       // Additional gap validation to make it consistent with the backend rules
       let endTimeRaw = ticks[startIndex + slots]
       if (endTimeRaw) {
-         if (leavesThirtyMinuteGap(booked, startTime, endTimeRaw, row.court.sportType, true, startTime)) {
+         if (leavesThirtyMinuteGap(booked, startTime, endTimeRaw, row.court.sportType, true, startTime, !!isAdmin)) {
              return false;
          }
       }
@@ -952,7 +953,7 @@ export default function TimelineGrid({
       setSelCourtId(courtId)
       setSelStart(startTime)
       setSelEnd(endTime)
-      const gapInvalid = leavesThirtyMinuteGap(booked, startTime, endTime, row.court.sportType)
+      const gapInvalid = leavesThirtyMinuteGap(booked, startTime, endTime, row.court.sportType, false, undefined, !!isAdmin)
       onSelectionChange?.(courtId, startTime, endTime, mins >= 60 && !gapInvalid, gapInvalid)
       if (reserveWarnVisible) {
         setReserveWarnVisible(false)

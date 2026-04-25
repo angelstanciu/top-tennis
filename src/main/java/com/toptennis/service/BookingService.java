@@ -73,7 +73,7 @@ public class BookingService {
 
         Court court = courtRepository.findWithLockById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         boolean isTennis = court.getSportType() == SportType.TENNIS;
-        validateTime(court, date, start, end, isTennis);
+        validateTime(court, date, start, end, isTennis, effectiveAdmin);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
 
         String normPhone = normalizePhone(phone);
@@ -154,7 +154,7 @@ public class BookingService {
             cancelCount = Math.max(cancelCount, playerCancelCount);
         }
         
-        if (cancelCount > 5) {
+        if (!effectiveAdmin && cancelCount > 5) {
             initialStatus = BookingStatus.PENDING_APPROVAL;
             log.warn("[PENALTY] User/Phone has {} cancellations ({} no-shows). Forcing PENDING_APPROVAL.", cancelCount, cancelCount / 10);
         }
@@ -527,7 +527,7 @@ public class BookingService {
     public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         boolean isTennis = court.getSportType() == SportType.TENNIS;
-        validateTime(court, date, start, end, isTennis);
+        validateTime(court, date, start, end, isTennis, true);
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
             throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
@@ -547,7 +547,7 @@ public class BookingService {
         return bookingRepository.save(b);
     }
 
-    private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end, boolean isTennis) {
+    private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end, boolean isTennis, boolean adminOverride) {
         if (date == null || start == null || end == null) {
             throw new IllegalArgumentException("Data și intervalul sunt obligatorii.");
         }
@@ -587,7 +587,7 @@ public class BookingService {
         }
         
         // No opening hours constraint: base is open non-stop
-        validateGaps(court, date, start, end, effectiveStart, isTennis);
+        if (!adminOverride) validateGaps(court, date, start, end, effectiveStart, isTennis);
     }
 
     @Transactional
