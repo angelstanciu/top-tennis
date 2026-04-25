@@ -125,7 +125,7 @@ export async function adminBlockSlot(payload: {
   startTime: string
   endTime: string
   note: string
-}, auth: string): Promise<BookingDto> {
+}, auth: string): Promise<{ booking: BookingDto, cancelledCount: number, notifiedCount: number }> {
   const res = await fetch(`${BASE_URL}/admin/block-slot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },

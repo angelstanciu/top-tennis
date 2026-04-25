@@ -523,15 +523,43 @@ public class BookingService {
         return saved;
     }
 
+    public record BlockResult(Booking blockBooking, int cancelledCount, int notifiedCount) {}
+
     @Transactional
-    public Booking block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
+    public BlockResult block(Long courtId, LocalDate date, LocalTime start, LocalTime end, String note) {
         Court court = courtRepository.findById(courtId).orElseThrow(() -> new IllegalArgumentException("Terenul nu a fost găsit: " + courtId));
         boolean isTennis = court.getSportType() == SportType.TENNIS;
         validateTime(court, date, start, end, isTennis, true);
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
-        if (!bookingRepository.findOverlapping(courtId, date, start, end, activeStatuses).isEmpty()) {
-            throw new IllegalArgumentException("Intervalul selectat se suprapune cu o rezervare existentă.");
+
+        // Cancel all CONFIRMED and PENDING_APPROVAL bookings in the interval — no penalty
+        List<Booking> toCancel = bookingRepository.findOverlapping(courtId, date, start, end,
+                Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.PENDING_APPROVAL));
+
+        java.util.Set<String> seenPhones = new java.util.LinkedHashSet<>();
+        java.util.List<Booking> toNotify = new java.util.ArrayList<>();
+
+        for (Booking existing : toCancel) {
+            existing.setStatus(BookingStatus.CANCELLED);
+            existing.setPenaltyExempt(true);
+            existing.setUpdatedAt(LocalDateTime.now());
+            bookingRepository.save(existing);
+            applyToSiblingIfExists(existing, sibling -> {
+                sibling.setStatus(BookingStatus.CANCELLED);
+                sibling.setPenaltyExempt(true);
+                sibling.setUpdatedAt(LocalDateTime.now());
+            });
+            String phone = existing.getCustomerPhone();
+            boolean hasPhone = phone != null && !phone.isBlank() && !"-".equals(phone) && !"0000000000".equals(phone);
+            if (!existing.isWeeklyUser() && hasPhone && seenPhones.add(phone)) {
+                toNotify.add(existing);
+            }
         }
+
+        // Block over existing BLOCKED slots is not allowed
+        if (!bookingRepository.findOverlapping(courtId, date, start, end, Arrays.asList(BookingStatus.BLOCKED)).isEmpty()) {
+            throw new IllegalArgumentException("Intervalul selectat se suprapune cu un slot deja blocat.");
+        }
+
         Booking b = new Booking();
         b.setCourt(court);
         b.setBookingDate(date);
@@ -544,7 +572,19 @@ public class BookingService {
         b.setCreatedAt(LocalDateTime.now());
         b.setUpdatedAt(LocalDateTime.now());
         b.setPrice(BigDecimal.ZERO);
-        return bookingRepository.save(b);
+        Booking saved = bookingRepository.save(b);
+
+        if (!toNotify.isEmpty()) {
+            final String blockNote = (note != null && !note.trim().isEmpty()) ? note : "Blocat de Administrator";
+            final java.util.List<Booking> notifyList = toNotify;
+            taskExecutor.execute(() -> {
+                for (Booking nb : notifyList) {
+                    smsService.sendBlockCancellationNotification(nb, blockNote);
+                }
+            });
+        }
+
+        return new BlockResult(saved, toCancel.size(), toNotify.size());
     }
 
     private void validateTime(Court court, LocalDate date, LocalTime start, LocalTime end, boolean isTennis, boolean adminOverride) {
@@ -686,7 +726,6 @@ public class BookingService {
         
         int gapBefore = bookingStartMin - blockStartMin;
         int gapAfter = blockEndMin - bookingEndMin;
-        int bookingDuration = bookingEndMin - bookingStartMin;
 
         log.debug("[GAP_LOG] court={} isTennis={} start={} gapBefore={} gapAfter={}", court.getId(), isTennis, start, gapBefore, gapAfter);
 

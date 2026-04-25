@@ -82,9 +82,17 @@ public class AdminController {
                                @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime endTime,
                                @Size(max=255) String note) {}
 
+    public record BlockResponse(BookingDto booking, int cancelledCount, int notifiedCount) {}
+
     @PostMapping("/block-slot")
-    public BookingDto block(@RequestBody @Valid BlockRequest req) {
-        return BookingMapper.toDto(bookingService.block(req.courtId, req.date, req.startTime, req.endTime, req.note));
+    public BlockResponse block(@RequestBody @Valid BlockRequest req) {
+        try {
+            com.toptennis.service.BookingService.BlockResult result =
+                    bookingService.block(req.courtId, req.date, req.startTime, req.endTime, req.note);
+            return new BlockResponse(BookingMapper.toDto(result.blockBooking()), result.cancelledCount(), result.notifiedCount());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
     }
 
     public record AdminCreateBookingRequest(

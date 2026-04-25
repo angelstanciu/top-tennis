@@ -77,14 +77,17 @@ export default function AdminBlockDayPage() {
     setError(null)
     setSuccess(null)
     try {
-      await adminBlockSlot({
+      const result = await adminBlockSlot({
         courtId: Number(courtId),
         date,
         startTime,
         endTime,
         note
       }, auth)
-      setSuccess('Terenul a fost blocat cu succes pentru intervalul selectat!')
+      const cancelMsg = result.cancelledCount > 0
+        ? ` ${result.cancelledCount} rezervare(i) anulate automat${result.notifiedCount > 0 ? `, ${result.notifiedCount} client(i) notificat(i) prin SMS` : ''}.`
+        : ''
+      setSuccess(`Terenul a fost blocat cu succes!${cancelMsg}`)
       setSport('')
       setCourtId('')
       setNote('Blocat de Administrator')

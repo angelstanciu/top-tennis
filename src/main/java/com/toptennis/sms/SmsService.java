@@ -236,6 +236,25 @@ public class SmsService {
 
     public static final String AUTOMAT_FOOTER = "\nMesaj automat. Nu raspundeti.";
 
+    public void sendBlockCancellationNotification(Booking booking, String reason) {
+        String phone = booking.getCustomerPhone();
+        if (phone == null || phone.isBlank() || "-".equals(phone)) return;
+        sleepBetweenMessages();
+        String date = formatDate(booking.getBookingDate());
+        String start = formatTime(booking.getStartTime());
+        String end = formatTime(booking.getEndTime());
+        String truncatedReason = (reason != null && reason.length() > 50) ? reason.substring(0, 47) + "..." : (reason != null ? reason : "Blocat de Administrator");
+        String text = "Rezervarea ta " + date + " " + start + "-" + end + "\n" +
+                      "a fost anulata. Motiv: " + truncatedReason + "\n" +
+                      "Ne cerem scuze! star-arena.ro";
+        SmsSendResult result = sendSms(phone, text);
+        if (!result.success) {
+            log.warn("Block cancellation SMS failed for {}. Transcript: {}", phone, result.transcript);
+        } else {
+            log.info("Block cancellation SMS sent to {} date={} {}-{} reason={}", phone, date, start, end, truncatedReason);
+        }
+    }
+
     public void sendAdminNewBookingNotification(Booking booking) {
         String adminNumber = props.getAdminNotificationNumber();
         if (adminNumber == null || adminNumber.isBlank()) return;
