@@ -656,7 +656,8 @@ export default function TimelineGrid({
                 {sortedData.map((row, rowIndex) => {
                   const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
                   const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex, isAdmin) : []
-                  const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
+                  const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
+                  const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
                   return (
                     <div key={row.court.id} className="relative h-[56px]">
                       <div className="grid h-full items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
@@ -844,7 +845,8 @@ export default function TimelineGrid({
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
                       const isPending = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                      const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
+                      const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
+                  const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
                       const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
                       const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours
                       const clickable = !unavailable
@@ -907,7 +909,8 @@ export default function TimelineGrid({
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
-      const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
+      const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
+      const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
