@@ -255,6 +255,31 @@ public class SmsService {
         }
     }
 
+    public void sendAdminApprovalNotification(Booking booking, long cancelCount) {
+        String adminNumber = props.getAdminNotificationNumber();
+        if (adminNumber == null || adminNumber.isBlank()) return;
+        sleepBetweenMessages();
+        String customer = booking.getCustomerName() == null ? "Client" : booking.getCustomerName();
+        String nameShort = customer.length() > 18 ? customer.substring(0, 16) + ".." : customer;
+        String customerPhone = booking.getCustomerPhone() == null ? "" : booking.getCustomerPhone();
+        String court = booking.getCourt() != null ? booking.getCourt().getName() : "?";
+        String sport = booking.getCourt() != null && booking.getCourt().getSportType() != null
+                ? booking.getCourt().getSportType().name() : "";
+        String sportLabel = mapSportLabel(sport);
+        String date = formatDate(booking.getBookingDate());
+        String start = formatTime(booking.getStartTime());
+        String end = formatTime(booking.getEndTime());
+        String text = "APROBARE NECESARA!\n" +
+                nameShort + " (" + customerPhone + "): " + sportLabel + " T" + court + ", " + date + ", " + start + "-" + end + "\n" +
+                "Anulari: " + cancelCount + ". Aproba: star-arena.ro/admin";
+        SmsSendResult result = sendSms(adminNumber, text);
+        if (!result.success) {
+            log.warn("Failed to send admin approval SMS. Transcript: {}", result.transcript);
+        } else {
+            log.info("Admin approval SMS sent for {} ({}), court={} {}-{} cancels={}", nameShort, customerPhone, court, start, end, cancelCount);
+        }
+    }
+
     public void sendAdminNewBookingNotification(Booking booking) {
         String adminNumber = props.getAdminNotificationNumber();
         if (adminNumber == null || adminNumber.isBlank()) return;

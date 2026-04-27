@@ -209,6 +209,10 @@ public class BookingService {
                         emailService.sendBookingConfirmation(saved);
                     });
                 }
+                if (initialStatus == BookingStatus.PENDING_APPROVAL && !effectiveAdmin) {
+                    final long finalCancelCount = cancelCount;
+                    taskExecutor.execute(() -> smsService.sendAdminApprovalNotification(saved, finalCancelCount));
+                }
                 return saved;
             } else {
                 LocalTime part1End = LocalTime.of(23, 59);
@@ -287,6 +291,10 @@ public class BookingService {
                         smsService.sendAdminNewBookingNotificationCrossMidnight(saved1, saved2);
                         emailService.sendBookingConfirmation(saved1);
                     });
+                }
+                if (initialStatus == BookingStatus.PENDING_APPROVAL && !effectiveAdmin) {
+                    final long finalCancelCount = cancelCount;
+                    taskExecutor.execute(() -> smsService.sendAdminApprovalNotification(saved1, finalCancelCount));
                 }
                 return saved1;
             }
@@ -626,7 +634,13 @@ public class BookingService {
             }
         }
         
-        // No opening hours constraint: base is open non-stop
+        // Court early-close restriction (e.g. court 5 tennis has no lighting → closes at 20:00)
+        if (!adminOverride && court.getCloseTime() != null && court.getCloseTime().isBefore(LocalTime.of(23, 59))) {
+            if (end.isAfter(court.getCloseTime())) {
+                throw new IllegalArgumentException("Terenul " + court.getName() + " se inchide la ora " + court.getCloseTime() + " (nocturna indisponibila). Va rugam alegeti un interval inainte de " + court.getCloseTime() + ".");
+            }
+        }
+
         if (!adminOverride) validateGaps(court, date, start, end, effectiveStart, isTennis);
     }
 

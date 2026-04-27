@@ -656,6 +656,7 @@ export default function TimelineGrid({
                 {sortedData.map((row, rowIndex) => {
                   const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
                   const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex, isAdmin) : []
+                  const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
                   return (
                     <div key={row.court.id} className="relative h-[56px]">
                       <div className="grid h-full items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
@@ -663,27 +664,30 @@ export default function TimelineGrid({
                           const next = ticks[i+1]
                           const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
                           const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
+                          const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
                           const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                          const clickable = !isBooked && !isPast
-                          
+                          const clickable = !isBooked && !isPast && !isOutsideHours
+
                           let stateClass = ''
                           const isBlocked = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
                           const isPending = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
-                          const unavailable = isPast || isBooked || isBlocked || isPending
+                          const unavailable = isPast || isBooked || isBlocked || isPending || isOutsideHours
                           if (selected && !unavailable) stateClass = 'bg-emerald-300'
                           else if (isBlocked) stateClass = 'bg-slate-200'
                           else if (isPending) stateClass = 'bg-amber-200 animate-pulse'
                           else if (isBooked) stateClass = 'bg-rose-200'
-                          else if (isPast) stateClass = 'bg-slate-100'
+                          else if (isPast || isOutsideHours) stateClass = 'bg-slate-100'
                           else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-                          
+
                           const disabledClass = unavailable ? 'cursor-not-allowed' : 'cursor-pointer'
+                          const outsideHoursStyle = isOutsideHours ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 7px, transparent 7px, transparent 14px)' } : undefined
 
                           return (
                             <div
                               key={`${row.court.id}-${t}`}
                               className={`h-full border-t border-l border-slate-200/60 ${stateClass} ${disabledClass} ${onAdminClick && isBooked ? 'ring-inset hover:ring-2 hover:ring-rose-400' : ''}`}
-                              onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBooked ? 'OCUPAT' : (isPast ? 'INDISPONIBIL' : 'LIBER')}`)}
+                              style={outsideHoursStyle}
+                              onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBooked ? 'OCUPAT' : isPast ? 'INDISPONIBIL' : 'LIBER'}`)}
                               onClick={(e) => {
                                 if (onAdminClick && isBooked) {
                                   const b = booked.find(br => !(br.end <= t || br.start >= next))
@@ -840,22 +844,25 @@ export default function TimelineGrid({
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
                       const isPending = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                      const unavailable = isPastRow || isBooked || isBlocked || isPending
+                      const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
+                      const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+                      const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours
                       const clickable = !unavailable
                       let stateClass = ''
                       if (selected && !unavailable) stateClass = 'bg-emerald-300'
                       else if (isBlocked) stateClass = 'bg-slate-200'
                       else if (isPending) stateClass = 'bg-amber-100 animate-pulse'
                       else if (isBooked) stateClass = 'bg-rose-200'
-                      else if (isPastRow) stateClass = 'bg-slate-100'
+                      else if (isPastRow || isOutsideHours) stateClass = 'bg-slate-100'
                       else stateClass = 'bg-emerald-50 hover:bg-emerald-100 transition-colors'
                       const disabledClass = unavailable && !onAdminClick ? 'cursor-not-allowed pointer-events-none' : (unavailable ? 'cursor-not-allowed' : 'cursor-pointer')
+                      const outsideHoursStyle = isOutsideHours ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 7px, transparent 7px, transparent 14px)' } : undefined
                       return (
                         <div
                           key={`cell-${row.court.id}-${t}`}
                           className={`border-t border-l border-slate-200 ${stateClass} ${disabledClass}`}
-                          style={{ minWidth: minCourtWidth }}
-                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                          style={{ minWidth: minCourtWidth, ...outsideHoursStyle }}
+                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : 'LIBER'}`)}
                           onClick={(e) => {
                             if (onAdminClick && isBooked) {
                               const b = bookedRanges.find(br => !(br.end <= t || br.start >= next))
@@ -900,15 +907,17 @@ export default function TimelineGrid({
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
+      const courtCloseLimit = (row.court.closeTime && row.court.closeTime !== '23:59') ? row.court.closeTime : null
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
         // If range crosses midnight conceptually, optimistically allow (backend handles PENDING)
         if (!t || !next) return true
-        
+
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
-        if (isPast || isBooked) return false
+        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        if (isPast || isBooked || isOutsideHours) return false
       }
       
       // Additional gap validation to make it consistent with the backend rules
