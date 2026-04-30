@@ -143,7 +143,7 @@ export default function FreePositionsPage() {
          const fresh = all.filter((d: any) => {
            if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
            // Hide only the INDOOR padel court named "4" (different location)
-           if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4' && d.court.indoor) return false
+           if (d.court.sportType === 'PADEL' && (d.court.name.trim() === '4' || d.court.name.trim() === '5') && d.court.indoor) return false
            return true
          })
          setData(fresh)
@@ -245,8 +245,8 @@ export default function FreePositionsPage() {
   const filteredData = useMemo(() => {
     return data.filter(d => {
       if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-      // Hide only the INDOOR padel court named "4" (different location)
-      if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4' && d.court.indoor) return false
+      // Hide indoor Padel 4 and 5 (Star Arena 2, different location)
+      if (d.court.sportType === 'PADEL' && (d.court.name.trim() === '4' || d.court.name.trim() === '5') && d.court.indoor) return false
       return true
     })
   }, [data])
@@ -397,8 +397,8 @@ export default function FreePositionsPage() {
       const dayStart = 8 * 60, dayEnd = 24 * 60
       const fresh = data.filter(d => {
         if (d.court.sportType === 'TENNIS' && !d.court.indoor) return false
-        // Hide only the INDOOR padel court named "4" (different location)
-        if (d.court.sportType === 'PADEL' && d.court.name.trim() === '4' && d.court.indoor) return false
+        // Hide indoor Padel 4 and 5 (Star Arena 2, different location)
+        if (d.court.sportType === 'PADEL' && (d.court.name.trim() === '4' || d.court.name.trim() === '5') && d.court.indoor) return false
         return true
       })
 

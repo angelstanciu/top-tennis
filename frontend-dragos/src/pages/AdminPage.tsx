@@ -212,16 +212,6 @@ export default function AdminPage() {
     fetchAvailability(date, sport || undefined)
       .then(res => {
         let items = res.filter(r => r.court.active !== false)
-        // Hide only the INDOOR padel court named "4" (different location, managed separately)
-        items = items.filter(r => !(r.court.sportType === 'PADEL' && r.court.name === '4' && r.court.indoor))
-        items.forEach(item => {
-          if (item.court.sportType === 'PADEL' && (item.court.name === '2' || item.court.name === '3')) {
-            // Force only Indoor label
-            item.court.indoor = true
-            item.court.notes = undefined
-          }
-        })
-
         setAvailabilityCourts(items.map(r => r.court))
         setAvailabilityData(items)
       })

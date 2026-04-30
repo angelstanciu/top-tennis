@@ -64,14 +64,6 @@ export async function fetchAvailability(date: string, sportType?: string): Promi
   if (!res.ok) throw new Error(await parseError(res))
   
   const data: AvailabilityDto[] = await res.json()
-  data.forEach(item => {
-    if (item.court && item.court.sportType === 'PADEL' && (item.court.name === '4' || item.court.name === '5')) {
-      item.court.indoor = false
-      if (item.court.notes && item.court.notes.includes('Locație diferită')) {
-        item.court.notes = undefined
-      }
-    }
-  })
   return data
 }
 
@@ -108,14 +100,6 @@ export async function fetchActiveCourts(): Promise<CourtDto[]> {
   if (!res.ok) throw new Error(await parseError(res))
   
   const courts: CourtDto[] = await res.json()
-  courts.forEach(c => {
-    if (c.sportType === 'PADEL' && (c.name === '4' || c.name === '5')) {
-      c.indoor = false
-      if (c.notes && c.notes.includes('Locație diferită')) {
-        c.notes = undefined
-      }
-    }
-  })
   return courts
 }
 

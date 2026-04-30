@@ -188,8 +188,6 @@ export default function App() {
         const filteredData = originalData.filter(row => {
           const isPadel = row.court.sportType === 'PADEL'
           const courtName = row.court.name.trim()
-          // Keep Padel 4 only if outdoor + not heated (the V32 court); hide any indoor or heated variant
-          if (isPadel && courtName === '4' && (row.court.indoor || row.court.heated)) return false
           // Support only 1 Basketball court as per user request (Round 21.5)
           if (row.court.sportType === 'BASKETBALL' && courtName !== '1') return false
           return true
@@ -216,7 +214,7 @@ export default function App() {
 
           // New outdoor padel courts 4 & 5 - coming soon until May 25, 2026
           const courtName = row.court.name.trim()
-          const isNewOutdoorPadel = isPadel && !row.court.indoor && (courtName === '4' || courtName === '5')
+          const isNewOutdoorPadel = isPadel && !row.court.indoor && (courtName === '2' || courtName === '3')
           if (isNewOutdoorPadel && date < PADEL_NEW_COURTS_DATE) {
             forceUnavailable = true
             ;(newRow.court as any).comingSoon = true
@@ -228,9 +226,10 @@ export default function App() {
           }
 
           // PADEL COURTS - Location Tagging
+          // 1,2,3 = outdoor Baza Cosmin; 4,5 = Star Arena 2 (different location)
           if (isPadel) {
             const courtName = row.court.name.trim()
-            if (courtName === '2' || courtName === '3') {
+            if (courtName === '4' || courtName === '5') {
               newRow.court.notes = LOCATION_TAGS.STAR_ARENA
             } else {
               newRow.court.notes = LOCATION_TAGS.COSMIN
@@ -665,7 +664,7 @@ export default function App() {
                           </button>
                         </div>
                         <div className="flex flex-col gap-1">
-                          {(['4', '5'] as const).map(n => (
+                          {(['2', '3'] as const).map(n => (
                             <div key={n} className="flex items-center justify-between px-2 py-1.5 bg-emerald-900/40 rounded-lg border border-emerald-500/20">
                               <span className="text-xs font-semibold text-white">Teren {n} <span className="text-emerald-400/60 font-normal">(outdoor)</span></span>
                               <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-300 uppercase tracking-wider">
