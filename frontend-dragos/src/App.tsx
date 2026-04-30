@@ -71,22 +71,18 @@ function formatDateDisplay(iso?: string) {
   if (!iso) return ''
   const today = todayISO()
   const tomorrow = todayISO(1)
-  
+
   if (iso === today) return 'Azi'
   if (iso === tomorrow) return 'Mâine'
 
   const [y, m, d] = iso.split('-')
   if (!y || !m || !d) return iso
-  
-  const months = [
-    'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 
-    'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
-  ]
-  const monthIdx = Math.max(0, Math.min(11, Number(m) - 1))
-  const dd = String(Number(d))
-  const currentYear = new Date().getFullYear().toString()
-  
-  return y === currentYear ? `${dd} ${months[monthIdx]}` : `${dd} ${months[monthIdx]} ${y}`
+
+  const dayNames = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm']
+  const dateObj = new Date(Number(y), Number(m) - 1, Number(d))
+  const dayName = dayNames[dateObj.getDay()]
+
+  return `${Number(d)}.${m} ${dayName}`
 }
 
 export default function App() {
@@ -187,8 +183,8 @@ export default function App() {
     fetchAvailability(date, sport)
       .then(originalData => {
         // Apply seasonal rules, price overrides and sort by availability
-        // Outdoor padel courts 4 & 5 are available for booking starting May 5, 2026
-        const PADEL_NEW_COURTS_DATE = '2026-05-05'
+        // Outdoor padel courts 4 & 5 are available for booking starting May 25, 2026
+        const PADEL_NEW_COURTS_DATE = '2026-05-25'
         const filteredData = originalData.filter(row => {
           const isPadel = row.court.sportType === 'PADEL'
           const courtName = row.court.name.trim()
@@ -218,7 +214,7 @@ export default function App() {
              forceUnavailable = true
           }
 
-          // New outdoor padel courts 4 & 5 - coming soon until May 5, 2026
+          // New outdoor padel courts 4 & 5 - coming soon until May 25, 2026
           const courtName = row.court.name.trim()
           const isNewOutdoorPadel = isPadel && !row.court.indoor && (courtName === '4' || courtName === '5')
           if (isNewOutdoorPadel && date < PADEL_NEW_COURTS_DATE) {
@@ -562,11 +558,11 @@ export default function App() {
       <section className="flex-1 min-h-0 flex flex-col px-2 pb-2 pt-1 relative z-10 w-full">
         {/* Compact Toolbar: Sport Dropdown + Date - ONE ROW */}
         <div className="bg-white/85 backdrop-blur-2xl px-3 py-2 rounded-2xl shadow-lg border border-white flex flex-row items-center gap-2 w-full mb-2">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <div className="shrink-0">
             <select
               value={sport}
               onChange={e => setSport(e.target.value as SportType)}
-              className="flex-1 min-w-0 bg-emerald-500 text-white font-bold text-sm rounded-xl px-3 py-2 border-0 outline-none cursor-pointer appearance-none text-center"
+              className="w-[108px] bg-emerald-500 text-white font-bold text-sm rounded-xl px-2 py-2 border-0 outline-none cursor-pointer appearance-none text-center"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
               {([
@@ -593,7 +589,7 @@ export default function App() {
           <div className="w-px h-8 bg-slate-200 shrink-0" />
 
           {/* Date compact */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 flex-1 justify-center">
             <button
               type="button"
               className="w-7 h-8 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors text-lg font-bold"
@@ -612,7 +608,7 @@ export default function App() {
                 try { el.click() } catch {}
               }}
             >
-              <span className="text-sm font-bold text-slate-800 whitespace-nowrap min-w-[70px] text-center group-hover:text-emerald-600 transition-colors">
+              <span className="text-sm font-bold text-slate-800 whitespace-nowrap min-w-[90px] text-center group-hover:text-emerald-600 transition-colors">
                 {displayDate}
               </span>
               <div className="text-slate-400 group-hover:text-emerald-500 transition-colors flex items-center justify-center w-6 h-6">
@@ -660,7 +656,7 @@ export default function App() {
                         <div className="font-bold text-xs text-amber-800">Terenuri Exterioare</div>
                       </div>
                     )}
-                    {sport === 'PADEL' && date < '2026-05-05' && !padelBannerDismissed && (
+                    {sport === 'PADEL' && date < '2026-05-25' && !padelBannerDismissed && (
                       <div className="mx-1 mt-1.5 px-3 py-2 bg-emerald-950/60 backdrop-blur-sm border border-emerald-500/40 rounded-xl">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">🏗️ Terenuri Noi Outdoor Padel</span>
@@ -677,7 +673,7 @@ export default function App() {
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
-                                Din 5 Mai
+                                Din 25 Mai
                               </span>
                             </div>
                           ))}
