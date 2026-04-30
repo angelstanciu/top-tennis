@@ -188,8 +188,8 @@ export default function App() {
         const filteredData = originalData.filter(row => {
           const isPadel = row.court.sportType === 'PADEL'
           const courtName = row.court.name.trim()
-          // Hide INDOOR padel court named "4" (the one at the different location)
-          if (isPadel && courtName === '4' && row.court.indoor) return false
+          // Keep Padel 4 only if outdoor + not heated (the V32 court); hide any indoor or heated variant
+          if (isPadel && courtName === '4' && (row.court.indoor || row.court.heated)) return false
           // Support only 1 Basketball court as per user request (Round 21.5)
           if (row.court.sportType === 'BASKETBALL' && courtName !== '1') return false
           return true
