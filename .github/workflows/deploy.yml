@@ -1,0 +1,34 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest code
+        run: |
+          cd ~/top-tennis
+          git pull origin main
+
+      - name: Build backend
+        run: |
+          cd ~/top-tennis
+          ./mvnw clean package -DskipTests
+
+      - name: Restart backend
+        run: |
+          pm2 restart star-arena
+
+      - name: Build frontend
+        run: |
+          cd ~/top-tennis/frontend-dragos
+          npm ci
+          npm run build
+
+      - name: Deploy frontend
+        run: |
+          sudo cp -r ~/top-tennis/frontend-dragos/dist/* /var/www/html/
+          sudo nginx -s reload
