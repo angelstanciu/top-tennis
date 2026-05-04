@@ -77,8 +77,6 @@ export function getPricePerHour(sport: SportType, indoor: boolean, date?: string
   return 0
 }
 
-const NIGHT_SPLIT_MIN = 20 * 60
-
 export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
@@ -89,17 +87,16 @@ export function calculateGranularPrice(sport: SportType, indoor: boolean, start:
   const d = date ? new Date(date) : new Date()
   const isBeforeNovember = d.getMonth() < 10 // 0-indexed, 10 is November
 
+  // Day window: 08:00–20:00. Night: 20:00–08:00 (includes early morning past midnight).
   function splitDayNight(dayRate: number, nightRate: number): number {
-    let price = 0
-    if (startMin < NIGHT_SPLIT_MIN) {
-      const dayEnd = Math.min(endMin, NIGHT_SPLIT_MIN)
-      price += ((dayEnd - startMin) * dayRate) / 60
-    }
-    if (endMin > NIGHT_SPLIT_MIN) {
-      const nightStart = Math.max(startMin, NIGHT_SPLIT_MIN)
-      price += ((endMin - nightStart) * nightRate) / 60
-    }
-    return price
+    const MORNING = 8 * 60   // 480
+    const EVENING = 20 * 60  // 1200
+    const DAY    = 24 * 60   // 1440
+    const dayMins =
+      Math.max(0, Math.min(endMin, EVENING)       - Math.max(startMin, MORNING)) +
+      Math.max(0, Math.min(endMin, EVENING + DAY) - Math.max(startMin, MORNING + DAY))
+    const nightMins = (endMin - startMin) - dayMins
+    return (dayMins * dayRate + nightMins * nightRate) / 60
   }
 
   // Tennis outdoor: 35 lei/h ziua, 50 lei/h dupa 20:00 (nocturna) — doar inainte de noiembrie
