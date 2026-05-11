@@ -6,7 +6,7 @@ UPDATE booking
 SET    customer_name = 'Boby (Abonament)',
        updated_at    = NOW()
 WHERE  status        = 'CONFIRMED'
-  AND  court_id      = (SELECT id FROM court WHERE name = '7' AND sport_type = 'TENNIS' AND indoor = true)
+  AND  court_id      IN (SELECT id FROM court WHERE name = '7' AND sport_type = 'TENNIS' AND indoor = true)
   AND  start_time    = '19:00:00'
   AND  end_time      = '20:30:00'
   AND  EXTRACT(DOW FROM booking_date) = 2
