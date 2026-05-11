@@ -10,13 +10,13 @@ jobs:
     steps:
       - name: Pull latest code
         run: |
-          cd ~/APLICATIE
+          cd /home/star-arena/APLICATIE
           git checkout -- .
           git pull origin main
 
       - name: Build backend
         run: |
-          cd ~/APLICATIE
+          cd /home/star-arena/APLICATIE
           ./mvnw clean package -DskipTests
 
       - name: Restart backend
@@ -25,11 +25,11 @@ jobs:
 
       - name: Build frontend
         run: |
-          cd ~/APLICATIE/frontend-dragos
+          cd /home/star-arena/APLICATIE/frontend-dragos
           npm ci
           npm run build
 
       - name: Deploy frontend
         run: |
-          sudo cp -r ~/APLICATIE/frontend-dragos/dist/* /var/www/html/
+          sudo cp -r /home/star-arena/APLICATIE/frontend-dragos/dist/* /var/www/html/
           sudo nginx -s reload
