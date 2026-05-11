@@ -11,6 +11,7 @@ jobs:
       - name: Pull latest code
         run: |
           cd ~/APLICATIE
+          git checkout -- .
           git pull origin main
 
       - name: Build backend
@@ -30,5 +31,5 @@ jobs:
 
       - name: Deploy frontend
         run: |
-          sudo cp -r ~/top-tennis/frontend-dragos/dist/* /var/www/html/
+          sudo cp -r ~/APLICATIE/frontend-dragos/dist/* /var/www/html/
           sudo nginx -s reload
