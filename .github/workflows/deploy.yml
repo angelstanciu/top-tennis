@@ -10,21 +10,21 @@ jobs:
     steps:
       - name: Pull latest code
         run: |
-          cd ~/top-tennis
+          cd ~/APLICATIE
           git pull origin main
 
       - name: Build backend
         run: |
-          cd ~/top-tennis
+          cd ~/APLICATIE
           ./mvnw clean package -DskipTests
 
       - name: Restart backend
         run: |
-          pm2 restart star-arena
+          pm2 restart star-arena-backend
 
       - name: Build frontend
         run: |
-          cd ~/top-tennis/frontend-dragos
+          cd ~/APLICATIE/frontend-dragos
           npm ci
           npm run build
 
