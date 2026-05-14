@@ -95,11 +95,6 @@ export default function App() {
   const [sport, setSport] = useState<SportType>(initialSport)
 
 
-  // Reset coming-soon banner every time user switches to PADEL
-  useEffect(() => {
-    if (sport === 'PADEL') setPadelBannerDismissed(false)
-  }, [sport])
-
   // React to sport query parameter changes from external navigation (e.g. homepage cards)
   useEffect(() => {
     if (paramSport && paramSport !== sport) {
