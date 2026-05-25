@@ -4,6 +4,7 @@ import { MapPin, Phone, Clock, ArrowRight, CheckCircle2, Trophy, CalendarDays, C
 import { LampHero } from '../components/ui/lamp'
 import { DateSlider } from '../components/ui/date-slider'
 import Footer from '../components/Footer'
+import TournamentFeatured from '../components/TournamentFeatured'
 
 export default function HomePageD() {
   const nav = useNavigate()
@@ -59,6 +60,9 @@ export default function HomePageD() {
 
       {/* Lamp Hero Section */}
       <LampHero />
+
+      {/* Tournament Featured Section — auto-hides after 14 June 2026 */}
+      <TournamentFeatured />
 
       {/* Offers & Subscriptions Section [NEW] */}
       <section className="px-4 py-12 max-w-7xl mx-auto relative z-10">
