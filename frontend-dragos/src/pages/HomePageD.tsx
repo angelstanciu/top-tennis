@@ -93,7 +93,7 @@ export default function HomePageD() {
                 </div>
                 <div className="bg-slate-950/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Indoor</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">150 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
+                    <p className="text-2xl font-black text-white tracking-tighter">120 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
               </div>
 
