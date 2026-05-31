@@ -3,6 +3,8 @@ package com.toptennis.sms;
 import com.toptennis.config.SmsProperties;
 import com.toptennis.dto.SmsSendResult;
 import com.toptennis.model.Booking;
+import com.toptennis.model.Court;
+import com.toptennis.model.SportType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -278,6 +280,9 @@ public class SmsService {
         } else {
             log.info("Admin approval SMS sent for {} ({}), court={} {}-{} cancels={}", nameShort, customerPhone, court, start, end, cancelCount);
         }
+        if (isPadelIndoorCourt45(booking)) {
+            sendToSupervisor(text);
+        }
     }
 
     public void sendAdminNewBookingNotification(Booking booking) {
@@ -291,6 +296,9 @@ public class SmsService {
         if (!result.success) {
             log.warn("Failed to send admin notification SMS. Transcript: {}", result.transcript);
         }
+        if (isPadelIndoorCourt45(booking)) {
+            sendToSupervisor(text);
+        }
     }
 
     public void sendAdminNewBookingNotificationCrossMidnight(Booking first, Booking second) {
@@ -303,6 +311,30 @@ public class SmsService {
         SmsSendResult result = sendSms(adminNumber, text);
         if (!result.success) {
             log.warn("Failed to send admin notification SMS (cross-midnight). Transcript: {}", result.transcript);
+        }
+        if (isPadelIndoorCourt45(first)) {
+            sendToSupervisor(text);
+        }
+    }
+
+    private boolean isPadelIndoorCourt45(Booking booking) {
+        Court court = booking.getCourt();
+        if (court == null) return false;
+        String name = court.getName() == null ? "" : court.getName().trim();
+        return court.getSportType() == SportType.PADEL
+                && court.isIndoor()
+                && (name.equals("4") || name.equals("5"));
+    }
+
+    private void sendToSupervisor(String text) {
+        String supervisorNumber = props.getPadelIndoorSupervisorNumber();
+        if (supervisorNumber == null || supervisorNumber.isBlank()) return;
+        sleepBetweenMessages();
+        SmsSendResult result = sendSms(supervisorNumber, text);
+        if (!result.success) {
+            log.warn("Failed to send padel indoor supervisor SMS. Transcript: {}", result.transcript);
+        } else {
+            log.info("Padel indoor supervisor SMS sent to {}", supervisorNumber);
         }
     }
 

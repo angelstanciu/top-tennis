@@ -14,6 +14,7 @@ public class SmsProperties {
     private long interCommandDelayMs = 100;
     private String clubNumber;
     private String adminNotificationNumber;
+    private String padelIndoorSupervisorNumber;
 
     public String getMode() { return mode; }
     public void setMode(String mode) { this.mode = mode; }
@@ -31,4 +32,6 @@ public class SmsProperties {
     public void setClubNumber(String clubNumber) { this.clubNumber = clubNumber; }
     public String getAdminNotificationNumber() { return adminNotificationNumber; }
     public void setAdminNotificationNumber(String adminNotificationNumber) { this.adminNotificationNumber = adminNotificationNumber; }
+    public String getPadelIndoorSupervisorNumber() { return padelIndoorSupervisorNumber; }
+    public void setPadelIndoorSupervisorNumber(String padelIndoorSupervisorNumber) { this.padelIndoorSupervisorNumber = padelIndoorSupervisorNumber; }
 }

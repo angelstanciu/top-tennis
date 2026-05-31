@@ -42,6 +42,7 @@ sms:
   baud: 115200
   clubNumber: ${SMS_CLUB_NUMBER:+40742197487}
   adminNotificationNumber: ${SMS_ADMIN_NUMBER:+40742197487}
+  padelIndoorSupervisorNumber: ${SMS_PADEL_INDOOR_SUPERVISOR:+40747174696}
   commandTimeoutMs: 4000
   sendTimeoutMs: 20000
 
