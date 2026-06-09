@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 
-const POSTER_SRC = '/poster-turneu.png'
+const POSTER_SRC = '/poster-turneu-tenis.png'
 const WHATSAPP_HREF =
   'https://wa.me/40742197487?text=' +
-  encodeURIComponent('Salut! As vrea sa ma inscriu la turneul de padel din 13-14 iunie.')
+  encodeURIComponent('Salut! As vrea sa ma inscriu la turneul de tenis Gold Star Arena din 26-28 iunie.')
 
-const SIGNUP_END = new Date('2026-06-12T23:59:59+03:00')
-const TOURNAMENT_END = new Date('2026-06-14T23:59:59+03:00')
+const SIGNUP_END = new Date('2026-06-28T23:59:59+03:00')
+const TOURNAMENT_END = new Date('2026-06-28T23:59:59+03:00')
 
 interface Countdown {
   days: number
@@ -280,7 +280,7 @@ export default function TournamentFeatured() {
               aria-label="Deschide posterul turneului"
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLb(true) }}
             >
-              <img src={POSTER_SRC} alt="Turneu Padel 13-14 Iunie" loading="lazy" />
+              <img src={POSTER_SRC} alt="Turneu Tenis Gold 26-28 Iunie" loading="lazy" />
             </div>
           </div>
 
@@ -289,9 +289,9 @@ export default function TournamentFeatured() {
             <span className="tf-pill">
               <span className="tf-dot" aria-hidden="true" />
               {signupOpen ? (
-                <span>Înscrieri deschise &mdash; <strong>până pe 12 iunie</strong></span>
+                <span>Înscrieri deschise &mdash; <strong>până pe 28 iunie</strong></span>
               ) : (
-                <span>Înscrierile s-au închis &mdash; turneu pe 13-14 iunie</span>
+                <span>Înscrierile s-au închis &mdash; turneu pe 26-28 iunie</span>
               )}
             </span>
 
@@ -333,7 +333,7 @@ export default function TournamentFeatured() {
               </a>
             </div>
 
-            <p className="tf-foot">Turneu Padel &middot; Star Arena Bascov &middot; 13-14 Iunie 2026</p>
+            <p className="tf-foot">Turneu Tenis Gold &middot; Star Arena Bascov &middot; 26-28 Iunie 2026</p>
           </div>
         </div>
       </div>
@@ -345,7 +345,7 @@ export default function TournamentFeatured() {
           </button>
           <img
             src={POSTER_SRC}
-            alt="Poster Turneu Padel 13-14 Iunie"
+            alt="Poster Turneu Tenis Gold 26-28 Iunie"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
