@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
     <img src="https://img.shields.io/badge/Styling-TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
     <img src="https://img.shields.io/badge/Backend-Java%20Spring%20Boot-6DB33F?style=for-the-badge&logo=spring&logoColor=white" alt="Spring" />
-    <img src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="Postgres" />
+    <img src="https://img.shields.io/badge/Database-H2%20File--Based-07405E?style=for-the-badge" alt="H2" />
   </p>
 </div>
 
@@ -52,7 +52,7 @@ Located in the `/frontend-dragos` workspace.
 Built on a robust Java ecosystem.
 - **Framework:** Java 21 LTS + Spring Boot 3.x
 - **Data Layer:** Spring Data JPA + Hibernate
-- **Database:** H2 (In-Memory for Dev) / PostgreSQL (Production)
+- **Database:** H2 file-based, stored at `./.localdb/tennisdb` (the same engine in both development and production)
 - **Migrations:** Flyway (`V2__seed_courts.sql`)
 - **Security:** JWT (JSON Web Tokens) & Spring Security
 - **Integrations:** Zoho Mail SMTP, Custom SMS Gateway
@@ -65,7 +65,7 @@ Follow these steps to spin up the project locally.
 
 ### 1. Start the Java Backend
 Prerequisites: **Java 21** & **Maven**.
-By default, the backend runs an in-memory `H2` database with `UPDATE` flyway migrations, making local testing effortless.
+By default, the backend runs a local `H2` file database at `./.localdb/tennisdb`, with Flyway migrations applied automatically on startup.
 
 ```bash
 # macOS / Linux
@@ -87,11 +87,7 @@ npm run dev
 > The Frontend UI will be available at: `http://localhost:5174`
 
 ### 3. Admin Access
-For local testing, bootstrap credentials are:
-- **Username:** `admin`
-- **Password:** `admin123`
-
-*(Important: Change these immediately if deploying to production!)*
+The admin login is configured in `application.yml` through `admin.username` and `admin.password`, and can be overridden with the `ADMIN_USERNAME` and `ADMIN_PASSWORD` environment variables. Ask the team for the current credentials rather than committing them to the repo.
 
 ---
 
@@ -101,6 +97,7 @@ The application is built to be deployed on an on-premise Linux environment or cl
 1. **Application Server:** `PM2` daemonizes the compiled `.jar` file.
 2. **Web Server:** `Nginx` acts as a load balancer and reverse proxy, serving the static `dist/` React bundle and forwarding `/api/` traffic to the underlying Java instance.
 3. **Security:** Cloudflare Zero Trust (Tunnel) is utilized to securely expose the local port 80 to the public domain, mitigating DDoS attacks and providing automatic SSL bridging without complex port forwarding.
+4. **Continuous Deployment:** A GitHub Actions workflow on a self-hosted runner rebuilds and restarts the app automatically on every push to `main`. For the full operational runbook (logs, SMS modem, database backups), see [`ONBOARDING.md`](ONBOARDING.md).
 
 ---
 
