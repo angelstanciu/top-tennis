@@ -122,6 +122,8 @@ export default function App() {
   const gapToastHideTimer = React.useRef<any>(null)
   const [clearTick, setClearTick] = useState<number>(0)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  // Meci deschis: modalul afisat cand utilizatorul apasa pe un bloc „Cautam jucatori" din grila
+  const [openMatchInfo, setOpenMatchInfo] = useState<null | { matchId: number; spotsLeft: number; takeover: boolean; courtId: number; start: string; end: string }>(null)
   const [showInstall, setShowInstall] = useState(false)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [unavailableVisible, setUnavailableVisible] = useState(false)
@@ -642,7 +644,7 @@ export default function App() {
           ) : (
             <>
                     <div className="-mx-2 flex-1 min-h-0">
-                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} player={player} />
+                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} player={player} onOpenMatchClick={setOpenMatchInfo} />
                     </div>
                     {hasSeasonalOutdoor && (
                       <div className="mx-1 mt-1.5 px-3 py-2 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-xl flex items-center gap-2">
@@ -726,6 +728,51 @@ export default function App() {
               >
                 Am inteles!
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal meci deschis: apare la click pe un bloc „Cautam jucatori" din grila */}
+      {openMatchInfo && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-md" onClick={() => setOpenMatchInfo(null)}>
+          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="p-7">
+              <div className="w-14 h-14 mx-auto rounded-full bg-lime-100 text-lime-700 flex items-center justify-center mb-4">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              </div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight text-center mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Meci deschis — se {openMatchInfo.spotsLeft === 1 ? 'caută 1 jucător' : `caută ${openMatchInfo.spotsLeft} jucători`}
+              </h3>
+              <p className="text-sm text-slate-500 font-medium text-center mb-6">
+                În intervalul {openMatchInfo.start} - {openMatchInfo.end}, o echipă incompletă caută parteneri de joc.
+                {openMatchInfo.takeover
+                  ? ' Meciul e la sub 6 ore de start, așa că o echipă completă poate rezerva intervalul.'
+                  : ' Te poți alătura echipei din pagina de meciuri.'}
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => { setOpenMatchInfo(null); nav('/meciuri') }}
+                  className="w-full py-3.5 bg-slate-900 text-lime-400 rounded-xl font-bold hover:bg-slate-800 active:scale-95 transition-all"
+                >
+                  Mă alătur meciului
+                </button>
+                {openMatchInfo.takeover && (
+                  <button
+                    onClick={() => {
+                      const info = openMatchInfo
+                      setOpenMatchInfo(null)
+                      const end = info.end === '23:59' ? '24:00' : info.end
+                      nav(`/book/${info.courtId}/${date}/${info.start}/${end}?sport=PADEL&takeover=${info.matchId}&spots=${info.spotsLeft}`)
+                    }}
+                    className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    Am echipa completă — rezervă intervalul
+                  </button>
+                )}
+                <button onClick={() => setOpenMatchInfo(null)} className="w-full py-2 text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors">
+                  Închide
+                </button>
+              </div>
             </div>
           </div>
         </div>

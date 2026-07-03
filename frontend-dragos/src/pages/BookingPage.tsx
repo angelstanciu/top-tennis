@@ -3,6 +3,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
 import { CourtDto, calculateGranularPrice, LOCATION_TAGS } from '../types'
 import fastCat from '../assets/fast-cat.svg'
+import { createOpenMatch, getMyLevel, takeoverOpenMatch } from '../openmatch/api'
+import {
+  AuthRequiredModal,
+  GroupSizeModal,
+  LevelRequiredModal,
+  OpenMatchSuccessModal,
+  WhoWithModal,
+} from '../openmatch/OpenMatchModals'
 
 function formatDateDisplay(iso?: string) {
   if (!iso) return ''
@@ -56,6 +64,19 @@ export default function BookingPage() {
   const nav = useNavigate()
   const phoneInputRef = useRef<HTMLInputElement | null>(null)
   const [court, setCourt] = useState<CourtDto | null>(null)
+
+  // ─── Meciuri deschise (matchmaking padel) ───
+  const [askTeam, setAskTeam] = useState(false)          // modalul „Cu cine joci?"
+  const [askGroup, setAskGroup] = useState(false)        // modalul „Câți sunteți deja?"
+  const [needAuth, setNeedAuth] = useState(false)        // cont necesar
+  const [needLevel, setNeedLevel] = useState(false)      // nivel nesetat
+  const [checkingLevel, setCheckingLevel] = useState(false)
+  const [omLevel, setOmLevel] = useState<number | null>(null)
+  const [omSubmitting, setOmSubmitting] = useState(false)
+  const [omSuccess, setOmSuccess] = useState<{ whatsappText: string; groupUrl?: string; pending: boolean } | null>(null)
+  // Preluarea intervalului unui meci deschis de catre o echipa completa (ultimele 6h)
+  const takeoverId = searchParams.get('takeover')
+  const takeoverSpots = searchParams.get('spots')
 
   const displayDate = useMemo(() => formatDateDisplay(date), [date])
   const subtitle = useMemo(() => `${displayDate} - ${startTime} - ${endTime}`, [displayDate, startTime, endTime])
@@ -134,6 +155,110 @@ export default function BookingPage() {
     return ' - ' + parts.join(' - ')
   }, [court])
 
+  // Interceptăm submit-ul: la Padel (non-admin) întrebăm întâi „Cu cine joci?".
+  // Fluxul normal (echipă completă) rămâne neschimbat.
+  function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    // Preluare de interval: echipa e completa prin definitie, sarim peste modalul padel.
+    if (takeoverId) {
+      validatePhone()
+      if (phoneInputRef.current && !phoneInputRef.current.checkValidity()) {
+        phoneInputRef.current.reportValidity()
+        return
+      }
+      onTakeoverSubmit()
+      return
+    }
+    if (court?.sportType === 'PADEL' && !isAdminUser) {
+      validatePhone()
+      if (phoneInputRef.current && !phoneInputRef.current.checkValidity()) {
+        phoneInputRef.current.reportValidity()
+        return
+      }
+      setAskTeam(true)
+      return
+    }
+    onSubmit(e)
+  }
+
+  // „Caut jucători": cere cont + nivel setat în profil.
+  async function onSearchPlayers() {
+    if (checkingLevel) return
+    const token = localStorage.getItem('playerToken')
+    if (!token) {
+      setAskTeam(false)
+      setNeedAuth(true)
+      return
+    }
+    setCheckingLevel(true)
+    try {
+      const level = await getMyLevel('PADEL')
+      setAskTeam(false)
+      if (level.levelRank == null) {
+        setNeedLevel(true)
+      } else {
+        setOmLevel(level.levelRank)
+        setAskGroup(true)
+      }
+    } catch {
+      setAskTeam(false)
+      setNeedAuth(true)
+    } finally {
+      setCheckingLevel(false)
+    }
+  }
+
+  async function onTakeoverSubmit() {
+    if (!takeoverId || submitting) return
+    setSubmitting(true)
+    try {
+      const result = await takeoverOpenMatch(Number(takeoverId), {
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email || undefined,
+      })
+      if (result.bookingStatus === 'PENDING_APPROVAL') {
+        setPendingVisible(true)
+      } else {
+        setSuccessVisible(true)
+      }
+    } catch (err: any) {
+      showUnavailable(err?.message || 'Nu am putut prelua intervalul. Încearcă din nou.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function onConfirmOpenMatch(groupSize: 2 | 3, targetLevelRank: number) {
+    if (!courtId || !date || !startTime || !endTime || omSubmitting) return
+    setOmSubmitting(true)
+    try {
+      const normalizedEnd = endTime === '24:00' ? '23:59' : endTime
+      const result = await createOpenMatch({
+        courtId: Number(courtId),
+        date,
+        startTime,
+        endTime: normalizedEnd,
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email || undefined,
+        groupSize,
+        targetLevelRank,
+      })
+      setAskGroup(false)
+      setOmSuccess({
+        whatsappText: result.whatsappText,
+        groupUrl: result.whatsappGroupUrl || undefined,
+        pending: result.bookingStatus === 'PENDING_APPROVAL',
+      })
+    } catch (err: any) {
+      setAskGroup(false)
+      showUnavailable(err?.message || 'Nu am putut deschide meciul. Încearcă din nou.')
+    } finally {
+      setOmSubmitting(false)
+    }
+  }
+
   async function onSubmit(e?: React.FormEvent, bypassDoubleBooking = false) {
     if (e) e.preventDefault()
     if (!courtId || !date || !startTime || !endTime) return
@@ -211,7 +336,20 @@ export default function BookingPage() {
           <div className="w-9"></div>
         </div>
 
-        <form onSubmit={onSubmit} className="p-5 flex flex-col gap-4">
+        <form onSubmit={handleFormSubmit} className="p-5 flex flex-col gap-4">
+          {/* Banner preluare interval (meci deschis, ultimele 6h) */}
+          {takeoverId && (
+            <div className="p-4 bg-lime-50 border border-lime-200 rounded-2xl flex gap-3 items-start shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-lime-500 flex items-center justify-center shrink-0 shadow-md shadow-lime-500/20">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              </div>
+              <p className="text-[12px] font-semibold text-slate-700 leading-relaxed">
+                În acest interval, o echipă incompletă {takeoverSpots === '1' ? 'caută 1 jucător' : `caută ${takeoverSpots || 'câțiva'} jucători`}.
+                Rezervând acum cu <strong>echipa ta completă</strong>, preiei intervalul: meciul deschis se anulează automat, iar organizatorul și jucătorii înscriși sunt anunțați prin SMS.
+              </p>
+            </div>
+          )}
+
           {/* Upsell Banner for Guests */}
           {!isLoggedUser && (
             <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-500 shadow-sm">
@@ -406,6 +544,44 @@ export default function BookingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Modale matchmaking padel ─── */}
+      {askTeam && (
+        <WhoWithModal
+          onFullTeam={() => { setAskTeam(false); onSubmit() }}
+          onSearchPlayers={onSearchPlayers}
+          onClose={() => setAskTeam(false)}
+        />
+      )}
+      {askGroup && omLevel != null && (
+        <GroupSizeModal
+          myLevelRank={omLevel}
+          submitting={omSubmitting}
+          onConfirm={onConfirmOpenMatch}
+          onBack={() => { setAskGroup(false); setAskTeam(true) }}
+        />
+      )}
+      {needAuth && (
+        <AuthRequiredModal
+          onGoLogin={() => nav('/cont')}
+          onClose={() => setNeedAuth(false)}
+        />
+      )}
+      {needLevel && (
+        <LevelRequiredModal
+          onGoProfile={() => nav('/profile')}
+          onClose={() => setNeedLevel(false)}
+        />
+      )}
+      {omSuccess && (
+        <OpenMatchSuccessModal
+          whatsappText={omSuccess.whatsappText}
+          whatsappGroupUrl={omSuccess.groupUrl}
+          pendingApproval={omSuccess.pending}
+          onViewMatches={() => nav('/meciuri')}
+          onClose={() => { setOmSuccess(null); redirectToGrid() }}
+        />
       )}
 
       {/* Success Modal Polish */}

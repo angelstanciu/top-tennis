@@ -26,6 +26,7 @@ const TermsPage                = React.lazy(() => import('./pages/TermsPage'))
 const PrivacyPage              = React.lazy(() => import('./pages/PrivacyPage'))
 const CookiesPage              = React.lazy(() => import('./pages/CookiesPage'))
 const InstallPage              = React.lazy(() => import('./pages/InstallPage'))
+const OpenMatchesPage          = React.lazy(() => import('./pages/OpenMatchesPage'))
 
 // Admin – cel mai mare chunk, complet separat
 const LoginPage                      = React.lazy(() => import('./pages/LoginPage'))
@@ -85,6 +86,7 @@ const router = createBrowserRouter([
   { path: '/privacy',                 element: <Lazy><PrivacyPage /></Lazy> },
   { path: '/cookies',                 element: <Lazy><CookiesPage /></Lazy> },
   { path: '/instalare',               element: <Lazy><InstallPage /></Lazy> },
+  { path: '/meciuri',                 element: <Lazy><OpenMatchesPage /></Lazy> },
 
   // ─── Rezervare & anulare ─────────────────────────────────────────────────
   { path: '/book/:courtId/:date/:startTime/:endTime', element: <Lazy><BookingPage /></Lazy> },

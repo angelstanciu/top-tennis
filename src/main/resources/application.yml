@@ -35,6 +35,8 @@ spring:
 
 app:
   base-url: ${APP_BASE_URL:https://star-arena.ro}
+  # Grupul WhatsApp al comunitatii de padel — apare in emailul de confirmare la rezervarile de padel
+  padel-whatsapp-group: ${PADEL_WHATSAPP_GROUP:https://chat.whatsapp.com/GcUxCakMrWK442YNFsuXEO?mode=gi_t}
 
 sms:
   mode: ${SMS_MODE:production}

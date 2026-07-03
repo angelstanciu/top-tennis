@@ -26,6 +26,10 @@ export interface AvailabilityTimeRange {
   status: string
   customerName?: string
   playerMatchesCount?: number
+  // Meci deschis (matchmaking): prezente doar când rezervarea caută jucători
+  openMatchId?: number
+  openMatchSpotsLeft?: number
+  openMatchTakeover?: boolean
 }
 
 export interface AvailabilityDto {

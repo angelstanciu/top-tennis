@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchPlayerHistory, updatePlayerProfile, cancelBooking } from '../api'
+import LevelSelector from '../openmatch/LevelSelector'
 import { BookingDto, PlayerUser } from '../types'
 import { toast } from 'sonner'
 import { ConfirmModal } from '../components/ui/confirm-modal'
@@ -734,6 +735,16 @@ export default function ProfilePage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Nivel de joc (matchmaking padel) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="mb-8"
+        >
+          <LevelSelector sport="PADEL" />
+        </motion.div>
 
         {/* Modern Activity Feed */}
         <div className="space-y-8">

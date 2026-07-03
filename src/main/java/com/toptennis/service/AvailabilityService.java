@@ -21,11 +21,17 @@ public class AvailabilityService {
     private final CourtService courtService;
     private final BookingRepository bookingRepository;
     private final PlayerAuthService playerAuthService;
+    private final com.toptennis.repository.OpenMatchRepository openMatchRepository;
+    private final com.toptennis.repository.OpenMatchParticipantRepository openMatchParticipantRepository;
 
-    public AvailabilityService(CourtService courtService, BookingRepository bookingRepository, PlayerAuthService playerAuthService) {
+    public AvailabilityService(CourtService courtService, BookingRepository bookingRepository, PlayerAuthService playerAuthService,
+                               com.toptennis.repository.OpenMatchRepository openMatchRepository,
+                               com.toptennis.repository.OpenMatchParticipantRepository openMatchParticipantRepository) {
         this.courtService = courtService;
         this.bookingRepository = bookingRepository;
         this.playerAuthService = playerAuthService;
+        this.openMatchRepository = openMatchRepository;
+        this.openMatchParticipantRepository = openMatchParticipantRepository;
     }
 
     public List<AvailabilityDto> getAvailability(SportType sportType, LocalDate date) {
@@ -46,6 +52,29 @@ public class AvailabilityService {
                 }
             }
         } catch (Exception e) {}
+
+        // Meciurile deschise (OPEN) din ziua ceruta, indexate dupa rezervare —
+        // grila le afiseaza distinct („Cauta jucatori") si, in ultimele 6 ore,
+        // permite preluarea intervalului de catre o echipa completa.
+        java.util.Map<Long, AvailabilityDto.TimeRangeDto> openMatchInfoByBookingId = new java.util.HashMap<>();
+        try {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            for (com.toptennis.model.OpenMatch om : openMatchRepository.findByStatusFetchBooking(com.toptennis.model.OpenMatchStatus.OPEN)) {
+                Booking omb = om.getBooking();
+                if (!date.equals(omb.getBookingDate())) continue;
+                long joined = openMatchParticipantRepository.countByOpenMatchId(om.getId());
+                int spotsLeft = Math.max(0, om.getTotalSlots() - om.getGroupSize() - (int) joined);
+                if (spotsLeft == 0) continue;
+                java.time.LocalDateTime startDT = java.time.LocalDateTime.of(omb.getBookingDate(), omb.getStartTime());
+                AvailabilityDto.TimeRangeDto info = new AvailabilityDto.TimeRangeDto();
+                info.openMatchId = om.getId();
+                info.openMatchSpotsLeft = spotsLeft;
+                info.openMatchTakeover = startDT.isAfter(now) && now.isAfter(startDT.minusHours(6));
+                openMatchInfoByBookingId.put(omb.getId(), info);
+            }
+        } catch (Exception ignored) {
+            // grila nu pica niciodata din cauza meciurilor deschise
+        }
 
         List<Court> courts = courtService.listActive(sportType);
         List<AvailabilityDto> result = new ArrayList<>();
@@ -75,6 +104,12 @@ public class AvailabilityService {
                 }
                 if (b.getPlayerUser() != null) {
                     tr.playerMatchesCount = b.getPlayerUser().getMatchesPlayed();
+                }
+                AvailabilityDto.TimeRangeDto omInfo = openMatchInfoByBookingId.get(b.getId());
+                if (omInfo != null) {
+                    tr.openMatchId = omInfo.openMatchId;
+                    tr.openMatchSpotsLeft = omInfo.openMatchSpotsLeft;
+                    tr.openMatchTakeover = omInfo.openMatchTakeover;
                 }
                 dto.booked.add(tr);
             }

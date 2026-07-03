@@ -50,6 +50,8 @@ type TimelineGridProps = {
   onAdminClick?: (courtId: number, startTime: string, endTime: string, booking?: any) => void
   player?: any // ADDED: to know if user is logged in
   isAdmin?: boolean
+  // Meciuri deschise: click pe un bloc „Caută jucători" din grilă
+  onOpenMatchClick?: (info: { matchId: number; spotsLeft: number; takeover: boolean; courtId: number; start: string; end: string }) => void
 }
 
 function sportLabel(s: string) {
@@ -77,10 +79,16 @@ type BookingBlock = {
   timeRange?: string
   status?: string
   playerMatchesCount?: number
+  // Meci deschis: blocul devine clickabil și se afișează distinct
+  openMatchId?: number
+  openMatchSpotsLeft?: number
+  openMatchTakeover?: boolean
+  rawStart?: string
+  rawEnd?: string
 }
 
 
-function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string }[], tickIndex: Map<string, number>, isAdmin?: boolean): BookingBlock[] {
+function computeBookingBlocks(booked: { start: string, end: string, customerName?: string, status?: string, note?: string, openMatchId?: number, openMatchSpotsLeft?: number, openMatchTakeover?: boolean }[], tickIndex: Map<string, number>, isAdmin?: boolean): BookingBlock[] {
   const blocks: BookingBlock[] = []
   const maxIdx = tickIndex.get('24:00') || 48
   const minIdx = tickIndex.get('00:00') || 0
@@ -89,11 +97,14 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
     const normalizedEnd = (b.end === '23:59' || b.end === '24:00') ? '24:00' : b.end
     const startIndex = tickIndex.get(b.start)
     let endIndex = tickIndex.get(normalizedEnd)
-    
+
     if (startIndex === undefined || endIndex === undefined) continue
-    
+
     const isBlocked = b.status === 'BLOCKED'
-    const label = (isAdmin || isBlocked) && b.customerName ? b.customerName : getDisplayName(b as any)
+    const isOpenMatch = b.openMatchId != null && (b.openMatchSpotsLeft ?? 0) > 0
+    const label = isOpenMatch
+      ? `🔎 Căutăm ${b.openMatchSpotsLeft} ${b.openMatchSpotsLeft === 1 ? 'jucător' : 'jucători'}`
+      : (isAdmin || isBlocked) && b.customerName ? b.customerName : getDisplayName(b as any)
 
     if (endIndex <= startIndex && normalizedEnd !== '00:00' && normalizedEnd !== '24:00') {
       // Over midnight booking - create TWO blocks
@@ -126,6 +137,11 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
         label,
         timeRange: `${b.start} - ${b.end}`,
         status: b.status,
+        openMatchId: isOpenMatch ? b.openMatchId : undefined,
+        openMatchSpotsLeft: isOpenMatch ? b.openMatchSpotsLeft : undefined,
+        openMatchTakeover: isOpenMatch ? !!b.openMatchTakeover : undefined,
+        rawStart: b.start,
+        rawEnd: b.end,
       })
     }
   }
@@ -141,6 +157,7 @@ function BookingLabelBlock({
   vertical,
   isBlocked,
   playerMatchesCount,
+  onClick,
 }: {
   label: string
   timeRange?: string
@@ -149,14 +166,17 @@ function BookingLabelBlock({
   vertical?: boolean
   isBlocked?: boolean
   playerMatchesCount?: number
+  onClick?: () => void
 }) {
   // For long blocks, we want the text to appear centered and truncated if necessary
   const displayText = label
 
   return (
     <div
-      className={`pointer-events-none flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
+      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
       style={style}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
     >
       <div
         className="text-white font-bold truncate w-full text-center px-2"
@@ -212,7 +232,8 @@ export default function TimelineGrid({
   data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef,
   onAdminClick,
   player,
-  isAdmin
+  isAdmin,
+  onOpenMatchClick
 }: TimelineGridProps) {
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
@@ -716,7 +737,7 @@ export default function TimelineGrid({
                           {blocks.map((block, blockIndex) => (
                             <BookingLabelBlock
                               key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                              className={`absolute inset-y-0 flex items-center rounded-sm ${block.status === 'BLOCKED' ? 'bg-slate-700/80 shadow-inner' : block.status === 'PENDING_APPROVAL' ? 'bg-amber-500/40 border border-amber-600/30' : 'bg-rose-500/20'}`}
+                              className={`absolute inset-y-0 flex items-center rounded-sm ${block.openMatchId != null ? 'bg-lime-600/50 border border-lime-500/60 hover:bg-lime-600/60' : block.status === 'BLOCKED' ? 'bg-slate-700/80 shadow-inner' : block.status === 'PENDING_APPROVAL' ? 'bg-amber-500/40 border border-amber-600/30' : 'bg-rose-500/20'}`}
                               style={{
                                 width: (block.endIndex - block.startIndex) * colWidth - 2,
                                 left: block.startIndex * colWidth + 1,
@@ -725,6 +746,14 @@ export default function TimelineGrid({
                               timeRange={block.timeRange}
                               isBlocked={block.status === 'BLOCKED'}
                               playerMatchesCount={block.playerMatchesCount}
+                              onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
+                                matchId: block.openMatchId!,
+                                spotsLeft: block.openMatchSpotsLeft ?? 0,
+                                takeover: !!block.openMatchTakeover,
+                                courtId: row.court.id,
+                                start: block.rawStart || '',
+                                end: block.rawEnd || '',
+                              }) : undefined}
                             />
                           ))}
                         </div>
@@ -808,11 +837,11 @@ export default function TimelineGrid({
                   }}
                 >
                   {sortedData.map((row, colIndex) => (
-                    <React.Fragment key={`label-col-${row.court.id}`}> 
+                    <React.Fragment key={`label-col-${row.court.id}`}>
                       {blocksByCourt[colIndex].map((block, blockIndex) => (
                         <BookingLabelBlock
                           key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                          className="bg-rose-500/20 rounded-sm"
+                          className={`${block.openMatchId != null ? 'bg-lime-600/50 border border-lime-500/60' : 'bg-rose-500/20'} rounded-sm`}
                           style={{
                             gridColumn: colIndex + 2,
                             gridRow: `${block.startIndex + 1} / ${block.endIndex + 1}`,
@@ -820,6 +849,14 @@ export default function TimelineGrid({
                           label={block.label}
                           timeRange={block.timeRange}
                           playerMatchesCount={block.playerMatchesCount}
+                          onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
+                            matchId: block.openMatchId!,
+                            spotsLeft: block.openMatchSpotsLeft ?? 0,
+                            takeover: !!block.openMatchTakeover,
+                            courtId: row.court.id,
+                            start: block.rawStart || '',
+                            end: block.rawEnd || '',
+                          }) : undefined}
                         />
                       ))}
                     </React.Fragment>

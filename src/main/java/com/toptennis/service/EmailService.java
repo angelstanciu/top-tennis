@@ -17,6 +17,10 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private static final String FROM_EMAIL = "rezervari@star-arena.ro";
 
+    /** Linkul grupului WhatsApp al comunitatii de padel (configurabil din application.yml). */
+    @org.springframework.beans.factory.annotation.Value("${app.padel-whatsapp-group:}")
+    private String padelWhatsappGroupUrl;
+
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -63,8 +67,22 @@ public class EmailService {
         String dateStr = booking.getBookingDate().format(dateFormatter);
         String sportName = booking.getCourt().getSportType().toString().replace("TENNIS", "TENIS");
         String mapsUrl = "https://maps.app.goo.gl/Z7LWuvTvo1cbWJNGA"; // Cosmin Top Tenis (Default)
-        if (booking.getCourt().getSportType().toString().contains("PADEL") && booking.getCourt().isIndoor()) {
+        boolean isPadel = booking.getCourt().getSportType() == com.toptennis.model.SportType.PADEL;
+        if (isPadel && booking.getCourt().isIndoor()) {
             mapsUrl = "https://maps.app.goo.gl/9eRR5rjmoV6ooGi56"; // Star Arena
+        }
+
+        // Comunitatea de padel pe WhatsApp — sectiunea apare DOAR la rezervarile de padel
+        String whatsappSection = "";
+        if (isPadel && padelWhatsappGroupUrl != null && !padelWhatsappGroupUrl.isBlank()) {
+            whatsappSection =
+               "      <div style='background: linear-gradient(135deg, #075e54 0%, #128c7e 100%); border-radius: 16px; padding: 28px 22px; text-align: center; margin-bottom: 30px;'>" +
+               "        <p style='color: #dcf8c6; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 8px;'>Comunitatea de padel</p>" +
+               "        <p style='color: #ffffff; font-size: 17px; font-weight: 700; margin: 0 0 6px;'>Intr&#259; &icirc;n grupul de WhatsApp Star Arena</p>" +
+               "        <p style='color: #e7f7ef; font-size: 13px; line-height: 1.6; margin: 0 0 18px;'>G&#259;se&#537;te-&#539;i parteneri de joc, al&#259;tur&#259;-te meciurilor deschise &#537;i afl&#259; primul nout&#259;&#539;ile arenei.</p>" +
+               "        <a href='" + padelWhatsappGroupUrl + "' style='display: inline-block; background-color: #25d366; color: #ffffff; padding: 13px 30px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 14px;'>Intr&#259; &icirc;n grup</a>" +
+               "      </div>" +
+               "      ";
         }
         
         return "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>" +
@@ -105,6 +123,7 @@ public class EmailService {
                "        <a href='" + mapsUrl + "' style='display: inline-block; background-color: #111827; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; text-align: center;'>Vezi locația pe hartă</a>" +
                "      </div>" +
                "      " +
+               whatsappSection +
                "      <div style='background-color: #ecfdf5; border-radius: 12px; padding: 25px 20px; text-align: center; margin-bottom: 30px; border: 1px solid #d1fae5;'>" +
                "        <p style='color: #065f46; font-size: 15px; line-height: 1.6; margin: 0 0 15px;'>Pentru a gestiona sau anula această rezervare (gratuit, cu până la 24 de ore înainte), te rugăm să folosești contul tău.</p>" +
                "        <a href='https://star-arena.ro/profile' style='display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;'>Accesează contul tău</a>" +
