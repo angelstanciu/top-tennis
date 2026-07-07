@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Footer from '../components/Footer'
+import { useSeo } from '../seo'
 
 // Evenimentul Chrome/Android care permite instalarea programatică.
 type BeforeInstallPromptEvent = Event & {
@@ -117,6 +118,11 @@ function Step({ index, children }: { index: number; children: React.ReactNode })
 }
 
 export default function InstallPage() {
+  useSeo({
+    path: '/instalare',
+    title: 'Instalează Aplicația Star Arena | Rezervări Padel & Tenis Pitești',
+    description: 'Adaugă aplicația Star Arena pe ecranul telefonului (iPhone sau Android) și rezervă terenuri de padel și tenis lângă Pitești în câteva secunde.',
+  })
   const navigate = useNavigate()
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(isAppInstalled())

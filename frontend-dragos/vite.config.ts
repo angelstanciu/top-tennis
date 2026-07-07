@@ -43,6 +43,7 @@ export default defineConfig({
                 name: 'Star Arena',
                 short_name: 'Star Arena',
                 description: 'Rezervări terenuri sport – Pitești, Bascov, Argeș',
+                lang: 'ro',
                 start_url: '/',
                 display: 'standalone',
                 background_color: '#0f172a',

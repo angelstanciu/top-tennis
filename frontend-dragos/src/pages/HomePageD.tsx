@@ -5,10 +5,12 @@ import { LampHero } from '../components/ui/lamp'
 import { DateSlider } from '../components/ui/date-slider'
 import Footer from '../components/Footer'
 import PadelSummerFeature from '../components/PadelSummerFeature'
+import { useSeo } from '../seo'
 
 export default function HomePageD() {
   const nav = useNavigate()
   const [scrolled, setScrolled] = useState(false)
+  useSeo({ path: '/' })
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)

@@ -6,6 +6,7 @@ import { fetchAvailability, fetchActiveCourts, isTokenExpired, clearPlayerAuth }
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import fastCat from './assets/fast-cat.svg'
+import { useSeo } from './seo'
 
 
 type BeforeInstallPromptEvent = Event & {
@@ -86,6 +87,11 @@ function formatDateDisplay(iso?: string) {
 }
 
 export default function App() {
+  useSeo({
+    path: '/rezerva',
+    title: 'Rezervă Teren Online – Padel, Tenis, Baschet | Star Arena Pitești',
+    description: 'Vezi disponibilitatea în timp real și rezervă online un teren de padel, tenis, baschet, fotbal-tenis sau volei la Star Arena Bascov, lângă Pitești. Confirmare instant prin SMS.',
+  })
   const [searchParams] = useSearchParams()
   const lsSport = (typeof window !== 'undefined' ? (localStorage.getItem('lastSport') as SportType | null) : null)
   const paramDate = searchParams.get('date')

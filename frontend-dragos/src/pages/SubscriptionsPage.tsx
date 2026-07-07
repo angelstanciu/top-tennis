@@ -2,8 +2,14 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trophy, CheckCircle2, Star, Clock, Zap, Target } from 'lucide-react'
 import Footer from '../components/Footer'
+import { useSeo } from '../seo'
 
 export default function SubscriptionsPage() {
+  useSeo({
+    path: '/abonamente',
+    title: 'Abonamente Padel și Tenis | Star Arena Pitești Bascov',
+    description: 'Abonamente lunare pentru padel și tenis la Star Arena Bascov, lângă Pitești. Interval fix săptămânal, preț avantajos, prioritate la rezervări.',
+  })
   const nav = useNavigate()
 
   const subscriptions = [

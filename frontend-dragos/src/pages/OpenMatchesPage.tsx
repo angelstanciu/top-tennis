@@ -5,6 +5,7 @@ import { OpenMatchDto, LEVELS, levelLabel } from '../openmatch/types'
 import { getMyLevel, joinOpenMatch, listOpenMatches } from '../openmatch/api'
 import OpenMatchCard from '../openmatch/OpenMatchCard'
 import { LevelMismatchModal, LevelRequiredModal } from '../openmatch/OpenMatchModals'
+import { useSeo } from '../seo'
 
 type DateFilter = 'ALL' | 'TODAY' | 'TOMORROW'
 
@@ -15,6 +16,11 @@ function todayISO(offset = 0): string {
 }
 
 export default function OpenMatchesPage() {
+  useSeo({
+    path: '/meciuri',
+    title: 'Meciuri Deschise de Padel – Găsește Parteneri de Joc | Star Arena Pitești',
+    description: 'Cauți parteneri de padel în Pitești? Vezi meciurile deschise de la Star Arena Bascov și alătură-te unei echipe la nivelul tău. Hobby, începător sau avansat.',
+  })
   const nav = useNavigate()
   const [matches, setMatches] = useState<OpenMatchDto[]>([])
   const [loading, setLoading] = useState(true)

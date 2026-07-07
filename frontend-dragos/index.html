@@ -9,8 +9,9 @@
     ============================================= -->
     <title>Star Arena Pitești | Padel, Tenis, Baschet – Rezervări Online Bascov</title>
     <meta name="description" content="Complex sportiv modern lângă Pitești, în Bascov, Argeș. Rezervă online terenuri de Padel Indoor și Outdoor, Tenis de Câmp, Baschet, Fotbal-Tenis și Volei. Iluminat nocturn LED. Aproape de Mioveni și Curtea de Argeș." />
-    <meta name="keywords" content="padel pitesti, tenis pitesti, baschet pitesti, teren sport pitesti, complex sportiv pitesti, padel bascov, star arena pitesti, star arena bascov, teren padel arges, padel mioveni, tenis mioveni, sport curtea de arges, padel curtea de arges, teren tenis arges, fotbal tenis pitesti, volei pitesti, rezervare teren sport pitesti, sport nocturn pitesti, padel indoor pitesti, padel outdoor pitesti" />
-    <link rel="canonical" href="https://star-arena.ro" />
+    <meta name="keywords" content="padel pitesti, tenis pitesti, baschet pitesti, teren sport pitesti, complex sportiv pitesti, padel bascov, star arena pitesti, star arena bascov, teren padel arges, padel mioveni, tenis mioveni, sport curtea de arges, padel curtea de arges, teren tenis arges, fotbal tenis pitesti, volei pitesti, rezervare teren sport pitesti, sport nocturn pitesti, padel indoor pitesti, padel outdoor pitesti, meciuri padel pitesti, parteneri padel pitesti" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <link rel="canonical" href="https://star-arena.ro/" />
 
     <!-- =============================================
          GEO TAGS (ajută motoarele de căutare locale)
@@ -29,7 +30,8 @@
     <meta property="og:url" content="https://star-arena.ro" />
     <meta property="og:title" content="Star Arena Pitești | Padel, Tenis, Baschet – Rezervări Online" />
     <meta property="og:description" content="Complex sportiv premium lângă Pitești. Padel Indoor & Outdoor, Tenis de Câmp, Baschet, Fotbal-Tenis. Iluminat nocturn LED. Rezervă online în câteva secunde." />
-    <meta property="og:image" content="https://star-arena.ro/og-image.png" />
+    <meta property="og:image" content="https://star-arena.ro/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Star Arena – Complex Sportiv Pitești Bascov" />
@@ -40,15 +42,17 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Star Arena Pitești | Padel, Tenis, Baschet – Rezervări Online" />
     <meta name="twitter:description" content="Complex sportiv premium lângă Pitești. Padel Indoor & Outdoor, Tenis de Câmp, Baschet. Rezervă online." />
-    <meta name="twitter:image" content="https://star-arena.ro/og-image.png" />
+    <meta name="twitter:image" content="https://star-arena.ro/og-image.jpg" />
 
     <!-- =============================================
          PWA / APPLE MOBILE
     ============================================= -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Star Arena" />
     <meta name="theme-color" content="#0f172a" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
 
     <!-- =============================================
          STRUCTURED DATA – LocalBusiness + SportsActivityLocation
@@ -68,7 +72,7 @@
       "priceRange": "$$",
       "currenciesAccepted": "RON",
       "paymentAccepted": "Cash, Card",
-      "image": "https://star-arena.ro/og-image.png",
+      "image": "https://star-arena.ro/og-image.jpg",
       "logo": "https://star-arena.ro/favicon.png",
       "address": {
         "@type": "PostalAddress",
@@ -94,15 +98,9 @@
       "openingHoursSpecification": [
         {
           "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
           "opens": "08:00",
-          "closes": "23:00"
-        },
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Saturday", "Sunday"],
-          "opens": "08:00",
-          "closes": "23:00"
+          "closes": "23:59"
         }
       ],
       "sport": ["Padel", "Tenis", "Baschet", "Fotbal-Tenis", "Volei pe Plajă", "Tenis de Masă"],
@@ -114,8 +112,20 @@
         { "@type": "LocationFeatureSpecification", "name": "Padel Outdoor", "value": true }
       ],
       "sameAs": [
-        "https://star-arena.ro"
-      ]
+        "https://www.facebook.com/profile.php?id=100086205076767"
+      ],
+      "potentialAction": {
+        "@type": "ReserveAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://star-arena.ro/rezerva",
+          "actionPlatform": [
+            "http://schema.org/DesktopWebPlatform",
+            "http://schema.org/MobileWebPlatform"
+          ]
+        },
+        "result": { "@type": "Reservation", "name": "Rezervare teren sport" }
+      }
     }
     </script>
 
@@ -182,6 +192,8 @@
         <p>Adresă: Bascov, Argeș, România (lângă Pitești)</p>
         <p>Accesibil din: Pitești, Mioveni, Curtea de Argeș, Câmpulung Muscel</p>
         <p><a href="https://star-arena.ro/rezerva">Rezervă un teren acum →</a></p>
+        <p><a href="https://star-arena.ro/meciuri">Meciuri deschise de padel – găsește parteneri de joc →</a></p>
+        <p><a href="https://star-arena.ro/abonamente">Abonamente padel și tenis →</a></p>
       </div>
     </noscript>
 
