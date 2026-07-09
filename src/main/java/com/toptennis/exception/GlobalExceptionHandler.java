@@ -82,6 +82,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
     }
 
+    // Client disconnected mid-stream (e.g. GET /api/bookings/stream, browser tab closed).
+    // The response is already unusable at this point — returning a body would only
+    // trigger a second, noisier failure trying to write JSON onto a broken SSE stream.
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(org.springframework.web.context.request.async.AsyncRequestNotUsableException ex, HttpServletRequest req) {
+        log.debug("Async client disconnected for URI {}", req.getRequestURI());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
         log.error("Unhandled Exception (500) caught globally for URI {}: ", req.getRequestURI(), ex);

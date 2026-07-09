@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import fastCat from './assets/fast-cat.svg'
 import { useSeo } from './seo'
+import { PartnersPromoModal } from './openmatch/OpenMatchModals'
 
 
 type BeforeInstallPromptEvent = Event & {
@@ -57,6 +58,36 @@ function timeToMinutes(t: string) {
   if (t === '24:00' || t === '23:59') return 24 * 60
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
+}
+
+const SPORT_EMOJI: Record<SportType, string> = {
+  TENNIS: '🎾',
+  PADEL: '🏓',
+  BEACH_VOLLEY: '🏐',
+  BASKETBALL: '🏀',
+  FOOTVOLLEY: '⚽',
+  TABLE_TENNIS: '🏓',
+}
+
+// Promo "Găsește parteneri" la selectarea Padel — nu-l arătăm la nesfârșit.
+const PARTNERS_PROMO_KEY = 'padelPartnersPromo'
+const PARTNERS_PROMO_MAX_SHOWS = 3
+
+function readPartnersPromoState(): { count: number; dismissedPermanently: boolean } {
+  try {
+    const raw = localStorage.getItem(PARTNERS_PROMO_KEY)
+    if (!raw) return { count: 0, dismissedPermanently: false }
+    const parsed = JSON.parse(raw)
+    return { count: parsed.count || 0, dismissedPermanently: !!parsed.dismissedPermanently }
+  } catch {
+    return { count: 0, dismissedPermanently: false }
+  }
+}
+
+function writePartnersPromoState(state: { count: number; dismissedPermanently: boolean }) {
+  try {
+    localStorage.setItem(PARTNERS_PROMO_KEY, JSON.stringify({ ...state, lastShownAt: Date.now() }))
+  } catch {}
 }
 
 function maxDateISO() {
@@ -126,10 +157,19 @@ export default function App() {
   const [gapToastFading, setGapToastFading] = useState<boolean>(false)
   const gapToastShowTimer = React.useRef<any>(null)
   const gapToastHideTimer = React.useRef<any>(null)
+  // Notificare "tocmai s-a rezervat" — legată vizual de cardul grid-ului, nu de tot ecranul
+  const [bookingToastVisible, setBookingToastVisible] = useState<boolean>(false)
+  const [bookingToastMessage, setBookingToastMessage] = useState<string>('')
+  const [bookingToastFading, setBookingToastFading] = useState<boolean>(false)
+  const bookingToastFadeTimer = React.useRef<any>(null)
+  const bookingToastHideTimer = React.useRef<any>(null)
   const [clearTick, setClearTick] = useState<number>(0)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   // Meci deschis: modalul afisat cand utilizatorul apasa pe un bloc „Cautam jucatori" din grila
   const [openMatchInfo, setOpenMatchInfo] = useState<null | { matchId: number; spotsLeft: number; takeover: boolean; courtId: number; start: string; end: string }>(null)
+  // Promo "Găsește parteneri" — o singură dată pe încărcare de pagină, respectă istoricul din localStorage
+  const [showPartnersPromo, setShowPartnersPromo] = useState(false)
+  const partnersPromoShownRef = React.useRef(false)
   const [showInstall, setShowInstall] = useState(false)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [unavailableVisible, setUnavailableVisible] = useState(false)
@@ -142,6 +182,9 @@ export default function App() {
   }, [selCourtId, data])
 
   const displayDate = useMemo(() => formatDateDisplay(date), [date])
+  const courtsById = useMemo(() => new Map(activeCourts.map(c => [c.id, c])), [activeCourts])
+  const courtsByIdRef = React.useRef(courtsById)
+  useEffect(() => { courtsByIdRef.current = courtsById }, [courtsById])
   const activeSports = useMemo(() => new Set(activeCourts.map(c => c.sportType)), [activeCourts])
   const disabledSports = useMemo(() => {
     const all: SportType[] = ['TENNIS','PADEL','BEACH_VOLLEY','BASKETBALL','FOOTVOLLEY','TABLE_TENNIS']
@@ -299,6 +342,8 @@ export default function App() {
     return () => {
       try { if (gapToastShowTimer.current) clearTimeout(gapToastShowTimer.current) } catch {}
       try { if (gapToastHideTimer.current) clearTimeout(gapToastHideTimer.current) } catch {}
+      try { if (bookingToastFadeTimer.current) clearTimeout(bookingToastFadeTimer.current) } catch {}
+      try { if (bookingToastHideTimer.current) clearTimeout(bookingToastHideTimer.current) } catch {}
     }
   }, [])
 
@@ -307,6 +352,25 @@ export default function App() {
       localStorage.setItem('lastSport', sport)
     } catch {}
   }, [sport])
+
+  // Promo "Găsește parteneri": o dată pe încărcare de pagină, doar dacă userul
+  // n-a confirmat/interacționat deja și nu a atins limita de afișări.
+  useEffect(() => {
+    if (sport !== 'PADEL' || partnersPromoShownRef.current) return
+    const state = readPartnersPromoState()
+    if (state.dismissedPermanently || state.count >= PARTNERS_PROMO_MAX_SHOWS) return
+    const timer = setTimeout(() => {
+      partnersPromoShownRef.current = true
+      setShowPartnersPromo(true)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [sport])
+
+  function closePartnersPromo(dismissedPermanently: boolean) {
+    const state = readPartnersPromoState()
+    writePartnersPromoState({ count: state.count + 1, dismissedPermanently })
+    setShowPartnersPromo(false)
+  }
 
   useEffect(() => {
     function onBeforeInstallPrompt(e: Event) {
@@ -444,9 +508,41 @@ export default function App() {
       if (e.key === 'bookingUpdate') refetch()
     }
     window.addEventListener('storage', onStorage)
+
+    // Live updates pushed from the backend (other users' bookings) via SSE.
+    // BroadcastChannel/storage above only cover tabs in this same browser.
+    // Quiet refetch (no setLoading) so the grid doesn't unmount/remount and
+    // reset the user's scroll position + selection on every unrelated booking.
+    function quietRefetch() {
+      fetchAvailability(date, sport).then(setData).catch(() => {})
+    }
+    const apiBase = (import.meta as any).env.VITE_API_BASE_URL || '/api'
+    const es = new EventSource(`${apiBase}/bookings/stream`)
+    const onBookingEvent = () => quietRefetch()
+    es.addEventListener('UPDATED', onBookingEvent)
+    es.addEventListener('CANCELLED', onBookingEvent)
+    es.addEventListener('CREATED', (ev: MessageEvent) => {
+      quietRefetch()
+      try {
+        const info = JSON.parse(ev.data)
+        const court = courtsByIdRef.current.get(info.courtId)
+        // Anunțăm doar dacă rezervarea e pe sportul și ziua pe care userul le are deschise chiar acum.
+        if (court && court.sportType === sport && info.bookingDate === date) {
+          setBookingToastMessage(`${SPORT_EMOJI[sport]} Terenul ${court.name} tocmai a fost rezervat: ${String(info.startTime).slice(0, 5)} - ${String(info.endTime).slice(0, 5)}`)
+          setBookingToastVisible(true)
+          setBookingToastFading(false)
+          if (bookingToastFadeTimer.current) clearTimeout(bookingToastFadeTimer.current)
+          if (bookingToastHideTimer.current) clearTimeout(bookingToastHideTimer.current)
+          bookingToastFadeTimer.current = setTimeout(() => setBookingToastFading(true), 4000)
+          bookingToastHideTimer.current = setTimeout(() => setBookingToastVisible(false), 4700)
+        }
+      } catch {}
+    })
+
     return () => {
       window.removeEventListener('storage', onStorage)
       try { ch?.close() } catch {}
+      es.close()
     }
   }, [date, sport])
 
@@ -516,11 +612,11 @@ export default function App() {
         <div className="flex items-center gap-3">
           <div className="hidden md:block">
             <h2 className="text-xs font-bold text-white uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30">
-              {sport === 'TENNIS' ? 'Tenis' : 
-               sport === 'PADEL' ? 'Padel' : 
-               sport === 'BEACH_VOLLEY' ? 'Volei' : 
-               sport === 'BASKETBALL' ? 'Baschet' : 
-               sport === 'FOOTVOLLEY' ? 'Tenis de picior' : 
+              {sport === 'TENNIS' ? 'Tenis' :
+               sport === 'PADEL' ? 'Padel' :
+               sport === 'BEACH_VOLLEY' ? 'Volei' :
+               sport === 'BASKETBALL' ? 'Baschet' :
+               sport === 'FOOTVOLLEY' ? 'Tenis de picior' :
                sport === 'TABLE_TENNIS' ? 'Tenis de Masă' : 'Sport'}
             </h2>
           </div>
@@ -641,7 +737,7 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="mt-1 flex-1 min-h-0 flex flex-col glass-card p-2 md:p-6 rounded-[2rem]">
+        <div className="relative mt-1 flex-1 min-h-0 flex flex-col glass-card p-2 md:p-6 rounded-[2rem]">
           {loading ? (
              <div className="flex-1 flex flex-col items-center justify-center h-full">
                 <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
@@ -675,6 +771,15 @@ export default function App() {
                 </div>
               </div>
             </>
+          )}
+          {bookingToastVisible && (
+            <div className="absolute inset-x-0 bottom-3 md:bottom-5 flex justify-center px-4 pointer-events-none z-30">
+              <div
+                className={`pointer-events-auto max-w-full px-5 py-3 rounded-[2rem] bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-xs md:text-sm shadow-lg shadow-emerald-900/10 transition-opacity duration-700 ${bookingToastFading ? 'opacity-0' : 'opacity-100'}`}
+              >
+                {bookingToastMessage}
+              </div>
+            </div>
           )}
         </div>
       </section>
@@ -782,6 +887,13 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {showPartnersPromo && (
+        <PartnersPromoModal
+          onFindPartners={() => { closePartnersPromo(true); nav('/meciuri') }}
+          onAcknowledge={() => closePartnersPromo(true)}
+          onClose={() => closePartnersPromo(false)}
+        />
       )}
       <Toaster richColors theme="dark" position="top-center" />
     </div>

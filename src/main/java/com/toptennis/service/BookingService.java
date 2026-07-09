@@ -10,6 +10,7 @@ import com.toptennis.repository.BookingRepository;
 import com.toptennis.repository.CourtRepository;
 import com.toptennis.repository.PlayerUserRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +34,10 @@ public class BookingService {
     private final PlayerAuthService playerAuthService;
     private final EmailService emailService;
     private final ThreadPoolTaskExecutor taskExecutor;
- 
+    private final ApplicationEventPublisher eventPublisher;
 
-    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, PlayerUserRepository playerUserRepository, EmailService emailService, PlayerAuthService playerAuthService, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
+
+    public BookingService(BookingRepository bookingRepository, CourtRepository courtRepository, SmsService smsService, PlayerUserRepository playerUserRepository, EmailService emailService, PlayerAuthService playerAuthService, @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor, ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
         this.courtRepository = courtRepository;
         this.smsService = smsService;
@@ -43,6 +45,7 @@ public class BookingService {
         this.emailService = emailService;
         this.playerAuthService = playerAuthService;
         this.taskExecutor = taskExecutor;
+        this.eventPublisher = eventPublisher;
     }
 
     public BookingRepository getBookingRepository() {
@@ -202,6 +205,7 @@ public class BookingService {
                 }
 
                 Booking saved = bookingRepository.save(b);
+                eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CREATED, saved));
                 if (initialStatus == BookingStatus.CONFIRMED && !effectiveAdmin) {
                     taskExecutor.execute(() -> {
                         smsService.sendReservationNotifications(saved);
@@ -284,6 +288,8 @@ public class BookingService {
 
                 Booking saved1 = bookingRepository.save(b1);
                 Booking saved2 = bookingRepository.save(b2);
+                eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CREATED, saved1));
+                eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CREATED, saved2));
 
                 if (initialStatus == BookingStatus.CONFIRMED && !effectiveAdmin) {
                     taskExecutor.execute(() -> {
@@ -374,7 +380,8 @@ public class BookingService {
             b.setStatus(BookingStatus.CONFIRMED);
             b.setUpdatedAt(LocalDateTime.now());
             Booking saved = bookingRepository.save(b);
-            
+            eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.UPDATED, saved));
+
             applyToSiblingIfExists(b, sibling -> {
                 sibling.setStatus(BookingStatus.CONFIRMED);
                 sibling.setUpdatedAt(LocalDateTime.now());
@@ -393,6 +400,7 @@ public class BookingService {
         b.setStatus(BookingStatus.CONFIRMED);
         b.setUpdatedAt(LocalDateTime.now());
         Booking saved = bookingRepository.save(b);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.UPDATED, saved));
         applyToSiblingIfExists(b, sibling -> {
             sibling.setStatus(BookingStatus.CONFIRMED);
             sibling.setUpdatedAt(LocalDateTime.now());
@@ -456,6 +464,7 @@ public class BookingService {
         b.setStatus(BookingStatus.CANCELLED);
         b.setUpdatedAt(LocalDateTime.now());
         Booking saved = bookingRepository.save(b);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, saved));
         applyToSiblingIfExists(b, sibling -> {
             sibling.setStatus(BookingStatus.CANCELLED);
             sibling.setUpdatedAt(LocalDateTime.now());
@@ -470,6 +479,7 @@ public class BookingService {
         b.setStatus(BookingStatus.NO_SHOW);
         b.setUpdatedAt(LocalDateTime.now());
         Booking saved = bookingRepository.save(b);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.UPDATED, saved));
         applyToSiblingIfExists(b, sibling -> {
             sibling.setStatus(BookingStatus.NO_SHOW);
             sibling.setUpdatedAt(LocalDateTime.now());
@@ -524,6 +534,7 @@ public class BookingService {
         b.setStatus(BookingStatus.CONFIRMED);
         b.setUpdatedAt(LocalDateTime.now());
         Booking saved = bookingRepository.save(b);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.UPDATED, saved));
         applyToSiblingIfExists(b, sibling -> {
             sibling.setStatus(BookingStatus.CONFIRMED);
             sibling.setUpdatedAt(LocalDateTime.now());
@@ -551,6 +562,7 @@ public class BookingService {
             existing.setPenaltyExempt(true);
             existing.setUpdatedAt(LocalDateTime.now());
             bookingRepository.save(existing);
+            eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, existing));
             applyToSiblingIfExists(existing, sibling -> {
                 sibling.setStatus(BookingStatus.CANCELLED);
                 sibling.setPenaltyExempt(true);
@@ -581,6 +593,7 @@ public class BookingService {
         b.setUpdatedAt(LocalDateTime.now());
         b.setPrice(BigDecimal.ZERO);
         Booking saved = bookingRepository.save(b);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CREATED, saved));
 
         if (!toNotify.isEmpty()) {
             final String blockNote = (note != null && !note.trim().isEmpty()) ? note : "Blocat de Administrator";
@@ -685,6 +698,7 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, booking));
         applyToSiblingIfExists(booking, sibling -> {
             sibling.setStatus(BookingStatus.CANCELLED);
             sibling.setUpdatedAt(LocalDateTime.now());
@@ -709,6 +723,7 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, booking));
         applyToSiblingIfExists(booking, sibling -> {
             sibling.setStatus(BookingStatus.CANCELLED);
             sibling.setUpdatedAt(LocalDateTime.now());

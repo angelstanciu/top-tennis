@@ -76,7 +76,7 @@ export const LampContainer = ({
         <div className="absolute inset-auto z-40 h-44 w-full -translate-y-[12.5rem] bg-slate-950"></div>
       </div>
 
-      <div className="relative z-50 flex -translate-y-40 flex-col items-center px-5 text-center">
+      <div className="relative z-50 flex -translate-y-16 flex-col items-center px-5 text-center">
         {children}
       </div>
     </div>
@@ -108,13 +108,25 @@ export function LampHero() {
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9, duration: 0.8, ease: "easeInOut" }}
-        className="mt-8 flex gap-4"
+        className="mt-8 flex flex-col items-center gap-4"
       >
         <a
           href="/rezerva"
           className="px-8 py-4 bg-lime-500 text-slate-950 font-bold rounded-full text-lg hover:bg-lime-400 transition-colors shadow-lg shadow-lime-500/30 active:scale-95"
         >
           Rezervă Acum
+        </a>
+        <a
+          href="/meciuri"
+          className="px-6 py-3.5 bg-lime-500/10 border-2 border-lime-400 text-lime-400 font-bold rounded-full text-base hover:bg-lime-500/20 transition-colors active:scale-95 flex items-center gap-2"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          Găsește parteneri
         </a>
       </motion.div>
     </LampContainer>

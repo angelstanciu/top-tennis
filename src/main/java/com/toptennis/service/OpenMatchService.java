@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -56,6 +57,7 @@ public class OpenMatchService {
     private final PlayerAuthService playerAuthService;
     private final SmsService smsService;
     private final ThreadPoolTaskExecutor taskExecutor;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.base-url:https://star-arena.ro}")
     private String baseUrl;
@@ -71,7 +73,8 @@ public class OpenMatchService {
                             BookingService bookingService,
                             PlayerAuthService playerAuthService,
                             SmsService smsService,
-                            @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
+                            @Qualifier("smsTaskExecutor") ThreadPoolTaskExecutor taskExecutor,
+                            ApplicationEventPublisher eventPublisher) {
         this.openMatchRepository = openMatchRepository;
         this.participantRepository = participantRepository;
         this.skillLevelRepository = skillLevelRepository;
@@ -81,6 +84,7 @@ public class OpenMatchService {
         this.playerAuthService = playerAuthService;
         this.smsService = smsService;
         this.taskExecutor = taskExecutor;
+        this.eventPublisher = eventPublisher;
     }
 
     // ─── Nivel de joc ────────────────────────────────────────────────────────
@@ -407,6 +411,7 @@ public class OpenMatchService {
         oldBooking.setPenaltyExempt(true);
         oldBooking.setUpdatedAt(now);
         bookingRepository.save(oldBooking);
+        eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, oldBooking));
         bookingRepository.flush();
 
         // Rezervarea echipei complete, prin acelasi drum validat ca oricare alta.
@@ -492,6 +497,7 @@ public class OpenMatchService {
                 booking.setPenaltyExempt(true);
                 booking.setUpdatedAt(now);
                 bookingRepository.save(booking);
+                eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, booking));
 
                 notifyAutoRelease(match, booking);
                 log.info("Open match #{} auto-released (booking #{} freed, no penalty).",

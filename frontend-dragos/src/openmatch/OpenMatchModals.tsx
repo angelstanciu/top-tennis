@@ -320,6 +320,61 @@ export function OpenMatchSuccessModal({
   )
 }
 
+// ─── Promo: descoperă „Găsește parteneri" (la selectarea sportului Padel) ────
+
+export function PartnersPromoModal({
+  onFindPartners,
+  onAcknowledge,
+  onClose,
+}: {
+  onFindPartners: () => void
+  onAcknowledge: () => void
+  onClose: () => void
+}) {
+  return (
+    <LightShell onClose={onClose}>
+      <div className="relative p-7 text-center">
+        <button
+          onClick={onClose}
+          aria-label="Închide"
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+        <div className="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          Știai că...
+        </h3>
+        <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+          Dacă nu ai echipă completă, poți căuta jucători potriviți nivelului tău direct din rezervare — te conectăm cu alți jucători de Padel.
+        </p>
+        <button
+          onClick={onFindPartners}
+          className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          Găsește parteneri
+        </button>
+        <button onClick={onAcknowledge} className="w-full py-2 mt-2 text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors">
+          Am înțeles
+        </button>
+      </div>
+    </LightShell>
+  )
+}
+
 // ─── Cont necesar ────────────────────────────────────────────────────────────
 
 export function AuthRequiredModal({

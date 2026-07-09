@@ -5,8 +5,11 @@ import com.toptennis.dto.CreateBookingRequest;
 import com.toptennis.mapper.BookingMapper;
 import com.toptennis.model.Booking;
 import com.toptennis.service.BookingService;
+import com.toptennis.service.BookingSseBroadcaster;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -16,10 +19,18 @@ import java.time.LocalTime;
 public class BookingController {
     private final BookingService bookingService;
     private final com.toptennis.service.PlayerAuthService playerAuthService;
+    private final BookingSseBroadcaster bookingSseBroadcaster;
 
-    public BookingController(BookingService bookingService, com.toptennis.service.PlayerAuthService playerAuthService) {
+    public BookingController(BookingService bookingService, com.toptennis.service.PlayerAuthService playerAuthService, BookingSseBroadcaster bookingSseBroadcaster) {
         this.bookingService = bookingService;
         this.playerAuthService = playerAuthService;
+        this.bookingSseBroadcaster = bookingSseBroadcaster;
+    }
+
+    // Grid clients subscribe here to get live push updates instead of polling/refreshing.
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream() {
+        return bookingSseBroadcaster.subscribe();
     }
 
     @PostMapping

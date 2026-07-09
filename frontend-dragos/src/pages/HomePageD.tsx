@@ -9,12 +9,17 @@ import { useSeo } from '../seo'
 
 export default function HomePageD() {
   const nav = useNavigate()
-  const [scrolled, setScrolled] = useState(false)
+  // 0 → 1, proporțional cu scroll-ul (nu un prag fix) — tranziția navbar-ului
+  // se leagă direct de cât ai scrollat, nu sare brusc la un anumit punct.
+  const [scrollProgress, setScrollProgress] = useState(0)
   useSeo({ path: '/' })
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50)
-    window.addEventListener('scroll', handleScroll)
+    const handleScroll = () => {
+      setScrollProgress(Math.min(1, Math.max(0, window.scrollY / 120)))
+    }
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -29,46 +34,43 @@ export default function HomePageD() {
   return (
     <div className="min-h-screen bg-slate-950 font-sans text-slate-100" style={{ fontFamily: 'Outfit, sans-serif' }}>
 
-      {/* Sticky Navbar */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 shadow-sm py-3' : 'bg-transparent py-5'}`}>
+      {/* Sticky Navbar — stil interpolat continuu cu scrollProgress, nu comutat la un prag */}
+      <nav
+        className="fixed top-0 inset-x-0 z-50"
+        style={{
+          paddingTop: `${20 - 8 * scrollProgress}px`,
+          paddingBottom: `${20 - 8 * scrollProgress}px`,
+          backgroundColor: `rgba(2, 6, 23, ${0.9 * scrollProgress})`,
+          backdropFilter: `blur(${24 * scrollProgress}px)`,
+          WebkitBackdropFilter: `blur(${24 * scrollProgress}px)`,
+          borderBottom: `1px solid rgba(30, 41, 59, ${scrollProgress})`,
+          boxShadow: `0 1px 2px 0 rgba(0, 0, 0, ${0.05 * scrollProgress})`,
+          transition: 'background-color 120ms linear, backdrop-filter 120ms linear, padding 120ms linear, box-shadow 120ms linear, border-color 120ms linear',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 lg:px-8 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-2xl tracking-tighter text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <span className="font-extrabold text-xl tracking-tighter text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
               STAR<span className="text-lime-400">ARENA</span>
             </span>
           </div>
           <div className="flex items-center gap-4">
           <button
-            onClick={() => nav('/meciuri')}
-            className="text-white hover:text-lime-400 transition-colors font-medium text-sm flex items-center gap-2"
-            aria-label="Meciuri deschise"
-          >
-            {/* Users icon */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span className="hidden md:inline">Meciuri</span>
-          </button>
-          <button
-            onClick={handleAccountClick}
-            className="text-white hover:text-lime-400 transition-colors font-medium text-sm flex items-center gap-2"
-          >
-            {/* User Icon */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span className="hidden md:inline">Contul Meu</span>
-          </button>
-
-          <button
             onClick={() => nav('/rezerva')}
             className="font-bold px-6 py-2.5 rounded-full transition-all shadow-lg active:scale-95 bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-lime-500/30"
           >
-            Rezervă Acum
+            Rezervă
+          </button>
+          <button
+            onClick={handleAccountClick}
+            aria-label="Contul Meu"
+            className="w-11 h-11 flex items-center justify-center rounded-full transition-all shadow-lg active:scale-95 bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-lime-500/30"
+          >
+            {/* User Icon */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </button>
           </div>
         </div>

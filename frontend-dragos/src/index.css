@@ -11,6 +11,8 @@
 html, body {
   overflow-x: hidden; /* Prevents horizontal scroll */
   max-width: 100%;
+  -webkit-text-size-adjust: 100%; /* Blochează font-boosting-ul automat al Android Chrome pe coloane inguste (ex. <select>) */
+  text-size-adjust: 100%;
 }
 
 body {
