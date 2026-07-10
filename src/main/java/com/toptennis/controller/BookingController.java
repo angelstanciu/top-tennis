@@ -6,6 +6,7 @@ import com.toptennis.mapper.BookingMapper;
 import com.toptennis.model.Booking;
 import com.toptennis.service.BookingService;
 import com.toptennis.service.BookingSseBroadcaster;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -28,8 +29,14 @@ public class BookingController {
     }
 
     // Grid clients subscribe here to get live push updates instead of polling/refreshing.
+    // Nginx buffers proxied responses by default, which silently holds back SSE
+    // events instead of forwarding them as they're written — X-Accel-Buffering
+    // tells it to stream this response through untouched. Cache-Control keeps any
+    // intermediary from caching the (never-ending) response body.
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream() {
+    public SseEmitter stream(HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
         return bookingSseBroadcaster.subscribe();
     }
 

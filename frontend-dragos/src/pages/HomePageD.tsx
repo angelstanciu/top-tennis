@@ -1,80 +1,24 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Phone, Clock, ArrowRight, CheckCircle2, Trophy, CalendarDays, ChevronRight, Shield } from 'lucide-react'
 import { LampHero } from '../components/ui/lamp'
 import { DateSlider } from '../components/ui/date-slider'
 import Footer from '../components/Footer'
 import PadelSummerFeature from '../components/PadelSummerFeature'
+import Navbar from '../components/Navbar'
 import { useSeo } from '../seo'
+import { useTheme } from '../ThemeContext'
 
 export default function HomePageD() {
   const nav = useNavigate()
-  // 0 → 1, proporțional cu scroll-ul (nu un prag fix) — tranziția navbar-ului
-  // se leagă direct de cât ai scrollat, nu sare brusc la un anumit punct.
-  const [scrollProgress, setScrollProgress] = useState(0)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   useSeo({ path: '/' })
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollProgress(Math.min(1, Math.max(0, window.scrollY / 120)))
-    }
-    handleScroll()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const handleAccountClick = () => {
-    if (localStorage.getItem('playerToken')) {
-      nav('/profile')
-    } else {
-      nav('/cont')
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-100" style={{ fontFamily: 'Outfit, sans-serif' }}>
+    <div className="min-h-screen font-sans transition-colors" style={{ fontFamily: 'Outfit, sans-serif', background: isDark ? '#020617' : '#f6f7f4', color: isDark ? '#f1f5f9' : '#0f172a' }}>
 
-      {/* Sticky Navbar — stil interpolat continuu cu scrollProgress, nu comutat la un prag */}
-      <nav
-        className="fixed top-0 inset-x-0 z-50"
-        style={{
-          paddingTop: `${20 - 8 * scrollProgress}px`,
-          paddingBottom: `${20 - 8 * scrollProgress}px`,
-          backgroundColor: `rgba(2, 6, 23, ${0.9 * scrollProgress})`,
-          backdropFilter: `blur(${24 * scrollProgress}px)`,
-          WebkitBackdropFilter: `blur(${24 * scrollProgress}px)`,
-          borderBottom: `1px solid rgba(30, 41, 59, ${scrollProgress})`,
-          boxShadow: `0 1px 2px 0 rgba(0, 0, 0, ${0.05 * scrollProgress})`,
-          transition: 'background-color 120ms linear, backdrop-filter 120ms linear, padding 120ms linear, box-shadow 120ms linear, border-color 120ms linear',
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-xl tracking-tighter text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              STAR<span className="text-lime-400">ARENA</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-          <button
-            onClick={() => nav('/rezerva')}
-            className="font-bold px-6 py-2.5 rounded-full transition-all shadow-lg active:scale-95 bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-lime-500/30"
-          >
-            Rezervă
-          </button>
-          <button
-            onClick={handleAccountClick}
-            aria-label="Contul Meu"
-            className="w-11 h-11 flex items-center justify-center rounded-full transition-all shadow-lg active:scale-95 bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-lime-500/30"
-          >
-            {/* User Icon */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </button>
-          </div>
-        </div>
-      </nav>
+      <Navbar variant="floating" showReserveButton />
 
       {/* Lamp Hero Section */}
       <LampHero />
@@ -86,12 +30,15 @@ export default function HomePageD() {
       <section className="px-4 py-12 max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col items-center mb-10">
           <span className="text-lime-400 font-bold uppercase tracking-widest text-xs mb-2">Oferte & Abonamente</span>
-          <h2 className="text-3xl md:text-4xl font-black text-white text-center">Profită de Avantajele Star Arena</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-center" style={{ color: isDark ? '#fff' : '#0f172a' }}>Profită de Avantajele Star Arena</h2>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Padel Subscription Card */}
-          <div className="glass-dark border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer shadow-2xl flex flex-col min-h-[400px]" onClick={() => nav('/abonamente')}>
+          <div
+            className={`${isDark ? 'bg-slate-950/40 backdrop-blur-3xl shadow-2xl' : 'bg-white/95 backdrop-blur-xl shadow-xl shadow-slate-200/50'} border border-indigo-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-indigo-500/60 transition-all cursor-pointer flex flex-col min-h-[400px]`}
+            onClick={() => nav('/abonamente')}
+          >
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all"></div>
             <div className="relative z-10 flex flex-col flex-1 justify-between h-full">
               <div className="flex items-center gap-4">
@@ -99,23 +46,23 @@ export default function HomePageD() {
                   <Trophy className="w-8 h-8 text-indigo-400" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white">Tarif Padel 2026</h3>
+                  <h3 className="text-2xl font-black" style={{ color: isDark ? '#fff' : '#0f172a' }}>Tarif Padel 2026</h3>
                   <p className="text-indigo-400/80 font-bold text-xs uppercase tracking-widest mt-0.5">Abonamente Early Booking</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 my-8">
-                <div className="bg-slate-950/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
+                <div className="p-6 rounded-2xl border flex flex-col items-center justify-center text-center" style={{ background: isDark ? 'rgba(2,6,23,0.6)' : '#f8fafc', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0' }}>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Exterior</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">80 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
+                    <p className="text-2xl font-black tracking-tighter" style={{ color: isDark ? '#fff' : '#0f172a' }}>80 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
-                <div className="bg-slate-950/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center">
+                <div className="p-6 rounded-2xl border flex flex-col items-center justify-center text-center" style={{ background: isDark ? 'rgba(2,6,23,0.6)' : '#f8fafc', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0' }}>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Padel Indoor</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">120 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
+                    <p className="text-2xl font-black tracking-tighter" style={{ color: isDark ? '#fff' : '#0f172a' }}>120 <span className="text-xs text-slate-400 font-bold uppercase">LEI/H</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/5">
+              <div className="flex items-center justify-between gap-4 pt-4 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.08)' }}>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider max-w-[150px] leading-tight">* Oferte abonamente Early Booking / 3 Luni</span>
                 <button className="whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2.5 rounded-full font-black text-xs transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-indigo-500/20">
                   VEZI OFERTE <ArrowRight className="w-4 h-4" />
@@ -125,7 +72,10 @@ export default function HomePageD() {
           </div>
 
           {/* General Sports Promo */}
-          <div className="glass-dark border border-emerald-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-emerald-500/60 transition-all cursor-pointer shadow-2xl" onClick={() => nav('/rezerva')}>
+          <div
+            className={`${isDark ? 'bg-slate-950/40 backdrop-blur-3xl shadow-2xl' : 'bg-white/95 backdrop-blur-xl shadow-xl shadow-slate-200/50'} border border-emerald-500/30 rounded-[3rem] p-8 relative overflow-hidden group hover:border-emerald-500/60 transition-all cursor-pointer`}
+            onClick={() => nav('/rezerva')}
+          >
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-6">
@@ -133,27 +83,27 @@ export default function HomePageD() {
                   <CalendarDays className="w-8 h-8 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white">Tarife Închiriere Terenuri</h3>
+                  <h3 className="text-2xl font-black" style={{ color: isDark ? '#fff' : '#0f172a' }}>Tarife Închiriere Terenuri</h3>
                   <p className="text-emerald-400/80 font-bold text-xs uppercase tracking-widest mt-0.5">Cele mai bune tarife din zonă</p>
                 </div>
               </div>
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Câmp</span>
-                  <span className="text-white font-black">de la 35 LEI/H</span>
+                <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.08)' }}>
+                  <span className="font-bold text-xs uppercase tracking-wider" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Tenis de Câmp</span>
+                  <span className="font-black" style={{ color: isDark ? '#fff' : '#0f172a' }}>de la 35 LEI/H</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Picior</span>
-                  <span className="text-white font-black">de la 75 LEI/H</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Baschet</span>
-                  <span className="text-emerald-400 font-black">de la 80 LEI/H</span>
+                <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.08)' }}>
+                  <span className="font-bold text-xs uppercase tracking-wider" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Tenis de Picior</span>
+                  <span className="font-black" style={{ color: isDark ? '#fff' : '#0f172a' }}>de la 75 LEI/H</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Tenis de Masă</span>
-                  <span className="text-emerald-400 font-black">de la 35 LEI/H</span>
+                  <span className="font-bold text-xs uppercase tracking-wider" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Baschet</span>
+                  <span className="text-emerald-500 font-black">de la 80 LEI/H</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-bold text-xs uppercase tracking-wider" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Tenis de Masă</span>
+                  <span className="text-emerald-500 font-black">de la 35 LEI/H</span>
                 </div>
               </div>
 
@@ -169,13 +119,13 @@ export default function HomePageD() {
       </section>
 
       {/* Date Quick-Pick Section */}
-      <section className="relative z-10 py-14 px-4 bg-slate-900 border-b border-slate-800">
+      <section className="relative z-10 py-14 px-4 border-b" style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}>
         <div className="max-w-2xl mx-auto">
           <div className="flex flex-col items-center mb-6">
             <span className="text-lime-400 font-bold uppercase tracking-widest text-xs mb-2">Rezervă Rapid</span>
-            <h2 className="text-2xl md:text-3xl font-bold text-white text-center">Alege data dorită</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-center" style={{ color: isDark ? '#fff' : '#0f172a' }}>Alege data dorită</h2>
           </div>
-          <div className="bg-slate-950/50 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-sm">
+          <div className="p-6 rounded-[2.5rem] border backdrop-blur-sm" style={{ background: isDark ? 'rgba(2,6,23,0.5)' : '#f8fafc', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0' }}>
             <DateSlider
               onSelect={(iso) => nav(`/rezerva?date=${iso}`)}
               onConfirm={(iso) => nav(`/rezerva?date=${iso}`)}
@@ -215,20 +165,20 @@ export default function HomePageD() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-8 rounded-[2.5rem] flex flex-col items-center text-center hover:border-sky-500/50 transition-all group">
+          <div className="backdrop-blur-md border p-8 rounded-[2.5rem] flex flex-col items-center text-center hover:border-sky-500/50 transition-all group" style={{ background: isDark ? 'rgba(15,23,42,0.5)' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}>
             <div className="bg-sky-500/10 border border-sky-500/30 w-16 h-16 rounded-2xl flex items-center justify-center text-sky-400 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform">
               <Clock className="w-8 h-8" />
             </div>
-            <h3 className="font-bold text-xl mb-3 text-white">Program Extins</h3>
+            <h3 className="font-bold text-xl mb-3" style={{ color: isDark ? '#fff' : '#0f172a' }}>Program Extins</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">Pregătiți pentru pasiunea ta, indiferent de oră. Nocturnă LED profesională.</p>
             <span className="text-sky-400 font-black text-xl tracking-tight">08:00 – 24:00</span>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-8 rounded-[2.5rem] flex flex-col items-center text-center hover:border-amber-500/50 transition-all group">
+          <div className="backdrop-blur-md border p-8 rounded-[2.5rem] flex flex-col items-center text-center hover:border-amber-500/50 transition-all group" style={{ background: isDark ? 'rgba(15,23,42,0.5)' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}>
             <div className="bg-amber-500/10 border border-amber-500/30 w-16 h-16 rounded-2xl flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
               <Phone className="w-8 h-8" />
             </div>
-            <h3 className="font-bold text-xl mb-3 text-white">Contact Rezervări</h3>
+            <h3 className="font-bold text-xl mb-3" style={{ color: isDark ? '#fff' : '#0f172a' }}>Contact Rezervări</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">Sună-ne pe WhatsApp pentru detalii sau asistență cu programările tale.</p>
             <div className="text-amber-400 font-black text-xl">
               <a href="https://wa.me/40742197487" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition-colors">0742 197 487</a>
@@ -239,7 +189,13 @@ export default function HomePageD() {
 
       {/* Padel Indoor Alert Section */}
       <section className="px-4 py-8 lg:py-12 max-w-7xl mx-auto">
-        <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-amber-500/30 rounded-[3rem] p-8 lg:p-12 text-white shadow-2xl relative overflow-hidden group">
+        <div
+          className="border border-amber-500/30 rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden group transition-colors"
+          style={{
+            background: isDark ? 'linear-gradient(to bottom right, #0f172a, #020617)' : 'linear-gradient(to bottom right, #ffffff, #f8fafc)',
+            color: isDark ? '#fff' : '#0f172a',
+          }}
+        >
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
           <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
@@ -249,7 +205,7 @@ export default function HomePageD() {
               <div>
                 <span className="text-amber-400 font-bold uppercase tracking-widest text-xs mb-2 block">Nou & Încălzit</span>
                 <h3 className="text-3xl lg:text-4xl font-extrabold mb-3">Terenurile Padel Indoor</h3>
-                <p className="text-slate-300 text-lg leading-relaxed max-w-2xl">
+                <p className="text-lg leading-relaxed max-w-2xl" style={{ color: isDark ? '#cbd5e1' : '#475569' }}>
                   Cele <span className="font-bold text-amber-400">2 terenuri indoor noi</span> sunt situate în locația dedicată din Mărăcineni. Verifică traseul optim!
                 </p>
               </div>
@@ -267,11 +223,11 @@ export default function HomePageD() {
       </section>
 
       {/* Gallery Section */}
-      <section className="py-24 bg-slate-950 relative overflow-hidden">
+      <section className="py-24 relative overflow-hidden transition-colors" style={{ background: isDark ? '#020617' : '#f6f7f4' }}>
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
             <span className="text-lime-400 font-bold uppercase tracking-widest text-xs">Complex Sportiv Premium Bascov</span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mt-3 mb-5 text-white tracking-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mt-3 mb-5 tracking-tight" style={{ color: isDark ? '#fff' : '#0f172a' }}>
               15 Terenuri pentru <span className="text-lime-400 underline decoration-lime-500/30 underline-offset-8">Excelență Sportivă</span>
             </h2>
             <p className="text-slate-400 text-lg md:text-xl max-w-3xl mx-auto font-medium">

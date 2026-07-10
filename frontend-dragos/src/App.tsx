@@ -8,6 +8,8 @@ import { Toaster } from 'sonner'
 import fastCat from './assets/fast-cat.svg'
 import { useSeo } from './seo'
 import { PartnersPromoModal } from './openmatch/OpenMatchModals'
+import Navbar from './components/Navbar'
+import { useTheme } from './ThemeContext'
 
 
 type BeforeInstallPromptEvent = Event & {
@@ -69,6 +71,15 @@ const SPORT_EMOJI: Record<SportType, string> = {
   TABLE_TENNIS: '🏓',
 }
 
+const SPORT_OPTIONS: { value: SportType; label: string }[] = [
+  { value: 'TENNIS', label: '🎾 Tenis' },
+  { value: 'PADEL', label: '🏓 Padel' },
+  { value: 'BEACH_VOLLEY', label: '🏐 Volei' },
+  { value: 'BASKETBALL', label: '🏀 Baschet' },
+  { value: 'FOOTVOLLEY', label: '⚽ Tenis de picior' },
+  { value: 'TABLE_TENNIS', label: '🏓 Tenis de Masă' },
+]
+
 // Promo "Găsește parteneri" la selectarea Padel — nu-l arătăm la nesfârșit.
 const PARTNERS_PROMO_KEY = 'padelPartnersPromo'
 const PARTNERS_PROMO_MAX_SHOWS = 3
@@ -118,6 +129,8 @@ function formatDateDisplay(iso?: string) {
 }
 
 export default function App() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   useSeo({
     path: '/rezerva',
     title: 'Rezervă Teren Online – Padel, Tenis, Baschet | Star Arena Pitești',
@@ -130,6 +143,7 @@ export default function App() {
   const initialSport = paramSport || lsSport || 'TENNIS'
   const initialDate = paramDate || todayISO()
   const [sport, setSport] = useState<SportType>(initialSport)
+  const [sportMenuOpen, setSportMenuOpen] = useState(false)
 
 
   // React to sport query parameter changes from external navigation (e.g. homepage cards)
@@ -144,7 +158,6 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [hover, setHover] = useState<string>('')
   const nav = useNavigate()
-  const gridScrollRef = React.useRef<HTMLDivElement | null>(null)
   const dateInputRef = React.useRef<HTMLInputElement | null>(null)
   const [selCourtId, setSelCourtId] = useState<number | null>(null)
   const [selStart, setSelStart] = useState<string | null>(null)
@@ -557,21 +570,24 @@ export default function App() {
   const bg = backgroundBySport[sport]
 
   return (
-    <div className="min-h-dvh relative font-sans text-slate-100 selection:bg-emerald-500 selection:text-white">
-      {/* Fixed Background Layer */}
-      <div 
+    <div
+      className="min-h-dvh relative font-sans selection:bg-lime-400 selection:text-slate-950 transition-colors"
+      style={{ background: isDark ? '#020617' : '#f6f7f4', color: isDark ? '#f8fafc' : '#0f172a' }}
+    >
+      {/* Fixed Background Layer per sport */}
+      <div
         className="fixed inset-0 z-0 pointer-events-none transition-all duration-700"
-        style={{ 
-          backgroundImage: bg ? `url('${bg}')` : 'none', 
-          backgroundSize: 'cover', 
-          backgroundPosition: 'center', 
-          backgroundRepeat: 'no-repeat'
+        style={{
+          backgroundImage: bg ? `url('${bg}')` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px]" />
+        <div className="absolute inset-0" style={{ background: isDark ? 'rgba(2,6,23,0.82)' : 'rgba(246,247,244,0.85)', backdropFilter: 'blur(1px)' }} />
       </div>
 
-      <div className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-1.5 relative z-10">
+      <div className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-0.5 relative z-10">
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
@@ -595,102 +611,68 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* Navbar compact - lipit de varf */}
-      <nav className="shrink-0 flex items-center justify-between bg-white/15 backdrop-blur-xl border-b border-white/20 px-4 py-2 z-20 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => nav('/')}
-            className="bg-black/20 hover:bg-black/40 text-white p-1.5 rounded-full backdrop-blur-md transition-all active:scale-95 flex items-center justify-center"
-            aria-label="Înapoi acasă"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-          <span className="font-extrabold text-base md:text-lg tracking-tighter text-white drop-shadow-md" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            STAR<span className="text-emerald-400">ARENA</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:block">
-            <h2 className="text-xs font-bold text-white uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30">
-              {sport === 'TENNIS' ? 'Tenis' :
-               sport === 'PADEL' ? 'Padel' :
-               sport === 'BEACH_VOLLEY' ? 'Volei' :
-               sport === 'BASKETBALL' ? 'Baschet' :
-               sport === 'FOOTVOLLEY' ? 'Tenis de picior' :
-               sport === 'TABLE_TENNIS' ? 'Tenis de Masă' : 'Sport'}
-            </h2>
-          </div>
-          <button
-            onClick={() => {
-              if (player) nav('/profile');
-              else nav('/cont');
-            }}
-            className={`p-1.5 rounded-full backdrop-blur-md transition-all active:scale-95 flex items-center justify-center shadow-lg border ${player ? 'bg-amber-500 border-amber-400/50' : 'bg-emerald-500 border-emerald-400/50'} text-white`}
-            aria-label="Contul Meu"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            {player && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-lime-400 border-2 border-white rounded-full"></span>
-            )}
-          </button>
-          {player && (
-            <button
-               onClick={() => {
-                 localStorage.removeItem('playerToken');
-                 localStorage.removeItem('playerData');
-                 window.dispatchEvent(new Event('auth-change'));
-                 nav('/');
-               }}
-               className="bg-white/10 hover:bg-white/20 text-white/70 hover:text-white p-1.5 rounded-full transition-all flex items-center justify-center"
-               title="Ieșire"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-          )}
-        </div>
-      </nav>
+      <Navbar variant="static" showReserveButton={false} />
 
-      <section className="flex-1 min-h-0 flex flex-col px-2 pb-2 pt-1 relative z-10 w-full">
+      <section className="flex-1 min-h-0 flex flex-col px-2 pb-2 relative z-10 w-full">
         {/* Compact Toolbar: Sport Dropdown + Date - ONE ROW */}
-        <div className="bg-white/85 backdrop-blur-2xl px-3 py-2 rounded-2xl shadow-lg border border-white flex flex-row items-center gap-2 w-full mb-2">
-          <div className="shrink-0">
-            <select
-              value={sport}
-              onChange={e => setSport(e.target.value as SportType)}
-              className="w-[108px] bg-emerald-500 text-white font-bold text-sm rounded-xl px-2 py-2 border-0 outline-none cursor-pointer appearance-none text-center"
-              style={{ fontFamily: 'Outfit, sans-serif' }}
-            >
-              {([
-                { value: 'TENNIS', label: '🎾 Tenis' },
-                { value: 'PADEL', label: '🏓 Padel' },
-                { value: 'BEACH_VOLLEY', label: '🏐 Volei' },
-                { value: 'BASKETBALL', label: '🏀 Baschet' },
-                { value: 'FOOTVOLLEY', label: '⚽ Tenis de picior' },
-                { value: 'TABLE_TENNIS', label: '🏓 Tenis de Masă' },
-              ] as { value: SportType; label: string }[]).map(({ value, label }) => {
-                const hasActive = activeCourts.some(c => c.sportType === value)
-                return (
-                  <option key={value} value={value} disabled={!hasActive}
-                    style={!hasActive ? { color: '#94a3b8', background: '#f1f5f9' } : {}}
+        <div
+          className="relative grid grid-cols-2 items-center px-2 py-2 rounded-[18px] border w-full"
+          style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0', boxShadow: isDark ? 'none' : '0 2px 10px rgba(15,23,42,0.04)' }}
+        >
+          {/* Splitter fix, exact la jumătatea barei, independent de conținut */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1.5px] h-[32px] rounded-full" style={{ background: isDark ? '#334155' : '#cbd5e1' }} />
+
+          {/* Jumătatea stângă: sport picker, centrat, lățime fixă (cât cel mai lung text) */}
+          <div className="flex items-center justify-center min-w-0 pr-2">
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setSportMenuOpen(o => !o)}
+                className="font-extrabold text-sm rounded-xl px-2 py-2 outline-none cursor-pointer flex items-center gap-1 w-[150px] max-w-full active:scale-95 transition-transform"
+                style={{ fontFamily: 'Outfit, sans-serif', background: isDark ? '#a3e635' : '#84cc16', color: isDark ? '#ffffff' : '#0f172a' }}
+              >
+                <span className="flex-1 text-center truncate">{SPORT_OPTIONS.find(o => o.value === sport)?.label}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" style={{ transition: 'transform 150ms', transform: sportMenuOpen ? 'rotate(180deg)' : 'none' }}>
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              {sportMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setSportMenuOpen(false)} />
+                  <div
+                    className="absolute top-full left-0 mt-2 min-w-[190px] rounded-2xl border shadow-xl z-50 overflow-hidden py-1"
+                    style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
                   >
-                    {label}{!hasActive ? ' (Indisponibil)' : ''}
-                  </option>
-                )
-              })}
-            </select>
+                    {SPORT_OPTIONS.map(({ value, label }) => {
+                      const hasActive = activeCourts.some(c => c.sportType === value)
+                      const isSelected = value === sport
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          disabled={!hasActive}
+                          onClick={() => { setSport(value); setSportMenuOpen(false) }}
+                          className="w-full text-left px-3.5 py-2.5 text-sm font-bold flex items-center gap-2 transition-colors disabled:cursor-not-allowed"
+                          style={isSelected
+                            ? { background: isDark ? 'rgba(163,230,53,0.15)' : 'rgba(132,204,22,0.12)', color: isDark ? '#a3e635' : '#4d7c0f' }
+                            : { color: hasActive ? (isDark ? '#e2e8f0' : '#0f172a') : (isDark ? '#475569' : '#94a3b8') }}
+                        >
+                          {label}{!hasActive ? ' (Indisponibil)' : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Divider */}
-          <div className="w-px h-8 bg-slate-200 shrink-0" />
-
-          {/* Date compact */}
-          <div className="flex items-center gap-1 flex-1 justify-center">
+          {/* Jumătatea dreaptă: navigare dată, lățime fixă (cealaltă jumătate) */}
+          <div className="flex items-center gap-1 min-w-0 justify-between pl-2">
             <button
               type="button"
-              className="w-7 h-8 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors text-lg font-bold"
+              className="w-6 h-7 shrink-0 flex items-center justify-center rounded-lg transition-colors text-lg font-bold"
+              style={{ color: isDark ? '#94a3b8' : '#64748b' }}
               onClick={() => shiftDate(-1)}
               aria-label="Ziua anterioară"
             >
@@ -698,7 +680,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              className="relative flex items-center gap-1 px-2 py-1.5 hover:bg-emerald-50 rounded-xl transition-colors group"
+              className="relative flex items-center gap-0.5 px-1 py-1.5 rounded-xl transition-colors group min-w-0"
               onClick={() => {
                 const el = dateInputRef.current
                 if (!el) return
@@ -706,11 +688,11 @@ export default function App() {
                 try { el.click() } catch {}
               }}
             >
-              <span className="text-sm font-bold text-slate-800 whitespace-nowrap min-w-[90px] text-center group-hover:text-emerald-600 transition-colors">
+              <span className="text-sm font-bold whitespace-nowrap min-w-[68px] text-center transition-colors" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
                 {displayDate}
               </span>
-              <div className="text-slate-400 group-hover:text-emerald-500 transition-colors flex items-center justify-center w-6 h-6">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <div className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: isDark ? '#94a3b8' : '#94a3b8' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -729,7 +711,8 @@ export default function App() {
             </button>
             <button
               type="button"
-              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors text-lg font-bold"
+              className="w-6 h-7 shrink-0 flex items-center justify-center rounded-lg transition-colors text-lg font-bold"
+              style={{ color: isDark ? '#94a3b8' : '#64748b' }}
               onClick={() => shiftDate(1)}
               aria-label="Ziua următoare"
             >
@@ -737,16 +720,19 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="relative mt-1 flex-1 min-h-0 flex flex-col glass-card p-2 md:p-6 rounded-[2rem]">
+        <div
+          className="relative mt-1 flex-1 min-h-0 flex flex-col p-2 md:p-6 rounded-[24px] border overflow-hidden"
+          style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#263349' : '#e2e8f0', boxShadow: isDark ? 'none' : '0 8px 24px rgba(15,23,42,0.06)' }}
+        >
           {loading ? (
              <div className="flex-1 flex flex-col items-center justify-center h-full">
-                <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
-                <div className="mt-4 text-emerald-800 font-medium">Se încarcă terenurile...</div>
+                <div className="w-12 h-12 rounded-full animate-spin" style={{ border: '4px solid rgba(163,230,53,0.3)', borderTopColor: '#a3e635' }}></div>
+                <div className="mt-4 font-medium" style={{ color: isDark ? '#94a3b8' : '#475569' }}>Se încarcă terenurile...</div>
              </div>
           ) : (
             <>
-                    <div className="-mx-2 flex-1 min-h-0">
-                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} scrollContainerRef={gridScrollRef} player={player} onOpenMatchClick={setOpenMatchInfo} />
+                    <div className="-mx-2 -mt-2 flex-1 min-h-0">
+                      <TimelineGrid flat data={activeData} date={date} onHover={setHover} onSelectionChange={handleSelectionChange} onReserve={openBooking} clearSignal={clearTick} player={player} onOpenMatchClick={setOpenMatchInfo} />
                     </div>
                     {hasSeasonalOutdoor && (
                       <div className="mx-1 mt-1.5 px-3 py-2 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-xl flex items-center gap-2">
@@ -754,20 +740,18 @@ export default function App() {
                         <div className="font-bold text-xs text-amber-800">Terenuri Exterioare</div>
                       </div>
                     )}
-              <div className="flex justify-center mt-1 mb-1">
-                <div className="flex gap-4 items-center opacity-40">
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-300"></span>
-                    <span className="text-[9px] text-slate-500 font-medium">Liber</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded bg-rose-200 border border-rose-300"></span>
-                    <span className="text-[9px] text-slate-500 font-medium">Ocupat</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded bg-slate-200 border border-slate-300" style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.5) 0, rgba(148,163,184,0.5) 2px, transparent 2px, transparent 5px)' }}></span>
-                    <span className="text-[9px] text-slate-500 font-medium">Indisponibil</span>
-                  </div>
+              <div className="flex justify-center gap-4 items-center" style={{ borderTop: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, padding: '6px 0 0' }}>
+                <div className="flex items-center gap-[5px]">
+                  <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: isDark ? 'rgba(163,230,53,0.35)' : 'rgba(132,204,22,0.25)', border: `1px solid ${isDark ? 'rgba(163,230,53,0.7)' : '#84cc16'}` }}></span>
+                  <span className="text-[10px] font-semibold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Liber</span>
+                </div>
+                <div className="flex items-center gap-[5px]">
+                  <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: isDark ? 'rgba(244,63,94,0.35)' : 'rgba(244,63,94,0.2)', border: `1px solid ${isDark ? 'rgba(251,113,133,0.6)' : 'rgba(244,63,94,0.5)'}` }}></span>
+                  <span className="text-[10px] font-semibold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Ocupat</span>
+                </div>
+                <div className="flex items-center gap-[5px]">
+                  <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`, backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.5) 0, rgba(148,163,184,0.5) 2px, transparent 2px, transparent 5px)' }}></span>
+                  <span className="text-[10px] font-semibold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Indisponibil</span>
                 </div>
               </div>
             </>

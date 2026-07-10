@@ -1,5 +1,6 @@
 import React, { useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useTheme } from '../../ThemeContext'
 
 // Generate next N days starting from today
 function generateDays(count = 14): { iso: string; label: string; dayName: string; day: number }[] {
@@ -27,6 +28,8 @@ interface DateSliderProps {
 }
 
 export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   // Show up to 90 days (approx 3 months) in the slider as requested for the horizon
   const days = generateDays(90)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -44,7 +47,8 @@ export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
       <div className="relative flex items-center gap-2">
         <button
           onClick={() => scroll('left')}
-          className="shrink-0 w-9 h-9 rounded-full bg-slate-800 border border-slate-700 text-slate-300 flex items-center justify-center hover:bg-slate-700 hover:text-lime-400 transition-colors"
+          className="shrink-0 w-9 h-9 rounded-full border flex items-center justify-center hover:text-lime-500 transition-colors"
+          style={{ background: isDark ? '#1e293b' : '#fff', borderColor: isDark ? '#334155' : '#e2e8f0', color: isDark ? '#cbd5e1' : '#64748b' }}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -69,10 +73,15 @@ export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
                   ${isSelected
                     ? 'bg-lime-500 border-lime-500 text-slate-950 shadow-lg shadow-lime-500/40'
                     : isToday
-                      ? 'border-lime-500/50 bg-slate-800 text-lime-400'
-                      : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:border-lime-500/50 hover:text-lime-400'
+                      ? 'border-lime-500/50'
+                      : 'hover:border-lime-500/50 hover:text-lime-500'
                   }
                 `}
+                style={isSelected ? undefined : {
+                  background: isToday ? (isDark ? '#1e293b' : '#fff') : (isDark ? 'rgba(30,41,59,0.6)' : '#fff'),
+                  borderColor: isToday ? undefined : (isDark ? '#334155' : '#e2e8f0'),
+                  color: isToday ? '#84cc16' : (isDark ? '#cbd5e1' : '#334155'),
+                }}
               >
                 <span className={`text-[10px] font-bold uppercase tracking-wide ${isSelected ? 'text-slate-950' : ''}`}>
                   {d.dayName}
@@ -80,7 +89,10 @@ export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
                 <span className={`text-xl font-extrabold leading-tight ${isSelected ? 'text-slate-950' : ''}`}>
                   {d.day}
                 </span>
-                <span className={`text-[9px] font-medium leading-tight ${isSelected ? 'text-slate-800' : 'text-slate-500'}`}>
+                <span
+                  className={`text-[9px] font-medium leading-tight ${isSelected ? 'text-slate-800' : ''}`}
+                  style={isSelected ? undefined : { color: isDark ? '#64748b' : '#94a3b8' }}
+                >
                   {d.label.split(' ')[1]}
                 </span>
               </button>
@@ -90,7 +102,8 @@ export function DateSlider({ selected, onSelect, onConfirm }: DateSliderProps) {
 
         <button
           onClick={() => scroll('right')}
-          className="shrink-0 w-9 h-9 rounded-full bg-slate-800 border border-slate-700 text-slate-300 flex items-center justify-center hover:bg-slate-700 hover:text-lime-400 transition-colors"
+          className="shrink-0 w-9 h-9 rounded-full border flex items-center justify-center hover:text-lime-500 transition-colors"
+          style={{ background: isDark ? '#1e293b' : '#fff', borderColor: isDark ? '#334155' : '#e2e8f0', color: isDark ? '#cbd5e1' : '#64748b' }}
         >
           <ChevronRight className="w-5 h-5" />
         </button>

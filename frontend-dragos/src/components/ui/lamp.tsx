@@ -1,134 +1,163 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { cn } from "../../lib/utils";
-
-export const LampContainer = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
-  return (
-    <div
-      className={cn(
-        "relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-slate-950 w-full z-0",
-        className
-      )}
-    >
-      {/* Background Image Layer */}
-      <div className="absolute inset-0 z-0 opacity-80">
-        <img 
-          src="/sports_hero_bg_dark.png" 
-          alt="Sports Hero Background" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/10 via-slate-950/40 to-slate-950" />
-      </div>
-      <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0">
-        <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto right-1/2 h-56 overflow-visible w-[30rem] bg-gradient-conic from-lime-500 via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]"
-        >
-          <div className="absolute w-[100%] left-0 bg-slate-950 h-40 bottom-0 z-20 [mask-image:linear-gradient(to_top,white,transparent)]" />
-          <div className="absolute w-40 h-[100%] left-0 bg-slate-950 bottom-0 z-20 [mask-image:linear-gradient(to_right,white,transparent)]" />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto left-1/2 h-56 w-[30rem] bg-gradient-conic from-transparent via-transparent to-lime-500 text-white [--conic-position:from_290deg_at_center_top]"
-        >
-          <div className="absolute w-40 h-[100%] right-0 bg-slate-950 bottom-0 z-20 [mask-image:linear-gradient(to_left,white,transparent)]" />
-          <div className="absolute w-[100%] right-0 bg-slate-950 h-40 bottom-0 z-20 [mask-image:linear-gradient(to_top,white,transparent)]" />
-        </motion.div>
-
-        <div className="absolute top-1/2 h-48 w-full translate-y-12 scale-x-150 bg-slate-950 blur-2xl"></div>
-        <div className="absolute top-1/2 z-50 h-48 w-full bg-transparent opacity-10 backdrop-blur-md"></div>
-
-        {/* Lamp Glow beam */}
-        <div className="absolute inset-auto z-50 h-36 w-[28rem] -translate-y-1/2 rounded-full bg-lime-500 opacity-50 blur-3xl"></div>
-        <motion.div
-          initial={{ width: "8rem" }}
-          whileInView={{ width: "16rem" }}
-          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          className="absolute inset-auto z-30 h-36 w-64 -translate-y-[6rem] rounded-full bg-lime-400 blur-2xl"
-        ></motion.div>
-
-        {/* Lamp thin light beam line */}
-        <motion.div
-          initial={{ width: "15rem" }}
-          whileInView={{ width: "30rem" }}
-          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          className="absolute inset-auto z-50 h-0.5 w-[30rem] -translate-y-[7rem] bg-lime-400"
-        ></motion.div>
-
-        <div className="absolute inset-auto z-40 h-44 w-full -translate-y-[12.5rem] bg-slate-950"></div>
-      </div>
-
-      <div className="relative z-50 flex -translate-y-16 flex-col items-center px-5 text-center">
-        {children}
-      </div>
-    </div>
-  );
-};
+import { useTheme } from "../../ThemeContext";
 
 export function LampHero() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
-    <LampContainer>
-      <motion.h1
-        initial={{ opacity: 0.5, y: 100 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-        className="mt-8 bg-gradient-to-br from-white via-lime-100 to-lime-500 py-4 bg-clip-text text-center text-5xl font-bold tracking-tight text-transparent md:text-7xl"
-        style={{ fontFamily: "Outfit, sans-serif" }}
+    <div
+      className="relative w-full overflow-hidden h-[520px] md:h-[640px]"
+      style={{ background: isDark ? "#020617" : "#f6f7f4" }}
+    >
+      <img
+        src="/sports_hero_bg_dark.png"
+        alt="Sports Hero Background"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ opacity: isDark ? 0.8 : 0.55 }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isDark
+            ? "linear-gradient(to bottom, rgba(2,6,23,0.3), rgba(2,6,23,0.5) 55%, #020617)"
+            : "linear-gradient(to bottom, rgba(246,247,244,0.55), rgba(246,247,244,0.75) 55%, #f6f7f4)",
+        }}
+      />
+      <div
+        className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        style={{
+          width: 280,
+          height: 120,
+          background: isDark ? "#a3e635" : "#84cc16",
+          opacity: isDark ? 0.28 : 0.25,
+          filter: "blur(60px)",
+        }}
+      />
+
+      <div
+        className="relative z-[1] flex h-full flex-col items-center justify-end text-center px-6"
+        style={{ paddingBottom: 36 }}
       >
-        Star Arena <br />
-        <span className="text-3xl md:text-5xl font-light text-white/70">Bascov</span>
-      </motion.h1>
-      <motion.p
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.8, ease: "easeInOut" }}
-        className="mt-4 text-slate-300 text-lg md:text-xl max-w-lg"
-      >
-        Performanță și Recreere la cele mai înalte standarde
-      </motion.p>
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.9, duration: 0.8, ease: "easeInOut" }}
-        className="mt-8 flex flex-col items-center gap-4"
-      >
-        <a
+        <motion.div
+          initial={{ opacity: 0.5, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.7, ease: "easeInOut" }}
+          style={{
+            fontFamily: "Outfit, sans-serif",
+            fontSize: 44,
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.05,
+            backgroundImage: isDark
+              ? "linear-gradient(135deg, #ffffff, #ecfccb 55%, #a3e635)"
+              : "linear-gradient(135deg, #0f172a, #365314 65%, #4d7c0f)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+          }}
+        >
+          Star Arena
+        </motion.div>
+        <div
+          style={{
+            fontFamily: "Outfit, sans-serif",
+            fontSize: 26,
+            fontWeight: 300,
+            color: isDark ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.6)",
+            marginTop: 2,
+          }}
+        >
+          Bascov
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6, ease: "easeInOut" }}
+          style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize: 15,
+            color: isDark ? "#cbd5e1" : "#475569",
+            maxWidth: 280,
+            marginTop: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          Performanță și Recreere la cele mai înalte standarde
+        </motion.div>
+
+        <motion.a
           href="/rezerva"
-          className="px-8 py-4 bg-lime-500 text-slate-950 font-bold rounded-full text-lg hover:bg-lime-400 transition-colors shadow-lg shadow-lime-500/30 active:scale-95"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.6, ease: "easeInOut" }}
+          className="active:scale-95 transition-transform"
+          style={{
+            marginTop: 22,
+            background: isDark ? "#a3e635" : "#84cc16",
+            color: isDark ? "#020617" : "#0f172a",
+            fontFamily: "Outfit, sans-serif",
+            fontWeight: 800,
+            fontSize: 16,
+            borderRadius: 999,
+            padding: "15px 34px",
+            boxShadow: isDark ? "0 8px 28px rgba(163,230,53,0.35)" : "0 8px 28px rgba(132,204,22,0.35)",
+          }}
         >
           Rezervă Acum
-        </a>
-        <a
+        </motion.a>
+        <motion.a
           href="/meciuri"
-          className="px-6 py-3.5 bg-lime-500/10 border-2 border-lime-400 text-lime-400 font-bold rounded-full text-base hover:bg-lime-500/20 transition-colors active:scale-95 flex items-center gap-2"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.6, ease: "easeInOut" }}
+          className="active:scale-95 transition-transform flex items-center"
+          style={{
+            marginTop: 12,
+            border: `1.5px solid ${isDark ? "#a3e635" : "#65a30d"}`,
+            color: isDark ? "#a3e635" : "#4d7c0f",
+            fontFamily: "Outfit, sans-serif",
+            fontWeight: 700,
+            fontSize: 14,
+            borderRadius: 999,
+            padding: "12px 26px",
+            gap: 8,
+          }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           Găsește parteneri
-        </a>
-      </motion.div>
-    </LampContainer>
+        </motion.a>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.85, duration: 0.6, ease: "easeInOut" }}
+          className="flex items-center"
+          style={{
+            marginTop: 22,
+            gap: 8,
+            border: `1px solid ${isDark ? "rgba(56,189,248,0.3)" : "#bae6fd"}`,
+            background: isDark ? "rgba(2,6,23,0.6)" : "rgba(255,255,255,0.8)",
+            borderRadius: 999,
+            padding: "9px 18px",
+          }}
+        >
+          <span
+            className="inline-block rounded-full"
+            style={{ width: 8, height: 8, background: isDark ? "#a3e635" : "#65a30d" }}
+          />
+          <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? "#e2e8f0" : "#334155" }}>
+            Padel Indoor · <span style={{ color: isDark ? "#a3e635" : "#4d7c0f" }}>Climatizat 24°C</span>
+          </span>
+        </motion.div>
+      </div>
+    </div>
   );
 }

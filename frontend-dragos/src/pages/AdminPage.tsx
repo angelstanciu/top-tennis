@@ -509,43 +509,31 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen relative font-sans text-slate-900 bg-slate-50 selection:bg-sky-100 selection:text-sky-900">
-      {/* Persistent Background Layer to fix mobile resizing jump */}
-      <div 
-        className="fixed inset-0 z-0 pointer-events-none transition-all duration-700"
-        style={{ 
-          backgroundImage: bg ? `url('${bg}')` : 'none', 
-          backgroundSize: 'cover', 
-          backgroundPosition: 'center', 
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div className="absolute inset-0 bg-slate-100/40 backdrop-blur-[1px]" />
-      </div>
-
+    <div className="min-h-screen relative font-sans selection:bg-lime-400 selection:text-slate-950" style={{ background: '#020617', color: '#f8fafc' }}>
       <div className="max-w-6xl mx-auto p-4 space-y-4 relative z-10">
         <AdminHeader active="bookings" />
       {!logged ? (
         <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="w-full max-w-sm rounded-[2.5rem] border border-sky-100 bg-white/80 backdrop-blur-xl p-10 shadow-2xl shadow-sky-900/10 flex flex-col items-center animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-emerald-500/30 rotate-3 group hover:rotate-6 transition-all">
-              <TrendingUp className="w-10 h-10 text-white" />
+          <div className="w-full max-w-sm rounded-[2.5rem] border p-10 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-500" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-8 shadow-xl rotate-3 group hover:rotate-6 transition-all" style={{ background: '#a3e635', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
+              <TrendingUp className="w-10 h-10" style={{ color: '#020617' }} />
             </div>
             
-            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">Panou Admin</h2>
+            <h2 className="text-3xl font-black tracking-tighter uppercase mb-2">Panou Admin</h2>
             <p className="text-slate-400 text-sm font-bold mb-8 uppercase tracking-widest text-[10px]">Acces Securizat Star-Arena</p>
 
             <form onSubmit={login} className="w-full space-y-5">
               {error && <div className="p-4 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl text-[11px] font-black uppercase text-center backdrop-blur-sm">{error}</div>}
-              
+
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Utilizator</label>
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input 
-                    className="w-full bg-slate-50 border-slate-100 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 transition-all outline-none" 
-                    value={username} 
-                    onChange={e => setUsername(e.target.value)} 
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    className="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold outline-none transition-all sa-form-input"
+                    style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
                     placeholder="ex: admin"
                   />
                 </div>
@@ -554,22 +542,24 @@ export default function AdminPage() {
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parola</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                   </div>
-                  <input 
-                    type="password" 
-                    className="w-full bg-slate-50 border-slate-100 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 transition-all outline-none" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
+                  <input
+                    type="password"
+                    className="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold outline-none transition-all sa-form-input"
+                    style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
-              <button 
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white rounded-2xl py-4 font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-slate-200 transition-all active:scale-95 disabled:opacity-50 mt-4" 
-                type="submit" 
+              <button
+                className="w-full rounded-2xl py-4 font-black uppercase tracking-[0.2em] text-[11px] shadow-xl transition-all active:scale-95 disabled:opacity-50 mt-4"
+                style={{ background: '#a3e635', color: '#020617', boxShadow: '0 8px 24px rgba(163,230,53,0.25)' }}
+                type="submit"
                 disabled={!username || !password}
               >
                 Autentificare
@@ -580,45 +570,46 @@ export default function AdminPage() {
       ) : (
         <div className="space-y-3">
             <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-sky-100 shadow-xl shadow-sky-900/5 flex items-center gap-5">
-                <div className="bg-emerald-500 text-white p-4 rounded-3xl shadow-lg shadow-emerald-500/20 rotate-3">
+              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
+                <div className="p-4 rounded-3xl shadow-lg rotate-3" style={{ background: '#a3e635', color: '#020617', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
                   <DollarSign className="w-8 h-8" />
                 </div>
                 <div>
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Încasări Azi</div>
-                  <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-300 italic">RON</span>
+                  <div className="text-3xl font-black tracking-tighter">
+                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-500 italic">RON</span>
                   </div>
-                  <div className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1">
+                  <div className="text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1" style={{ background: 'rgba(163,230,53,0.1)', color: '#a3e635' }}>
                     <TrendingUp className="w-2 h-2" />
                     + {stats.collectedRevenue.toFixed(0)} colectat
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 border border-sky-100 shadow-xl shadow-sky-900/5 flex items-center gap-5">
-                <div className="bg-sky-500 text-white p-4 rounded-3xl shadow-lg shadow-sky-500/20 -rotate-3">
+              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
+                <div className="p-4 rounded-3xl shadow-lg -rotate-3" style={{ background: '#38bdf8', color: '#020617', boxShadow: '0 8px 20px rgba(56,189,248,0.2)' }}>
                   <Percent className="w-8 h-8" />
                 </div>
                 <div>
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grad Ocupare</div>
-                  <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                  <div className="text-3xl font-black tracking-tighter">
                     {stats.occupancyRate}%
                   </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-sky-500 transition-all duration-1000" style={{ width: `${stats.occupancyRate}%` }}></div>
+                  <div className="h-1.5 w-full rounded-full mt-2 overflow-hidden" style={{ background: '#0b1120' }}>
+                    <div className="h-full transition-all duration-1000" style={{ width: `${stats.occupancyRate}%`, background: '#38bdf8' }}></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-sky-100 bg-white/80 backdrop-blur-md p-6 shadow-xl shadow-sky-900/5">
+            <div className="rounded-3xl border p-6 shadow-xl" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
               <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1 w-full relative">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sport</div>
-                <select 
-                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm" 
-                  value={sport} 
+                <select
+                  className="w-full h-11 rounded-2xl px-4 py-2 text-sm font-bold transition-all appearance-none sa-form-input"
+                  style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
+                  value={sport}
                   onChange={e => setSport(e.target.value as SportType | '')}
                 >
                   <option value="">Toate Sporturile</option>
@@ -636,7 +627,8 @@ export default function AdminPage() {
               <div className="flex-1 w-full relative">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Teren</div>
                 <select
-                  className="w-full h-11 bg-slate-50 border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm"
+                  className="w-full h-11 rounded-2xl px-4 py-2 text-sm font-bold transition-all appearance-none sa-form-input"
+                  style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
                   value={courtId as any}
                   onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -652,24 +644,26 @@ export default function AdminPage() {
               </div>
               <div className="flex-1 w-full">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data</div>
-                <div className="relative flex items-stretch bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden h-11 shadow-sm focus-within:ring-4 focus-within:ring-sky-500/10 focus-within:border-sky-500 transition-all">
+                <div className="relative flex items-stretch rounded-2xl overflow-hidden h-11 transition-all" style={{ background: '#0b1120', border: '1.5px solid #1e293b' }}>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-r border-slate-100 focus:outline-none transition-all"
+                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:text-lime-400 border-r focus:outline-none transition-all"
+                    style={{ borderColor: '#1e293b' }}
                     onClick={() => shiftDate(-1)}
                   >
                     {'\u2039'}
                   </button>
                   <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
                     <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4">
-                      <div className="text-sm font-black text-slate-700 text-center select-none truncate group-hover:text-sky-600 transition-colors uppercase tracking-tight">
+                      <div className="text-sm font-black text-center select-none truncate group-hover:text-lime-400 transition-colors uppercase tracking-tight" style={{ color: '#e2e8f0' }}>
                         {formatDateDisplay(date)}
                       </div>
                     </div>
                   </CalendarDemo>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-l border-slate-100 focus:outline-none transition-all"
+                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:text-lime-400 border-l focus:outline-none transition-all"
+                    style={{ borderColor: '#1e293b' }}
                     onClick={() => shiftDate(1)}
                   >
                     {'\u203A'}
@@ -678,14 +672,16 @@ export default function AdminPage() {
               </div>
               <div className="w-full md:w-auto flex gap-2">
                 <button
-                  className="bg-slate-800 hover:bg-slate-900 text-white px-8 flex-1 md:flex-none md:w-auto h-11 rounded-2xl shadow-xl shadow-slate-800/20 font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                  className="px-8 flex-1 md:flex-none md:w-auto h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                  style={{ background: '#a3e635', color: '#020617' }}
                   onClick={reload}
                   disabled={loading}
                 >
                   {loading ? '...' : 'ÎNCARCĂ'}
                 </button>
                 <button
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-5 flex-1 md:flex-none h-11 rounded-2xl shadow-xl shadow-amber-500/20 font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
+                  className="px-5 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
+                  style={{ background: '#f59e0b', color: '#020617' }}
                   onClick={approveAll}
                   disabled={approvingAll || loading}
                   title={`Aprobă toate rezervările pending${sport ? ` pentru ${sportLabel(sport as SportType)}` : ''} din urmăoarele 13 luni`}

@@ -11,6 +11,7 @@ import {
   OpenMatchSuccessModal,
   WhoWithModal,
 } from '../openmatch/OpenMatchModals'
+import { useTheme } from '../ThemeContext'
 
 function formatDateDisplay(iso?: string) {
   if (!iso) return ''
@@ -22,6 +23,8 @@ function formatDateDisplay(iso?: string) {
 }
 
 export default function BookingPage() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const { courtId, date, startTime, endTime } = useParams()
   const [searchParams] = useSearchParams()
   const sport = searchParams.get('sport') || 'TENNIS'
@@ -316,24 +319,31 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 w-full font-sans flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 to-teal-400"></div>
-        
+    <div
+      className="min-h-[100dvh] w-full font-sans flex flex-col items-center justify-center p-4 transition-colors"
+      style={{ background: isDark ? '#020617' : '#f6f7f4', color: isDark ? '#f8fafc' : '#0f172a' }}
+    >
+      <div
+        className="w-full max-w-[360px] rounded-[24px] shadow-xl overflow-hidden relative border"
+        style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
+      >
+        <div className="absolute top-0 inset-x-0 h-[5px]" style={{ background: `linear-gradient(90deg, ${isDark ? '#a3e635' : '#84cc16'}, #4ade80)` }}></div>
+
         {/* Header Compact */}
-        <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-10">
-          <button 
-            onClick={() => redirectToGrid()} 
-            className="group bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-2xl transition-all active:scale-90" 
+        <div className="px-5 pt-6 pb-3 border-b flex items-center justify-between sticky top-0 z-10" style={{ borderColor: isDark ? '#1e293b' : '#e2e8f0', background: isDark ? '#0f172a' : '#ffffff' }}>
+          <button
+            onClick={() => redirectToGrid()}
+            className="group w-9 h-9 rounded-[14px] transition-all active:scale-90 flex items-center justify-center"
+            style={{ background: isDark ? '#1e293b' : '#f1f5f9', color: isDark ? '#e2e8f0' : '#334155' }}
             aria-label="Înapoi la calendar"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div className="text-center">
-            <h1 className="text-xl font-black text-slate-900 tracking-tighter leading-tight">Rezervare {court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name || ''}</h1>
-            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-0.5">{displayDate} • {startTime} - {endTime}</p>
+            <h1 className="text-lg font-black tracking-tighter leading-tight" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>Rezervare {court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name || ''}</h1>
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] mt-0.5" style={{ color: '#a3e635' }}>{displayDate} • {startTime} - {endTime}</p>
           </div>
-          <div className="w-9"></div>
+          <div className="w-9" />
         </div>
 
         <form onSubmit={handleFormSubmit} className="p-5 flex flex-col gap-4">
@@ -365,14 +375,14 @@ export default function BookingPage() {
           )}
 
           {/* Summary Compact */}
-          <div className="bg-slate-50 rounded-2xl p-3.5 flex justify-between items-center border border-slate-100">
+          <div className="rounded-2xl p-3.5 flex justify-between items-center" style={{ background: isDark ? '#0b1120' : '#f8fafc' }}>
             <div>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Total de plată</p>
-              <p className="text-xl font-black text-slate-800">{totalPrice != null ? `${totalPrice.toFixed(2)} RON` : '...'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: isDark ? '#64748b' : '#64748b' }}>Total de plată</p>
+              <p className="text-xl font-black" style={{ color: '#a3e635' }}>{totalPrice != null ? `${totalPrice.toFixed(2)} RON` : '...'}</p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Durată</p>
-              <p className="text-sm font-bold text-slate-700">{minutesBetween(startTime, endTime)} min</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: '#64748b' }}>Durată</p>
+              <p className="text-sm font-bold" style={{ color: isDark ? '#e2e8f0' : '#334155' }}>{minutesBetween(startTime, endTime)} min</p>
             </div>
           </div>
 
@@ -386,31 +396,33 @@ export default function BookingPage() {
           {/* Inputs Compact */}
           <div className="space-y-3.5">
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Nume și Prenume *</label>
+              <label className="block text-[11px] font-extrabold uppercase tracking-wide mb-1.5 ml-1" style={{ color: isDark ? '#94a3b8' : '#475569' }}>Nume și Prenume *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style={{ color: '#475569' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
-                <input 
-                  className="w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 transition-all font-semibold text-slate-800" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
+                <input
+                  className="w-full h-11 border-[1.5px] rounded-xl pl-9 pr-3 text-[14px] outline-none transition-all font-semibold sa-form-input"
+                  style={{ background: isDark ? '#0b1120' : '#f8fafc', borderColor: isDark ? '#1e293b' : '#e2e8f0', color: isDark ? '#e2e8f0' : '#0f172a' }}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   placeholder="Ex. Popescu Ion"
-                  required 
+                  required
                 />
               </div>
             </div>
-            
+
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Telefon *</label>
+              <label className="block text-[11px] font-extrabold uppercase tracking-wide mb-1.5 ml-1" style={{ color: isDark ? '#94a3b8' : '#475569' }}>Telefon *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style={{ color: '#475569' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                 </div>
                 <input
                   ref={phoneInputRef}
                   type="tel"
-                  className={`w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none ${isLoggedUser && !isAdminUser ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10'} transition-all font-semibold text-slate-800`}
+                  className={`w-full h-11 border-[1.5px] rounded-xl pl-9 pr-3 text-[14px] outline-none transition-all font-semibold sa-form-input ${isLoggedUser && !isAdminUser ? 'cursor-not-allowed opacity-60' : ''}`}
+                  style={{ background: isDark ? '#0b1120' : '#f8fafc', borderColor: isDark ? '#1e293b' : '#e2e8f0', color: isDark ? '#e2e8f0' : '#0f172a' }}
                   value={phone}
                   onChange={e => (!isLoggedUser || isAdminUser) && setPhone(e.target.value)}
                   onInput={(e) => (!isLoggedUser || isAdminUser) && validatePhone(e.currentTarget)}
@@ -422,44 +434,46 @@ export default function BookingPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Email <span className="font-medium text-slate-400">(Opțional)</span></label>
+              <label className="block text-[11px] font-extrabold uppercase tracking-wide mb-1.5 ml-1" style={{ color: isDark ? '#94a3b8' : '#475569' }}>Email <span className="font-medium normal-case" style={{ color: '#475569' }}>(Opțional)</span></label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style={{ color: '#475569' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 </div>
-                <input 
-                  className="w-full h-11 border-2 border-slate-200 rounded-xl pl-9 pr-3 text-[15px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 transition-all font-semibold text-slate-800" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  type="email" 
+                <input
+                  className="w-full h-11 border-[1.5px] rounded-xl pl-9 pr-3 text-[14px] outline-none transition-all font-semibold sa-form-input"
+                  style={{ background: isDark ? '#0b1120' : '#f8fafc', borderColor: isDark ? '#1e293b' : '#e2e8f0', color: isDark ? '#e2e8f0' : '#0f172a' }}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  type="email"
                   placeholder="adresa@exemplu.ro"
                 />
               </div>
 
               {/* Midnight/Night Warning */}
               {(startTime && endTime) && (endTime === '00:00' || (endTime !== '24:00' && endTime <= startTime)) && (
-                <div className="mt-3 p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-[10px] font-black uppercase tracking-tight flex gap-2 items-center animate-pulse">
+                <div className="mt-3 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-xl text-[10px] font-black uppercase tracking-tight flex gap-2 items-center animate-pulse">
                   <span className="shrink-0 text-lg">🌙</span>
                   <span className="leading-tight text-left">Atenție: Rezervările nocturne (care depășesc miezul nopții) necesită aprobarea administratorului din motive logistice.</span>
                 </div>
               )}
 
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 ml-1 italic">
-                <span className="text-emerald-500">Informație:</span> Recomandăm completarea adresei de email pentru a primi confirmarea oficială a rezervării.
+              <p className="text-[9px] font-bold uppercase tracking-widest mt-2 ml-1 italic" style={{ color: '#64748b' }}>
+                <span style={{ color: '#a3e635' }}>Informație:</span> Recomandăm completarea adresei de email pentru a primi confirmarea oficială a rezervării.
               </p>
             </div>
           </div>
 
           <div className="pt-2">
 
-             <button 
-               className="w-full h-[52px] rounded-xl font-bold tracking-wide text-[15px] bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:bg-slate-300 disabled:shadow-none" 
-               disabled={submitting || !meetsMinDuration} 
+             <button
+               className="w-full h-[52px] rounded-[14px] font-black tracking-wide text-[15px] active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-40"
+               style={{ background: '#a3e635', color: '#020617', boxShadow: '0 8px 24px rgba(163,230,53,0.25)' }}
+               disabled={submitting || !meetsMinDuration}
                type="submit"
              >
                {submitting ? 'SE PROCESEAZĂ...' : 'CONFIRMĂ REZERVAREA'}
              </button>
-             <p className="text-[10px] text-slate-400 font-medium text-center mt-3 px-2 leading-relaxed">
+             <p className="text-[10px] font-medium text-center mt-3 px-2 leading-relaxed" style={{ color: '#64748b' }}>
                Apasând pe buton ești de acord cu prelucrarea datelor. Plata se face la locație.
              </p>
           </div>

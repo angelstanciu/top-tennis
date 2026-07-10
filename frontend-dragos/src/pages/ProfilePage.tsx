@@ -11,9 +11,12 @@ import LevelSelector from '../openmatch/LevelSelector'
 import { BookingDto, PlayerUser } from '../types'
 import { toast } from 'sonner'
 import { ConfirmModal } from '../components/ui/confirm-modal'
+import { useTheme } from '../ThemeContext'
 
 export default function ProfilePage() {
   const nav = useNavigate()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const [player, setPlayer] = useState<PlayerUser | null>(null)
   const [history, setHistory] = useState<BookingDto[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,11 +108,11 @@ export default function ProfilePage() {
   
   const rankInfo = useMemo(() => {
     if (matchesPlayed < 10) return { label: 'Bronze', color: 'from-orange-400 to-orange-700', next: 10, icon: <Shield className="w-16 h-16 text-orange-400 drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]" />, level: 1 }
-    if (matchesPlayed < 25) return { label: 'Silver', color: 'from-slate-300 to-slate-500', next: 25, icon: <Zap className="w-16 h-16 text-slate-300 drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]" />, level: 2 }
+    if (matchesPlayed < 25) return { label: 'Silver', color: 'from-slate-300 to-slate-500', next: 25, icon: <Zap className={`w-16 h-16 ${isDark ? 'text-slate-300' : 'text-slate-500'} drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]`} />, level: 2 }
     if (matchesPlayed < 55) return { label: 'Gold', color: 'from-yellow-300 to-yellow-600', next: 55, icon: <Crown className="w-16 h-16 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />, level: 3 }
     if (matchesPlayed < 105) return { label: 'Diamond', color: 'from-cyan-300 to-cyan-500', next: 105, icon: <Gem className="w-16 h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />, level: 4 }
     return { label: 'Platinum', color: 'from-indigo-400 to-purple-600', next: null, icon: <Trophy className="w-16 h-16 text-purple-400 drop-shadow-[0_0_15px_rgba(192,132,252,0.5)]" />, level: 5 }
-  }, [matchesPlayed])
+  }, [matchesPlayed, isDark])
 
   const progress = rankInfo.next ? (matchesPlayed / rankInfo.next) * 100 : 100
 
@@ -364,23 +367,23 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 gap-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 gap-6" style={{ background: isDark ? '#020617' : '#f6f7f4' }}>
       <div className="relative">
         <div className="w-16 h-16 border-4 border-lime-500/20 border-t-lime-500 rounded-full animate-spin"></div>
         <div className="absolute inset-0 flex items-center justify-center text-lime-500 font-black">S</div>
       </div>
-      <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizare Profil...</p>
+      <p className="font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Sincronizare Profil...</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-lime-500/30 overflow-x-hidden" style={{ fontFamily: 'Outfit, sans-serif' }}>
-      
+    <div className="min-h-screen font-sans selection:bg-lime-500/30 overflow-x-hidden" style={{ fontFamily: 'Outfit, sans-serif', background: isDark ? '#020617' : '#f6f7f4', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+
       {/* Premium Background Layer */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#0f172a,transparent)] opacity-60" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] blend-overlay" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-800/50 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#0f172a,transparent)]" style={{ opacity: isDark ? 0.6 : 0.08 }} />
+        {isDark && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] blend-overlay" />}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${isDark ? 'rgba(30,41,59,0.5)' : 'rgba(226,232,240,0.8)'}, transparent)` }} />
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-12">
@@ -397,23 +400,25 @@ export default function ProfilePage() {
               <span className="text-black font-black text-xl md:text-2xl italic">S</span>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">
+              <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
                 STAR<span className="text-lime-400">ARENA</span>
               </h1>
-              <p className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Premium Hub</p>
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.2em] mt-0.5" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Premium Hub</p>
             </div>
           </motion.div>
 
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={() => nav('/securitate')}
-              className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-slate-400 hover:text-blue-400 shadow-2xl backdrop-blur-xl"
+              className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-2xl backdrop-blur-xl"
+              style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}`, color: isDark ? '#94a3b8' : '#64748b' }}
             >
               <Shield className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={handleLogout}
-              className="px-6 h-12 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-2 hover:bg-rose-500/10 transition-all text-rose-500/70 hover:text-rose-400 shadow-2xl backdrop-blur-xl font-bold text-xs uppercase tracking-widest"
+              className="px-6 h-12 rounded-2xl flex items-center gap-2 transition-all shadow-2xl backdrop-blur-xl font-bold text-xs uppercase tracking-widest"
+              style={{ background: isDark ? 'rgba(244,63,94,0.05)' : 'rgba(244,63,94,0.06)', border: `1px solid ${isDark ? 'rgba(244,63,94,0.1)' : 'rgba(244,63,94,0.15)'}`, color: isDark ? 'rgba(244,63,94,0.7)' : '#e11d48' }}
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Deconectare</span>
@@ -471,23 +476,23 @@ export default function ProfilePage() {
             animate={{ opacity: 1, y: 0 }}
             className="md:col-span-2 relative group"
           >
-            <div className="relative h-full bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 overflow-hidden">
+            <div className="relative h-full backdrop-blur-3xl rounded-[2.5rem] p-8 md:p-12 overflow-hidden" style={{ background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}>
               <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              
+
               <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
                 {/* Avatar Section */}
                 <div className="relative">
                   <div className="absolute -inset-4 bg-gradient-to-tr from-lime-500/20 to-sky-500/20 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
-                  <div className="relative w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] overflow-hidden border-2 border-white/10 shadow-2xl bg-slate-800 p-1 flex items-center justify-center group/avatar">
+                  <div className="relative w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] overflow-hidden shadow-2xl p-1 flex items-center justify-center group/avatar" style={{ border: `2px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, background: isDark ? '#1e293b' : '#f1f5f9' }}>
                     {player?.avatarUrl ? (
-                      <img 
+                      <img
                         src={player.avatarUrl}
-                        alt="Avatar" 
+                        alt="Avatar"
                         className="w-full h-full object-cover rounded-[2.2rem]"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-[2.2rem] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                        <span className="text-5xl font-black text-white/50 tracking-widest">{getInitials(player?.fullName || '')}</span>
+                      <div className="w-full h-full rounded-[2.2rem] flex items-center justify-center" style={{ background: isDark ? 'linear-gradient(to bottom right, #334155, #0f172a)' : 'linear-gradient(to bottom right, #cbd5e1, #94a3b8)' }}>
+                        <span className="text-5xl font-black tracking-widest" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.8)' }}>{getInitials(player?.fullName || '')}</span>
                       </div>
                     )}
                     <label className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
@@ -501,21 +506,24 @@ export default function ProfilePage() {
                 <div className="flex-1 text-center md:text-left space-y-4">
                   {isEditing ? (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                       <input 
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-center md:text-left text-2xl font-black text-white focus:border-lime-500 outline-none transition-all"
+                       <input
+                        className="w-full rounded-2xl px-6 py-4 text-center md:text-left text-2xl font-black focus:border-lime-500 outline-none transition-all"
+                        style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#ffffff' : '#0f172a' }}
                         value={editForm.fullName}
                         onChange={e => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
                         placeholder="Nume Complet"
                       />
                       <div className="flex flex-col gap-4">
-                        <input 
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all font-mono"
+                        <input
+                          className="w-full rounded-2xl px-4 py-4 text-sm font-bold focus:border-lime-500 outline-none transition-all font-mono"
+                          style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                           value={editForm.phoneNumber}
                           onChange={e => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
                           placeholder="Telefon"
                         />
-                        <input 
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                        <input
+                          className="w-full rounded-2xl px-4 py-4 text-sm font-bold focus:border-lime-500 outline-none transition-all"
+                          style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                           value={editForm.email}
                           onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="Email"
@@ -524,15 +532,17 @@ export default function ProfilePage() {
 
                       {/* Added Missing Fields: Age, Gender, Sport */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input 
+                        <input
                           type="number"
-                          className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                          className="rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime-500 outline-none transition-all"
+                          style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                           value={editForm.age || ''}
                           onChange={e => setEditForm(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
                           placeholder="Vârstă"
                         />
-                        <select 
-                          className="bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                        <select
+                          className="rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime-500 outline-none transition-all"
+                          style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                           value={editForm.gender}
                           onChange={e => setEditForm(prev => ({ ...prev, gender: e.target.value }))}
                         >
@@ -543,8 +553,9 @@ export default function ProfilePage() {
                         </select>
                       </div>
 
-                      <select 
-                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-slate-300 focus:border-lime-500 outline-none transition-all"
+                      <select
+                        className="w-full rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime-500 outline-none transition-all"
+                        style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                         value={editForm.preferredSport}
                         onChange={e => setEditForm(prev => ({ ...prev, preferredSport: e.target.value }))}
                       >
@@ -555,17 +566,19 @@ export default function ProfilePage() {
                       </select>
 
                       <div className="flex gap-4">
-                        <button 
+                        <button
                           onClick={handleSaveProfile}
                           disabled={saving}
-                          className="flex-1 bg-lime-500 hover:bg-lime-400 text-black px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                          className="flex-1 bg-lime-500 hover:bg-lime-400 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                          style={{ color: '#020617' }}
                         >
                           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           Salveaza
                         </button>
-                        <button 
+                        <button
                           onClick={() => setIsEditing(false)}
-                          className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black transition-all"
+                          className="px-6 py-4 rounded-2xl font-black transition-all"
+                          style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', color: isDark ? '#ffffff' : '#0f172a' }}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -574,31 +587,33 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       <div className="space-y-1">
-                        <motion.h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+                        <motion.h2 className="text-4xl md:text-5xl font-black tracking-tighter" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
                           {player?.fullName || 'Jucător Pro'}
                         </motion.h2>
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 opacity-60">
-                           <span className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">{player?.phoneNumber || 'Fără telefon'}</span>
+                           <span className="text-xs font-bold font-mono tracking-widest uppercase" style={{ color: isDark ? '#cbd5e1' : '#334155' }}>{player?.phoneNumber || 'Fără telefon'}</span>
                            {player?.email && (
                              <>
-                               <div className="w-1 h-1 rounded-full bg-slate-700" />
-                               <span className="text-xs font-bold text-slate-400 italic break-all md:break-words line-clamp-1 hover:line-clamp-none transition-all cursor-help">{player.email}</span>
+                               <div className="w-1 h-1 rounded-full" style={{ background: isDark ? '#334155' : '#cbd5e1' }} />
+                               <span className="text-xs font-bold italic break-all md:break-words line-clamp-1 hover:line-clamp-none transition-all cursor-help" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>{player.email}</span>
                              </>
                            )}
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4">
-                        <button 
+                        <button
                           onClick={() => setIsEditing(true)}
-                          className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-300 hover:bg-white/10 hover:text-white transition-all group/edit"
+                          className="flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all group/edit"
+                          style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                         >
                           <Edit2 className="w-3.5 h-3.5 group-hover/edit:rotate-12 transition-transform" />
                           Editează Profil
                         </button>
-                        <button 
+                        <button
                           onClick={() => nav('/rezerva')}
-                          className="flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-400 text-black rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                          className="flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-400 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                          style={{ color: '#020617' }}
                         >
                           <Calendar className="w-3.5 h-3.5" />
                           Rezervă meci
@@ -616,13 +631,14 @@ export default function ProfilePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-slate-950/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center group hover:border-sky-500/30 transition-all duration-700 h-full min-h-[300px]"
+            className="backdrop-blur-3xl rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center group hover:border-sky-500/30 transition-all duration-700 h-full min-h-[300px]"
+            style={{ background: isDark ? 'rgba(2,6,23,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}
           >
             <div className="w-20 h-20 rounded-3xl bg-sky-500/10 flex items-center justify-center text-sky-400 border border-sky-500/10 mb-6 group-hover:scale-110 group-hover:bg-sky-500/20 transition-all duration-500">
               <Target className="w-10 h-10" />
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Meciuri Finalizate</p>
-            <span className="text-7xl font-black text-white tracking-tighter">{matchesPlayed}</span>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Meciuri Finalizate</p>
+            <span className="text-7xl font-black tracking-tighter" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{matchesPlayed}</span>
             <div className="mt-6 px-4 py-2 bg-sky-500/5 rounded-xl border border-sky-500/10">
                <span className="text-[10px] font-bold text-sky-500 uppercase tracking-widest">
                  {matchesPlayed === 0 ? 'Te așteptăm pe teren' : 'Performanță Excelentă'}
@@ -632,11 +648,12 @@ export default function ProfilePage() {
 
 
           {/* Pro Ranking Progress Card */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="md:col-span-2 bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group shadow-2xl"
+            className="md:col-span-2 backdrop-blur-3xl rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group shadow-2xl"
+            style={{ background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}
           >
             <div className={`absolute inset-0 bg-gradient-to-r ${rankInfo.color} opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700`} />
             
@@ -644,8 +661,8 @@ export default function ProfilePage() {
               {/* Circular Premium Progress */}
               <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
                 <svg className="w-full h-full -rotate-90 filter drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                  <circle cx="88" cy="88" r="80" className="fill-none stroke-slate-800/50 stroke-[8]" />
-                  <motion.circle 
+                  <circle cx="88" cy="88" r="80" className="fill-none stroke-[8]" style={{ stroke: isDark ? 'rgba(30,41,59,0.5)' : '#e2e8f0' }} />
+                  <motion.circle
                     cx="88" cy="88" r="80" 
                     className={`fill-none stroke-[10] stroke-current ${rankInfo.color.split(' ')[1].replace('to-', 'text-')}`}
                     strokeDasharray={502.6}
@@ -657,7 +674,7 @@ export default function ProfilePage() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center group-hover:scale-110 transition-transform duration-700">
                    <div className="text-6xl mb-1">{rankInfo.icon}</div>
-                   <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Status Curent</div>
+                   <div className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(15,23,42,0.35)' }}>Status Curent</div>
                 </div>
               </div>
 
@@ -667,7 +684,7 @@ export default function ProfilePage() {
                     <Star className="w-4 h-4 fill-white" />
                     <span className="text-xs font-black uppercase tracking-widest">NIVEL {rankInfo.label}</span>
                   </div>
-                  <h3 className="text-3xl font-black text-white leading-tight">
+                  <h3 className="text-3xl font-black leading-tight" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
                     {matchesPlayed === 0 ? (
                       <>
                         Descoperă pasiunea <br />
@@ -681,20 +698,20 @@ export default function ProfilePage() {
                     )}
                   </h3>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Meciuri Contorizate</p>
-                      <p className="text-xl font-black text-white">{matchesPlayed} <span className="text-slate-500 text-sm">/ {rankInfo.next || matchesPlayed}</span></p>
+                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Meciuri Contorizate</p>
+                      <p className="text-xl font-black" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{matchesPlayed} <span className="text-sm" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>/ {rankInfo.next || matchesPlayed}</span></p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mastery</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Mastery</p>
                       <p className="text-xl font-black text-lime-400">{Math.round(progress)}%</p>
                     </div>
                   </div>
-                  <div className="h-4 w-full bg-black/40 rounded-full border border-white/5 p-1 relative overflow-hidden">
-                    <motion.div 
+                  <div className="h-4 w-full rounded-full p-1 relative overflow-hidden" style={{ background: isDark ? 'rgba(0,0,0,0.4)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}>
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
                       className={`h-full rounded-full bg-gradient-to-r ${rankInfo.color} relative overflow-hidden`}
@@ -703,9 +720,9 @@ export default function ProfilePage() {
                     </motion.div>
                   </div>
                   {rankInfo.next && (
-                    <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2 justify-center md:justify-start">
+                    <p className="text-[11px] font-bold flex items-center gap-2 justify-center md:justify-start" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>
                       <ArrowRight className="w-3.5 h-3.5 text-lime-500" />
-                      Mai ai nevoie de <span className="text-white">{rankInfo.next - matchesPlayed}</span> meciuri pentru noul rang
+                      Mai ai nevoie de <span style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{rankInfo.next - matchesPlayed}</span> meciuri pentru noul rang
                     </p>
                   )}
                 </div>
@@ -714,11 +731,12 @@ export default function ProfilePage() {
           </motion.div>
 
           {/* Sport Favorit Detail Card */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="group relative bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center overflow-hidden h-full shadow-2xl"
+            className="group relative backdrop-blur-3xl rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center overflow-hidden h-full shadow-2xl"
+            style={{ background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}
           >
             <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-lime-500/5 rounded-full blur-3xl" />
             
@@ -727,8 +745,8 @@ export default function ProfilePage() {
                 <div className="text-4xl">{sports.find(s => s.id === player?.preferredSport)?.icon || '🎾'}</div>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Sport Favorit</p>
-                <h3 className="text-2xl font-black text-white tracking-widest uppercase">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Sport Favorit</p>
+                <h3 className="text-2xl font-black tracking-widest uppercase" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
                   {sports.find(s => s.id === player?.preferredSport)?.label || 'Nespecificat'}
                 </h3>
               </div>
@@ -752,15 +770,16 @@ export default function ProfilePage() {
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-lime-400" />
-                <h3 className="text-xl font-black text-white tracking-widest uppercase">Rezervări Active</h3>
+                <h3 className="text-xl font-black tracking-widest uppercase" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>Rezervări Active</h3>
               </div>
               <div className="grid grid-cols-1 gap-6">
                 {activeBookings.map((item, idx) => (
-                  <motion.div 
+                  <motion.div
                     key={item.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="group relative bg-slate-900/60 backdrop-blur-3xl border border-lime-500/10 rounded-3xl p-5 flex flex-col md:flex-row items-center gap-6 hover:border-lime-500/30 transition-all duration-500 shadow-xl"
+                    className="group relative backdrop-blur-3xl rounded-3xl p-5 flex flex-col md:flex-row items-center gap-6 transition-all duration-500 shadow-xl"
+                    style={{ background: isDark ? 'rgba(15,23,42,0.6)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(163,230,53,0.1)' : 'rgba(132,204,22,0.25)'}` }}
                   >
                     <div className="flex items-center gap-5 flex-1 w-full">
                       <div className="w-16 h-16 shrink-0 bg-lime-500 rounded-2xl flex flex-col items-center justify-center shadow-lg">
@@ -774,35 +793,36 @@ export default function ProfilePage() {
                       <div className="flex-1 text-center md:text-left">
                         <div className="flex items-center justify-center md:justify-start gap-2 mb-0.5">
                           <span className="text-[9px] font-black text-lime-500 uppercase tracking-widest bg-lime-500/10 px-2 py-0.5 rounded-full">Viitor</span>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>
                             Teren {item.court?.name} {item.court?.indoor ? '• Indoor' : '• Exterior'}
                           </span>
                         </div>
-                        <h4 className="text-xl font-black text-white tracking-tight leading-none uppercase">
-                           {item.court?.sportType === 'TENNIS' ? 'Tenis' : 
-                            item.court?.sportType === 'PADEL' ? 'Padel' : 
-                            item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 
+                        <h4 className="text-xl font-black tracking-tight leading-none uppercase" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
+                           {item.court?.sportType === 'TENNIS' ? 'Tenis' :
+                            item.court?.sportType === 'PADEL' ? 'Padel' :
+                            item.court?.sportType === 'BASKETBALL' ? 'Baschet' :
                             (item.court?.sportType as any) === 'FOOTBALL' || item.court?.sportType === 'FOOTVOLLEY' ? 'Tenis de picior' : 'Sport'}
                          </h4>
-                         <div className="flex items-center justify-center md:justify-start gap-4 text-slate-400 font-mono mt-1.5">
+                         <div className="flex items-center justify-center md:justify-start gap-4 font-mono mt-1.5" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
                            <div className="flex items-center gap-1.5">
-                             <Clock className="w-3 h-3 text-slate-600" />
+                             <Clock className="w-3 h-3" style={{ color: isDark ? '#475569' : '#94a3b8' }} />
                              <span className="text-[10px] font-bold tracking-wider">{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
                            </div>
                          </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto">
-                      <a 
-                        href={getLocationLink(item.court)} 
-                        target="_blank" 
+                      <a
+                        href={getLocationLink(item.court)}
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 md:flex-none px-4 py-3 bg-white/5 border border-white/5 text-slate-300 hover:bg-white/10 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        className="flex-1 md:flex-none px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}`, color: isDark ? '#cbd5e1' : '#334155' }}
                       >
                          <MapPin className="w-3 h-3" />
                          Locație
                       </a>
-                      <button 
+                      <button
                         onClick={() => {
                           if (isCancellable(item.bookingDate, item.startTime)) {
                             handleCancelClick(item.id)
@@ -812,8 +832,9 @@ export default function ProfilePage() {
                         className={`flex-1 md:flex-none px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
                           isCancellable(item.bookingDate, item.startTime)
                             ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-95'
-                            : 'bg-slate-800 border border-white/5 text-slate-500 cursor-not-allowed'
+                            : 'cursor-not-allowed'
                         }`}
+                        style={!isCancellable(item.bookingDate, item.startTime) ? { background: isDark ? '#1e293b' : '#e2e8f0', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}`, color: isDark ? '#64748b' : '#94a3b8' } : undefined}
                         title={!isCancellable(item.bookingDate, item.startTime) ? "Anularea este posibilă cu maxim 24h înainte" : ""}
                       >
                          Anulează
@@ -827,11 +848,11 @@ export default function ProfilePage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-10">
             <div>
-              <h3 className="text-3xl font-black text-white tracking-widest uppercase text-center sm:text-left">Istoric Activitate</h3>
-              <p className="text-xs font-bold text-slate-500 mt-1 text-center sm:text-left">Meciurile tale trecute</p>
+              <h3 className="text-3xl font-black tracking-widest uppercase text-center sm:text-left" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>Istoric Activitate</h3>
+              <p className="text-xs font-bold mt-1 text-center sm:text-left" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Meciurile tale trecute</p>
             </div>
             {pastBookings.length > 3 && (
-              <button 
+              <button
                 onClick={() => setShowAllHistory(!showAllHistory)}
                 className="w-full sm:w-auto text-[10px] font-black text-lime-400 hover:text-black transition-all uppercase tracking-widest px-8 py-4 bg-lime-500/10 hover:bg-lime-500 rounded-2xl border border-lime-500/20 shadow-xl backdrop-blur-xl"
               >
@@ -843,41 +864,42 @@ export default function ProfilePage() {
           <div className="space-y-6 relative">
             <AnimatePresence mode="popLayout">
               {displayedHistory.length > 0 ? displayedHistory.map((item, idx) => (
-                <motion.div 
+                <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="group relative bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 hover:bg-slate-900/60 transition-all duration-500 hover:border-lime-500/30 shadow-xl"
+                  className="group relative backdrop-blur-3xl rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 transition-all duration-500 hover:border-lime-500/30 shadow-xl"
+                  style={{ background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}
                 >
                   <div className="flex items-center gap-6 flex-1 w-full opacity-60">
                     {/* Date Block */}
-                    <div className="w-20 h-20 shrink-0 bg-slate-950 rounded-[1.8rem] border border-white/10 flex flex-col items-center justify-center shadow-inner group-hover:bg-slate-800 transition-colors duration-500">
-                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                    <div className="w-20 h-20 shrink-0 rounded-[1.8rem] flex flex-col items-center justify-center shadow-inner transition-colors duration-500" style={{ background: isDark ? '#020617' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}>
+                       <span className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>
                          {new Date(item.bookingDate).toLocaleDateString('ro-RO', { month: 'short' })}
                        </span>
-                       <span className="text-3xl font-black text-slate-400 leading-none italic">
+                       <span className="text-3xl font-black leading-none italic" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
                          {new Date(item.bookingDate).getDate()}
                        </span>
                     </div>
 
                     <div className="flex-1 space-y-2 text-center md:text-left">
                       <div className="flex items-center justify-center md:justify-start gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${item.status === 'CANCELLED' ? 'text-rose-500 bg-rose-500/10' : 'text-slate-500 bg-slate-500/10'} px-2 py-0.5 rounded-full`}>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${item.status === 'CANCELLED' ? 'text-rose-500 bg-rose-500/10' : ''} px-2 py-0.5 rounded-full`} style={item.status !== 'CANCELLED' ? { color: isDark ? '#64748b' : '#94a3b8', background: isDark ? 'rgba(100,116,139,0.1)' : 'rgba(148,163,184,0.15)' } : undefined}>
                           {item.status === 'CANCELLED' ? 'Anulată' : 'Finalizată'}
                         </span>
-                        <div className="w-1 h-1 rounded-full bg-slate-700" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Teren {item.court?.name}</span>
+                        <div className="w-1 h-1 rounded-full" style={{ background: isDark ? '#334155' : '#cbd5e1' }} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Teren {item.court?.name}</span>
                       </div>
-                      <h4 className="text-2xl font-black text-slate-400 tracking-tight leading-none uppercase">
-                        {item.court?.sportType === 'TENNIS' ? 'Tenis' : 
-                         item.court?.sportType === 'PADEL' ? 'Padel' : 
-                         item.court?.sportType === 'BASKETBALL' ? 'Baschet' : 
+                      <h4 className="text-2xl font-black tracking-tight leading-none uppercase" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
+                        {item.court?.sportType === 'TENNIS' ? 'Tenis' :
+                         item.court?.sportType === 'PADEL' ? 'Padel' :
+                         item.court?.sportType === 'BASKETBALL' ? 'Baschet' :
                          (item.court?.sportType as any) === 'FOOTBALL' || item.court?.sportType === 'FOOTVOLLEY' ? 'Tenis de picior' : 'Sport'}
                       </h4>
-                      <div className="flex items-center justify-center md:justify-start gap-4 text-slate-500 font-mono">
+                      <div className="flex items-center justify-center md:justify-start gap-4 font-mono" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>
                         <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-600" />
+                          <Clock className="w-3.5 h-3.5" style={{ color: isDark ? '#475569' : '#94a3b8' }} />
                           <span className="text-[11px] font-bold tracking-wider">{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
                         </div>
                       </div>
@@ -885,26 +907,28 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-                    <div className="px-6 py-3 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-center justify-center shrink-0 text-center">
-                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Cost</span>
-                       <span className="text-sm font-black text-white italic">{item.price} RON</span>
+                    <div className="px-6 py-3 rounded-2xl flex flex-col items-center justify-center shrink-0 text-center" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}>
+                       <span className="text-[9px] font-black uppercase tracking-widest leading-none mb-1" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Cost</span>
+                       <span className="text-sm font-black italic" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{item.price} RON</span>
                     </div>
                   </div>
                 </motion.div>
               )) : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-20 bg-slate-900/40 rounded-[2.5rem] border border-white/5"
+                  className="text-center py-20 rounded-[2.5rem]"
+                  style={{ background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}
                 >
-                  <div className="w-24 h-24 rounded-[2.5rem] bg-slate-900/50 flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-2xl">
-                    <Calendar className="w-10 h-10 text-slate-700" />
+                  <div className="w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl" style={{ background: isDark ? 'rgba(15,23,42,0.5)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'}` }}>
+                    <Calendar className="w-10 h-10" style={{ color: isDark ? '#334155' : '#cbd5e1' }} />
                   </div>
-                  <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">Niciun meci înregistrat</h3>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-8 max-w-[200px] mx-auto leading-relaxed">Începe activitatea sportivă și rezervă primul tău meci.</p>
-                  <button 
+                  <h3 className="text-xl font-black tracking-tight mb-2 uppercase" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>Niciun meci înregistrat</h3>
+                  <p className="font-bold uppercase tracking-widest text-[10px] mb-8 max-w-[200px] mx-auto leading-relaxed" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Începe activitatea sportivă și rezervă primul tău meci.</p>
+                  <button
                     onClick={() => nav('/rezerva')}
-                    className="px-10 py-4 bg-lime-500 hover:bg-lime-400 text-black font-black rounded-2xl transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-xs tracking-widest"
+                    className="px-10 py-4 bg-lime-500 hover:bg-lime-400 font-black rounded-2xl transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-xs tracking-widest"
+                    style={{ color: '#020617' }}
                   >
                     RESERVĂ ACUM
                   </button>
@@ -922,27 +946,29 @@ export default function ProfilePage() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[110] flex items-center justify-center px-4 backdrop-blur-md bg-black/60"
             >
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl text-center"
+                className="w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-center"
+                style={{ background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}
               >
                 <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <X className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Anulezi rezervarea?</h3>
-                <p className="text-slate-400 text-sm font-medium mb-8">
+                <h3 className="text-xl font-black uppercase tracking-tight mb-2" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>Anulezi rezervarea?</h3>
+                <p className="text-sm font-medium mb-8" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
                   Această acțiune este ireversibilă. Poți anula doar cu cel puțin <span className="text-rose-400 font-bold">24 ore</span> înainte. Ești sigur?
                 </p>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => setShowCancelModal(false)}
-                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
+                    className="flex-1 py-4 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
+                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', color: isDark ? '#ffffff' : '#0f172a' }}
                   >
                     Nu, înapoi
                   </button>
-                  <button 
+                  <button
                     onClick={confirmCancel}
                     className="flex-1 py-4 bg-rose-500 hover:bg-rose-400 text-white rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
                   >
@@ -963,27 +989,28 @@ export default function ProfilePage() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[100] flex items-center justify-center px-4 backdrop-blur-md bg-black/60"
             >
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="w-full max-w-md bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden"
+                className="w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden"
+                style={{ background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}
               >
                 {/* Background Decor */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-lime-500/10 rounded-full blur-3xl" />
-                
+
                 <div className="relative z-10">
                   <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500 mb-6 mx-auto">
                     <Shield className="w-8 h-8" />
                   </div>
-                  
-                  <h3 className="text-2xl font-black text-white text-center tracking-tight mb-2 uppercase">
+
+                  <h3 className="text-2xl font-black text-center tracking-tight mb-2 uppercase" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
                     {isVerificationOnly ? 'Verifică Numărul' : 'Revendică Numărul'}
                   </h3>
-                  <p className="text-slate-400 text-center text-sm font-medium mb-8 leading-relaxed">
-                    {isVerificationOnly ? 
-                      <>Îți vom trimite un cod prin SMS la numărul <span className="text-white font-bold">{claimPhone}</span> pentru a-l verifica.</> : 
-                      <>Numărul <span className="text-white font-bold">{claimPhone}</span> este legat de un alt cont. Îl poți transfera pe acest cont verificându-l prin SMS.</>}
+                  <p className="text-center text-sm font-medium mb-8 leading-relaxed" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
+                    {isVerificationOnly ?
+                      <>Îți vom trimite un cod prin SMS la numărul <span className="font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{claimPhone}</span> pentru a-l verifica.</> :
+                      <>Numărul <span className="font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{claimPhone}</span> este legat de un alt cont. Îl poți transfera pe acest cont verificându-l prin SMS.</>}
                   </p>
 
                   <div className="space-y-6">
@@ -1009,10 +1036,11 @@ export default function ProfilePage() {
                         <p className="text-slate-500 text-center text-xs font-bold uppercase tracking-widest">
                           Pasul 2 din 2 — Introdu codul primit
                         </p>
-                        <input 
+                        <input
                           type="text"
                           placeholder="Cod OTP din SMS"
-                          className="w-full bg-slate-950 border border-white/10 rounded-2xl px-6 py-4 text-center text-lg font-black tracking-[0.5em] focus:border-lime-500 outline-none transition-all placeholder:tracking-normal placeholder:font-bold placeholder:text-slate-700"
+                          className="w-full rounded-2xl px-6 py-4 text-center text-lg font-black tracking-[0.5em] focus:border-lime-500 outline-none transition-all placeholder:tracking-normal placeholder:font-bold"
+                          style={{ background: isDark ? '#020617' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, color: isDark ? '#f8fafc' : '#0f172a' }}
                           value={claimOtp}
                           onChange={e => setClaimOtp(e.target.value)}
                           autoFocus
@@ -1042,9 +1070,10 @@ export default function ProfilePage() {
                       </p>
                     )}
 
-                    <button 
+                    <button
                       onClick={() => setShowClaimModal(false)}
-                      className="w-full py-3 text-slate-500 hover:text-white font-bold text-[10px] tracking-widest uppercase transition-colors"
+                      className="w-full py-3 font-bold text-[10px] tracking-widest uppercase transition-colors"
+                      style={{ color: isDark ? '#64748b' : '#94a3b8' }}
                     >
                       ANULEAZĂ
                     </button>

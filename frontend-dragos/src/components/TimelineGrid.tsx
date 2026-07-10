@@ -1,6 +1,38 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AvailabilityDto, calculateGranularPrice } from '../types'
+import { useTheme } from '../ThemeContext'
+
+const GRID_TOKENS = {
+  dark: {
+    free: { background: 'rgba(163,230,53,0.1)', borderTop: '1px solid rgba(163,230,53,0.18)' },
+    selected: { background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.35)' },
+    booked: { background: 'rgba(244,63,94,0.24)', border: '1px solid rgba(251,113,133,0.5)', name: '#ffe4e6', time: 'rgba(255,228,230,0.65)' },
+    pending: { background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.45)', text: '#fef3c7', time: 'rgba(254,243,199,0.65)' },
+    timeCol: { background: '#0b1120', color: '#cbd5e1' },
+    headerCell: { background: '#0b1120', borderBottom: '1px solid #334155' },
+    outdoor: { background: 'rgba(56,189,248,0.18)', color: '#7dd3fc' },
+    indoor: { background: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
+    hatch: 'rgba(148,163,184,0.22)',
+    legendUnavailableBorder: '#475569',
+    border: '#263349',
+    cellBorder: '#263349',
+  },
+  light: {
+    free: { background: 'rgba(132,204,22,0.09)', borderTop: '1px solid #e2e8f0' },
+    selected: { background: '#84cc16', color: '#0f172a', boxShadow: '0 4px 18px rgba(132,204,22,0.3)' },
+    booked: { background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', name: '#be123c', time: 'rgba(190,18,60,0.6)' },
+    pending: { background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', text: '#b45309', time: 'rgba(180,83,9,0.65)' },
+    timeCol: { background: '#f8fafc', color: '#475569' },
+    headerCell: { background: '#ffffff', borderBottom: '1px solid #cbd5e1' },
+    outdoor: { background: '#e0f2fe', color: '#0284c7' },
+    indoor: { background: '#fef3c7', color: '#b45309' },
+    hatch: 'rgba(148,163,184,0.3)',
+    legendUnavailableBorder: '#94a3b8',
+    border: '#e2e8f0',
+    cellBorder: '#e2e8f0',
+  },
+}
 
 function todayISO() {
   const d = new Date()
@@ -25,6 +57,12 @@ function timeToMinutes(t: string) {
   return h * 60 + m
 }
 
+// Normalized court close time, or null when the court runs non-stop (23:59 = no limit).
+function courtCloseLimitOf(closeTime?: string) {
+  const normalizedClose = (closeTime || '23:59').substring(0, 5)
+  return normalizedClose === '23:59' ? null : normalizedClose
+}
+
 function enumerateSlots(start: string, end: string) {
   const out: string[] = []
   let [h, m] = start.split(':').map(Number)
@@ -46,7 +84,6 @@ type TimelineGridProps = {
   onReserve?: (courtId?: number, start?: string, end?: string) => void
   clearSignal?: number
   flat?: boolean
-  scrollContainerRef?: React.RefObject<HTMLDivElement>
   onAdminClick?: (courtId: number, startTime: string, endTime: string, booking?: any) => void
   player?: any // ADDED: to know if user is logged in
   isAdmin?: boolean
@@ -158,6 +195,9 @@ function BookingLabelBlock({
   isBlocked,
   playerMatchesCount,
   onClick,
+  timeColor,
+  unavailableOverlays,
+  hatchColor,
 }: {
   label: string
   timeRange?: string
@@ -167,74 +207,88 @@ function BookingLabelBlock({
   isBlocked?: boolean
   playerMatchesCount?: number
   onClick?: () => void
+  timeColor?: string
+  // Sub-ranges (as % of this block's own height) that also fall in an
+  // "unavailable" window (e.g. already past) — rendered as a striped overlay
+  // on top of the block's own background, never replacing it.
+  unavailableOverlays?: { topPct: number; heightPct: number }[]
+  hatchColor?: string
 }) {
   // For long blocks, we want the text to appear centered and truncated if necessary
   const displayText = label
 
   return (
     <div
-      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
+      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} relative flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
       style={style}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
     >
-      <div
-        className="text-white font-bold truncate w-full text-center px-2"
-        style={{
-          fontSize: isBlocked ? "13px" : "12px",
-          lineHeight: 1.2,
-          textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          letterSpacing: '0.01em',
-        }}
-      >
-        {displayText}
+      {unavailableOverlays?.map((seg, idx) => (
+        <div
+          key={`unavail-${idx}`}
+          className="absolute left-0 right-0"
+          style={{
+            top: `${seg.topPct}%`,
+            height: `${seg.heightPct}%`,
+            backgroundImage: `repeating-linear-gradient(45deg, ${hatchColor} 0, ${hatchColor} 10px, transparent 10px, transparent 20px)`,
+          }}
+        />
+      ))}
+      <div className={`relative z-[1] flex flex-col ${vertical ? '' : 'items-center'} w-full`}>
+        <div
+          className="font-extrabold truncate w-full text-center px-2"
+          style={{
+            fontSize: isBlocked ? "13px" : "13px",
+            lineHeight: 1.2,
+            letterSpacing: '0.01em',
+            color: 'inherit',
+          }}
+        >
+          {displayText}
+        </div>
+        {playerMatchesCount !== undefined && playerMatchesCount !== null && (
+          <div className="mt-0.5 scale-75 transform-gpu opacity-90">
+               {(() => {
+                  const RANKS = [
+                    { name: 'Bronze', min: 0, max: 6, color: 'bg-orange-400/10 text-orange-600 border-orange-400/20' },
+                    { name: 'Silver', min: 7, max: 19, color: 'bg-slate-200 text-slate-600 border-slate-300' },
+                    { name: 'Gold', min: 20, max: 49, color: 'bg-amber-100 text-amber-600 border-amber-200' },
+                    { name: 'Diamond', min: 50, max: 99, color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
+                    { name: 'Platinum', min: 100, max: Infinity, color: 'bg-purple-100 text-purple-600 border-purple-200' }
+                  ];
+                  const r = RANKS.find(rank => playerMatchesCount >= rank.min && playerMatchesCount <= rank.max) || RANKS[0];
+                  return (
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black tracking-tighter uppercase border ${r.color}`}>
+                      {r.name}
+                    </span>
+                  );
+               })()}
+          </div>
+        )}
+        {timeRange && (
+          <div
+            className="truncate w-full text-center mt-0.5 font-semibold"
+            style={timeColor ? { fontSize: "10px", lineHeight: 1.2, color: timeColor } : { fontSize: "10px", lineHeight: 1.2, color: 'inherit', opacity: 0.75 }}
+          >
+            {timeRange}
+          </div>
+        )}
       </div>
-      {playerMatchesCount !== undefined && playerMatchesCount !== null && (
-        <div className="mt-0.5 scale-75 transform-gpu opacity-90">
-             {(() => {
-                const RANKS = [
-                  { name: 'Bronze', min: 0, max: 6, color: 'bg-orange-400/10 text-orange-600 border-orange-400/20' },
-                  { name: 'Silver', min: 7, max: 19, color: 'bg-slate-200 text-slate-600 border-slate-300' },
-                  { name: 'Gold', min: 20, max: 49, color: 'bg-amber-100 text-amber-600 border-amber-200' },
-                  { name: 'Diamond', min: 50, max: 99, color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
-                  { name: 'Platinum', min: 100, max: Infinity, color: 'bg-purple-100 text-purple-600 border-purple-200' }
-                ];
-                const r = RANKS.find(rank => playerMatchesCount >= rank.min && playerMatchesCount <= rank.max) || RANKS[0];
-                return (
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black tracking-tighter uppercase border ${r.color}`}>
-                    {r.name}
-                  </span>
-                );
-             })()}
-        </div>
-      )}
-      {timeRange && !isBlocked && (
-        <div
-          className="text-white/80 truncate w-full text-center mt-0.5"
-          style={{ fontSize: "10px", lineHeight: 1.2 }}
-        >
-          {timeRange}
-        </div>
-      )}
-      {timeRange && isBlocked && (
-        <div
-          className="text-white/90 truncate w-full text-center mt-0.5 font-semibold tracking-wider"
-          style={{ fontSize: "11px", lineHeight: 1.2 }}
-        >
-          {timeRange}
-        </div>
-      )}
     </div>
   )
 }
 
 export default function TimelineGrid({
-  data, date, onHover, onSelectionChange, onReserve, clearSignal, flat, scrollContainerRef,
+  data, date, onHover, onSelectionChange, onReserve, clearSignal, flat,
   onAdminClick,
   player,
   isAdmin,
   onOpenMatchClick
 }: TimelineGridProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const T = GRID_TOKENS[theme]
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
   const minOpen = '00:00'
@@ -262,16 +316,6 @@ export default function TimelineGrid({
     });
   }, [data]);
 
-  // Responsive: use mobile layout under 768px
-  const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
-  useEffect(() => {
-    function onResize() { setIsMobile(window.innerWidth < 768) }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  const colWidth = isMobile ? 48 : 60 // px per 30 mins (desktop only)
-  const leftColWidth = isMobile ? 180 : 240
-
   // Selection state: court-bound contiguous 30-min slots
   const [selCourtId, setSelCourtId] = useState<number | null>(null)
   const [selStart, setSelStart] = useState<string | null>(null)
@@ -281,6 +325,15 @@ export default function TimelineGrid({
   const [reserveWarnFading, setReserveWarnFading] = useState(false)
   const reserveWarnHideTimer = useRef<any>(null)
   const reserveWarnFadeTimer = useRef<any>(null)
+
+  // Forces a re-render every minute so slots that just crossed into the past
+  // pick up the "unavailable/striped" styling live, without needing a reload
+  // or an unrelated data refetch to happen to trigger it.
+  const [, setMinuteTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setMinuteTick(t => t + 1), 30 * 1000)
+    return () => clearInterval(id)
+  }, [])
 
   // Reset selection on date changes or data refresh
   useEffect(() => {
@@ -431,28 +484,12 @@ export default function TimelineGrid({
   // Past time disabling
   const todayStr = todayISO()
   const nowTime = new Date().toTimeString().slice(0,5) // HH:mm
+  const isTickPast = (t: string) => (date < todayStr) || (date === todayStr && t < nowTime)
 
-  const scrollRef = useRef<HTMLDivElement>(null)
   const mobileBodyRef = useRef<HTMLDivElement>(null)
   const popupRowIndexRef = useRef<number>(0)
 
-  // Custom smooth scroll helpers (slower ~600ms)
-  function animateScrollX(el: HTMLElement, toLeft: number, duration = 600, onStep?: (left: number) => void) {
-    const start = el.scrollLeft
-    const change = toLeft - start
-    if (Math.abs(change) < 1) { el.scrollLeft = toLeft; onStep?.(toLeft); return }
-    const startTime = performance.now()
-    const ease = (t: number) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2
-    const step = (now: number) => {
-      const pct = Math.min(1, (now - startTime) / duration)
-      const val = start + change * ease(pct)
-      el.scrollLeft = val
-      onStep?.(val)
-      if (pct < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-  }
-
+  // Custom smooth scroll helper (slower ~600ms)
   function animateScrollY(el: HTMLElement, toTop: number, duration = 600) {
     const start = el.scrollTop
     const change = toTop - start
@@ -467,11 +504,9 @@ export default function TimelineGrid({
     }
     requestAnimationFrame(step)
   }
-  // Close popup and reset horizontal scroll on date/data changes
+  // Close popup on date/data changes
   useEffect(() => {
     setPopup(null)
-    if (scrollRef.current) scrollRef.current.scrollLeft = 0
-    if (headerRef.current) headerRef.current.scrollLeft = 0
   }, [date, data.length])
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setPopup(null) }
@@ -500,306 +535,148 @@ export default function TimelineGrid({
     onSelectionChange?.(null, null, null, false, false)
   }, [clearSignal])
 
+  // Shared: index of the first clickable (free, within hours, not past) slot across all courts
+  function findFirstClickableIndex() {
+    for (let i = 0; i < ticks.length - 1; i++) {
+      const t = ticks[i]
+      const next = ticks[i+1]
+      const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
+      if (isPast) continue
+      for (const row of sortedData) {
+        const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
+        const isWithin = t >= row.court.openTime && next <= closeTime
+        if (!isWithin) continue
+        const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
+        if (!isBooked) return i
+      }
+    }
+    return null
+  }
+
+  function scrollToFirstAvailable(idx: number | null, duration = 600) {
+    const container = mobileBodyRef.current
+    if (!container) return
+    if (idx !== null) {
+      if (idx <= 1) return
+      const targetIndex = Math.max(0, idx - 1)
+      const rowEl = container.querySelector(`[data-row-index="${targetIndex}"]`) as HTMLElement | null
+      if (rowEl) {
+        const top = Math.max(0, rowEl.offsetTop)
+        animateScrollY(container, top, duration)
+      }
+    } else {
+      const maxTop = container.scrollHeight - container.clientHeight
+      animateScrollY(container, Math.max(0, maxTop), duration)
+    }
+  }
+
   // Auto-scroll to first clickable interval
   useEffect(() => {
     if (!data.length) return
-    const findFirstClickableIndex = () => {
-      for (let i = 0; i < ticks.length - 1; i++) {
-        const t = ticks[i]
-        const next = ticks[i+1]
-        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-        if (isPast) continue
-        for (const row of sortedData) {
-          const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
-          const isWithin = t >= row.court.openTime && next <= closeTime
-          if (!isWithin) continue
-          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
-          if (!isBooked) return i
-        }
-      }
-      return null
-    }
-    const idx = findFirstClickableIndex()
-    if (idx !== null) {
-      if (idx <= 1) return
-      if (!isMobile) {
-        // Desktop: scroll horizontally to the first available slot
-        const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
-        if (scrollRef.current) {
-          animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
-            if (headerRef.current) headerRef.current.scrollLeft = left
-          })
-        }
-      } else if (isMobile) {
-        // Mobile: vertical scroll to align the first free row at the top
-        const container = mobileBodyRef.current
-        if (!container) return
-        const targetIndex = Math.max(0, idx - 1)
-        const rowEl = container.querySelector(`[data-row-index="${targetIndex}"]`) as HTMLElement | null
-        if (rowEl) {
-          const top = Math.max(0, rowEl.offsetTop)
-          animateScrollY(container, top, 600)
-        }
-      }
-    } else {
-      if (!isMobile) {
-        const maxLeft = scrollRef.current ? scrollRef.current.scrollWidth - scrollRef.current.clientWidth : 0
-        if (scrollRef.current) {
-          animateScrollX(scrollRef.current, Math.max(0, maxLeft), 600, (left) => {
-            if (headerRef.current) headerRef.current.scrollLeft = left
-          })
-        }
-      } else if (isMobile) {
-        const container = mobileBodyRef.current
-        if (container) {
-          const maxTop = container.scrollHeight - container.clientHeight
-          animateScrollY(container, Math.max(0, maxTop), 600)
-        }
-      }
-    }
-  }, [date, sportLabel(data[0]?.court.sportType || ''), ticks.length, isMobile]) // Stabilized dependencies
+    scrollToFirstAvailable(findFirstClickableIndex())
+  }, [date, sportLabel(data[0]?.court.sportType || ''), ticks.length]) // Stabilized dependencies
 
   // Reinforce auto-scroll shortly after layout settles
   useEffect(() => {
     if (!data.length) return
-    const findFirstClickableIndex = () => {
-      for (let i = 0; i < ticks.length - 1; i++) {
-        const t = ticks[i]
-        const next = ticks[i+1]
-        const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-        if (isPast) continue
-        for (const row of sortedData) {
-          const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
-          const isWithin = t >= row.court.openTime && next <= closeTime
-          if (!isWithin) continue
-          const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
-          if (!isBooked) return i
-        }
-      }
-      return null
-    }
     const idx = findFirstClickableIndex()
-    const timer = setTimeout(() => {
-      if (idx !== null) {
-        if (idx <= 1) return
-        if (!isMobile) {
-          const targetLeft = Math.max(0, idx * colWidth - colWidth * 2)
-          if (scrollRef.current) {
-            animateScrollX(scrollRef.current, targetLeft, 600, (left) => {
-              if (headerRef.current) headerRef.current.scrollLeft = left
-            })
-          }
-        } else if (isMobile) {
-          const container = mobileBodyRef.current
-          const targetIndex = Math.max(0, idx - 1)
-          const rowEl = container?.querySelector(`[data-row-index="${targetIndex}"]`) as HTMLElement | null
-          if (container && rowEl) {
-            const top = Math.max(0, rowEl.offsetTop)
-            animateScrollY(container, top, 600)
-          }
-        }
-      } else {
-        if (!isMobile) {
-          const maxLeft = scrollRef.current ? scrollRef.current.scrollWidth - scrollRef.current.clientWidth : 0
-          if (scrollRef.current) {
-            animateScrollX(scrollRef.current, Math.max(0, maxLeft), 600, (left) => {
-              if (headerRef.current) headerRef.current.scrollLeft = left
-            })
-          }
-        } else if (isMobile) {
-          const container = mobileBodyRef.current
-          if (container) {
-            const maxTop = container.scrollHeight - container.clientHeight
-            animateScrollY(container, Math.max(0, maxTop), 600)
-          }
-        }
-      }
-    }, 80)
+    const timer = setTimeout(() => scrollToFirstAvailable(idx), 80)
     return () => clearTimeout(timer)
-  }, [date, sportLabel(data[0]?.court.sportType || ''), isMobile, colWidth]) // Stabilized dependencies
-
-  const headerRef = useRef<HTMLDivElement>(null)
-
-  // Desktop layout (original)
-  function renderDesktop() {
-    return (
-      <div className={flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'}>
-        <div className={flat ? '' : 'rounded'}>
-          <div className="flex">
-            <div className="px-3 py-2 font-semibold shrink-0" style={{ width: leftColWidth }}>Terenuri</div>
-            <div className="overflow-hidden" ref={headerRef}>
-              <div className="grid" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
-                {ticks.slice(0, -1).map((t,i) => (
-                  <div key={t} className="text-xs text-slate-500 px-1 py-2 border-l border-slate-300 bg-white text-left">
-                    {i % 2 === 0 ? timeLabel(t) : ''}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="flex">
-            <div className="shrink-0" style={{ width: leftColWidth }}>
-              {sortedData.map((row) => (
-                <div key={`name-${row.court.id}`} className="border-t border-slate-300 px-2 py-0.5 text-sm h-[56px] flex flex-col items-start justify-center bg-white">
-                  <div className="font-bold text-slate-800 text-xs leading-snug">{sportLabel(row.court.sportType)} {row.court.name}</div>
-                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${row.court.indoor ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
-                      {row.court.indoor ? 'Indoor' : 'Exterior'}
-                    </span>
-                    {row.court.indoor && row.court.sportType === 'PADEL' && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white shadow-sm ring-1 ring-rose-600/20">
-                        Star Arena 2
-                      </span>
-                    )}
-                    {row.court.heated && !row.court.indoor && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Încălzit</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div ref={scrollRef} className="overflow-x-auto flex-1" onScroll={() => { if (headerRef.current && scrollRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft }}>
-              <div className="relative">
-                {/* Past time overlay - single element at grid level for aligned stripes */}
-                {(() => {
-                  const pastCount = ticks.slice(0, -1).filter(t => (date < todayStr) || (date === todayStr && t < nowTime)).length
-                  if (pastCount <= 0) return null
-                  const totalCols = ticks.length - 1
-                  const pastWidth = pastCount * colWidth
-                  return (
-                    <div
-                      className="absolute top-0 left-0 bottom-0 pointer-events-none z-20"
-                      style={{
-                        width: pastWidth,
-                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.3) 0, rgba(148,163,184,0.3) 8px, transparent 8px, transparent 16px)',
-                      }}
-                    />
-                  )
-                })()}
-                {sortedData.map((row, rowIndex) => {
-                  const booked = row.booked.map(b => ({ start: b.start, end: b.end, status: b.status }))
-                  const blocks = SHOW_BOOKING_LABELS ? computeBookingBlocks(row.booked as any, tickIndex, isAdmin) : []
-                  const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
-                  const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
-                  return (
-                    <div key={row.court.id} className="relative h-[56px]">
-                      <div className="grid h-full items-stretch" style={{ gridTemplateColumns: `repeat(${ticks.length-1}, ${colWidth}px)` }}>
-                        {ticks.slice(0,-1).map((t, i) => {
-                          const next = ticks[i+1]
-                          const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
-                          const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
-                          const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
-                          const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                          const clickable = !isBooked && !isPast && !isOutsideHours
-
-                          let stateClass = ''
-                          const isBlocked = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
-                          const isPending = booked.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
-                          const unavailable = isPast || isBooked || isBlocked || isPending || isOutsideHours
-                          if (selected && !unavailable) stateClass = 'bg-emerald-300'
-                          else if (isBlocked) stateClass = 'bg-slate-200'
-                          else if (isPending) stateClass = 'bg-amber-200 animate-pulse'
-                          else if (isBooked) stateClass = 'bg-rose-200'
-                          else if (isPast || isOutsideHours) stateClass = 'bg-slate-100'
-                          else stateClass = 'bg-emerald-50 hover:bg-emerald-100'
-
-                          const disabledClass = unavailable ? 'cursor-not-allowed' : 'cursor-pointer'
-                          const outsideHoursStyle = isOutsideHours ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 7px, transparent 7px, transparent 14px)' } : undefined
-
-                          return (
-                            <div
-                              key={`${row.court.id}-${t}`}
-                              className={`h-full border-t border-l border-slate-200/60 ${stateClass} ${disabledClass} ${onAdminClick && isBooked ? 'ring-inset hover:ring-2 hover:ring-rose-400' : ''}`}
-                              style={outsideHoursStyle}
-                              onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBooked ? 'OCUPAT' : isPast ? 'INDISPONIBIL' : 'LIBER'}`)}
-                              onClick={(e) => {
-                                if (onAdminClick && isBooked) {
-                                  const b = booked.find(br => !(br.end <= t || br.start >= next))
-                                  onAdminClick(row.court.id, t, next, b)
-                                  return
-                                }
-                                if (!clickable) return
-                                if (selCourtId && selStart && selEnd) {
-                                  setSelCourtId(null); setSelStart(null); setSelEnd(null)
-                                  onSelectionChange?.(null, null, null, false, false)
-                                }
-                                // Note: Premature gap validation removed here to allow selecting 90+ min intervals even if 60 mins is invalid
-                                popupRowIndexRef.current = rowIndex
-                                handleCellClick(row.court.id, t, next, isBooked, true, (booked as any))
-                                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                                setPopup({ courtId: row.court.id, rowIndex, startIndex: i, left: rect.left + window.scrollX, top: rect.bottom + window.scrollY })
-                              }}
-                              title={`${row.court.name} • ${t} - ${next}`}
-                            />
-                          )
-                        })}
-                      </div>
-                      {SHOW_BOOKING_LABELS && blocks.length > 0 && (
-                        <div className="absolute inset-0 pointer-events-none">
-                          {blocks.map((block, blockIndex) => (
-                            <BookingLabelBlock
-                              key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                              className={`absolute inset-y-0 flex items-center rounded-sm ${block.openMatchId != null ? 'bg-lime-600/50 border border-lime-500/60 hover:bg-lime-600/60' : block.status === 'BLOCKED' ? 'bg-slate-700/80 shadow-inner' : block.status === 'PENDING_APPROVAL' ? 'bg-amber-500/40 border border-amber-600/30' : 'bg-rose-500/20'}`}
-                              style={{
-                                width: (block.endIndex - block.startIndex) * colWidth - 2,
-                                left: block.startIndex * colWidth + 1,
-                              }}
-                              label={block.status === 'PENDING_APPROVAL' ? `⏳ ${block.label}` : block.label}
-                              timeRange={block.timeRange}
-                              isBlocked={block.status === 'BLOCKED'}
-                              playerMatchesCount={block.playerMatchesCount}
-                              onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
-                                matchId: block.openMatchId!,
-                                spotsLeft: block.openMatchSpotsLeft ?? 0,
-                                takeover: !!block.openMatchTakeover,
-                                courtId: row.court.id,
-                                start: block.rawStart || '',
-                                end: block.rawEnd || '',
-                              }) : undefined}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  }, [date, sportLabel(data[0]?.court.sportType || '')]) // Stabilized dependencies
 
   // Mobile layout (transposed): rows = times, columns = courts
-  function renderMobile() {
+  function renderGrid() {
     const sortedDataList = sortedData
     const courtCount = sortedDataList.length
     const timeColWidth = 56
     const minCourtWidth = 85 // Prevent squashing
     const rowHeight = 44
-    const pastRows = (date < todayStr)
-      ? (ticks.length - 1)
-      : (date === todayStr ? ticks.slice(0, -1).filter(t => t < nowTime).length : 0)
     const blocksByCourt = SHOW_BOOKING_LABELS
       ? sortedDataList.map(row => computeBookingBlocks(row.booked as any, tickIndex, isAdmin))
       : []
+
+    // Background segments (free / unavailable / selected) merged into contiguous
+    // per-column runs, so each visual state renders as one rounded shape instead
+    // of a seam of individually-square 30-min cells.
+    type BgSegment = { startIndex: number; endIndex: number; kind: 'free' | 'unavailable' | 'selected' }
+    const bgSegmentsByCourt: BgSegment[][] = sortedDataList.map((row, colIndex) => {
+      const N = ticks.length - 1
+      const covered = new Array(N).fill(false)
+      const blocks = blocksByCourt[colIndex] || []
+      blocks.forEach(b => {
+        for (let i = Math.max(0, b.startIndex); i < Math.min(N, b.endIndex); i++) covered[i] = true
+      })
+      const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
+      const segments: BgSegment[] = []
+      let curKind: BgSegment['kind'] | null = null
+      let curStart = -1
+      for (let i = 0; i < N; i++) {
+        if (covered[i]) {
+          if (curKind) { segments.push({ startIndex: curStart, endIndex: i, kind: curKind }); curKind = null }
+          continue
+        }
+        const t = ticks[i]
+        const next = ticks[i + 1]
+        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        const isSelectedHere = selCourtId === row.court.id && isSelectedSlot(t, next)
+        const kind: BgSegment['kind'] = isSelectedHere ? 'selected' : (isTickPast(t) || isOutsideHours) ? 'unavailable' : 'free'
+        if (kind !== curKind) {
+          if (curKind) segments.push({ startIndex: curStart, endIndex: i, kind: curKind })
+          curKind = kind
+          curStart = i
+        }
+      }
+      if (curKind) segments.push({ startIndex: curStart, endIndex: N, kind: curKind })
+      return segments
+    })
+
+    // For each booking block, the sub-ranges (in the same tick-index space as the
+    // block itself) that overlap an "unavailable" window — past time or outside
+    // operating hours. Rendered as a striped overlay on top of the block's own
+    // color, never shortening/splitting the block or replacing its background.
+    type OverlaySeg = { startIndex: number; endIndex: number }
+    const blockOverlaysByCourt: OverlaySeg[][][] = sortedDataList.map((row, colIndex) => {
+      const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
+      const blocks = blocksByCourt[colIndex] || []
+      return blocks.map(block => {
+        const segs: OverlaySeg[] = []
+        let curStart = -1
+        for (let i = block.startIndex; i < block.endIndex; i++) {
+          const t = ticks[i]
+          const next = ticks[i + 1]
+          const isUnavailable = isTickPast(t) || (courtCloseLimit != null && next > courtCloseLimit)
+          if (isUnavailable) {
+            if (curStart === -1) curStart = i
+          } else if (curStart !== -1) {
+            segs.push({ startIndex: curStart, endIndex: i })
+            curStart = -1
+          }
+        }
+        if (curStart !== -1) segs.push({ startIndex: curStart, endIndex: block.endIndex })
+        return segs
+      })
+    })
 
     return (
       <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col overflow-hidden`}>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
           <div style={{ minWidth: timeColWidth + courtCount * minCourtWidth }}>
             {/* Header: corner cell + court names */}
-            <div className="grid sticky top-0 z-40 bg-white border-b border-slate-300" 
-                 style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)` }}>
-              <div className="sticky left-0 z-50 px-2 py-3 text-[10px] font-black bg-white text-slate-400 uppercase tracking-tighter border-r border-slate-200">
-                Ora
+            <div className="grid sticky top-0 z-40 border-b"
+                 style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)`, background: T.headerCell.background, borderColor: T.headerCell.borderBottom.replace('1px solid ', '') }}>
+              <div className="sticky left-0 z-50 px-2 py-3 text-[10px] font-black uppercase tracking-tighter border-r flex items-center justify-center text-center" style={{ background: T.headerCell.background, color: '#94a3b8', borderColor: T.cellBorder }}>
+                ORA
               </div>
               {sortedData.map(row => (
-                <div key={`head-${row.court.id}`} 
-                     className="px-1 py-1.5 text-[10px] font-bold bg-white border-l border-slate-200 text-center leading-tight flex flex-col items-center justify-center gap-0.5"
-                     style={{ minWidth: minCourtWidth }}>
-                  <span className="text-slate-950 truncate w-full px-0.5">{row.court.name}</span>
+                <div key={`head-${row.court.id}`}
+                     className="px-1 py-2 text-[13px] font-bold border-l text-center leading-tight flex flex-col items-center justify-center gap-0.5"
+                     style={{ minWidth: minCourtWidth, background: T.headerCell.background, borderColor: T.cellBorder }}>
+                  <span className="truncate w-full px-0.5 font-extrabold" style={{ color: theme === 'dark' ? '#ffffff' : '#0f172a' }}>{row.court.name}</span>
                   <div className="flex flex-col gap-0.5">
-                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase ${row.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
+                    <span
+                      className="text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase tracking-[0.08em]"
+                      style={row.court.indoor ? T.indoor : T.outdoor}
+                    >
                       {row.court.indoor ? 'INDOOR' : 'OUTDOOR'}
                     </span>
                     {row.court.indoor && row.court.sportType === 'PADEL' && (
@@ -814,19 +691,64 @@ export default function TimelineGrid({
 
             {/* Body: each row is a time slot */}
             <div className="relative">
-              {pastRows > 0 && (
-                <div
-                  className="absolute z-20"
-                  style={{
-                    top: 0,
-                    left: timeColWidth,
-                    right: 0,
-                    height: Math.max(0, pastRows * rowHeight - 1),
-                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.3) 0, rgba(148,163,184,0.3) 12px, rgba(255,255,255,0) 12px, rgba(255,255,255,0) 24px)',
-                    pointerEvents: 'none',
-                  }}
-                />
-              )}
+              {/* Background segments: free / unavailable / selected, merged per contiguous run so each state renders as one rounded shape */}
+              <div
+                className="absolute inset-0 pointer-events-none z-[5] grid"
+                style={{
+                  gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)`,
+                  gridTemplateRows: `repeat(${ticks.length - 1}, ${rowHeight}px)`,
+                }}
+              >
+                {sortedData.map((row, colIndex) => (
+                  <React.Fragment key={`bg-col-${row.court.id}`}>
+                    {bgSegmentsByCourt[colIndex].map((seg, segIndex) => {
+                      const segStyle: React.CSSProperties = seg.kind === 'selected'
+                        ? { background: T.selected.background, boxShadow: T.selected.boxShadow }
+                        : seg.kind === 'unavailable'
+                          ? { background: theme === 'dark' ? '#0f172a' : '#f1f5f9', backgroundImage: `repeating-linear-gradient(45deg, ${T.hatch} 0, ${T.hatch} 10px, transparent 10px, transparent 20px)` }
+                          : { background: T.free.background }
+                      return (
+                        <div
+                          key={`bg-${row.court.id}-${seg.startIndex}-${seg.endIndex}`}
+                          className="rounded-[10px] mx-[3px] my-[2px] flex flex-col items-center justify-center overflow-hidden"
+                          style={{
+                            gridColumn: colIndex + 2,
+                            gridRow: `${seg.startIndex + 1} / ${seg.endIndex + 1}`,
+                            ...segStyle,
+                          }}
+                        >
+                          {seg.kind === 'selected' && (
+                            <>
+                              <div className="font-black truncate w-full text-center px-2" style={{ fontSize: 13, color: T.selected.color }}>Selecția ta</div>
+                              <div className="truncate w-full text-center mt-0.5 font-bold" style={{ fontSize: 10, color: T.selected.color, opacity: 0.75 }}>
+                                {ticks[seg.startIndex]} – {ticks[seg.endIndex]}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Linie subțire între fiecare interval de 30 min, ca în UI-ul vechi.
+                  Layer separat (nu per-segment) ca să se alinieze exact cu liniile
+                  reale din coloana ORA, fără artefact la marginile blocurilor unite,
+                  și acoperit de blocurile de rezervare (z peste segmentele de fundal,
+                  sub etichetele de rezervare). */}
+              <div
+                className="absolute pointer-events-none z-[7]"
+                style={{
+                  left: timeColWidth,
+                  right: 0,
+                  top: 0,
+                  height: (ticks.length - 1) * rowHeight,
+                  backgroundImage: `linear-gradient(to bottom, ${T.cellBorder} 1px, transparent 1px)`,
+                  backgroundSize: `100% ${rowHeight}px`,
+                  backgroundRepeat: 'repeat',
+                }}
+              />
 
               {SHOW_BOOKING_LABELS && (
                 <div
@@ -838,17 +760,38 @@ export default function TimelineGrid({
                 >
                   {sortedData.map((row, colIndex) => (
                     <React.Fragment key={`label-col-${row.court.id}`}>
-                      {blocksByCourt[colIndex].map((block, blockIndex) => (
+                      {blocksByCourt[colIndex].map((block, blockIndex) => {
+                        const isOpenMatch = block.openMatchId != null
+                        const isPendingBlock = block.status === 'PENDING_APPROVAL'
+                        const blockStyle: React.CSSProperties = isOpenMatch
+                          ? { background: 'rgba(163,230,53,0.3)', border: '1px solid rgba(163,230,53,0.5)' }
+                          : isPendingBlock
+                            ? { background: T.pending.background, border: T.pending.border, color: T.pending.text }
+                            : { background: T.booked.background, border: T.booked.border, color: T.booked.name }
+                        // Portions of this block that are also "unavailable" (already past,
+                        // or past the court's closing time) get a striped overlay on top of
+                        // the block's own color instead of replacing it — the reservation
+                        // itself is never shortened, moved, or split.
+                        const totalRows = block.endIndex - block.startIndex
+                        const overlays = (blockOverlaysByCourt[colIndex]?.[blockIndex] || []).map(seg => ({
+                          topPct: ((seg.startIndex - block.startIndex) / totalRows) * 100,
+                          heightPct: ((seg.endIndex - seg.startIndex) / totalRows) * 100,
+                        }))
+                        return (
                         <BookingLabelBlock
                           key={`${row.court.id}-${block.startIndex}-${block.endIndex}-${blockIndex}`}
-                          className={`${block.openMatchId != null ? 'bg-lime-600/50 border border-lime-500/60' : 'bg-rose-500/20'} rounded-sm`}
+                          className="rounded-[10px] mx-[3px] my-[2px]"
                           style={{
                             gridColumn: colIndex + 2,
                             gridRow: `${block.startIndex + 1} / ${block.endIndex + 1}`,
+                            ...blockStyle,
                           }}
-                          label={block.label}
+                          label={isPendingBlock ? `⏳ ${block.label}` : block.label}
                           timeRange={block.timeRange}
+                          timeColor={isOpenMatch ? undefined : isPendingBlock ? T.pending.time : T.booked.time}
                           playerMatchesCount={block.playerMatchesCount}
+                          unavailableOverlays={overlays}
+                          hatchColor={T.hatch}
                           onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
                             matchId: block.openMatchId!,
                             spotsLeft: block.openMatchSpotsLeft ?? 0,
@@ -858,7 +801,7 @@ export default function TimelineGrid({
                             end: block.rawEnd || '',
                           }) : undefined}
                         />
-                      ))}
+                      )})}
                     </React.Fragment>
                   ))}
                 </div>
@@ -866,13 +809,16 @@ export default function TimelineGrid({
 
               {ticks.slice(0,-1).map((t, i) => {
                 const next = ticks[i+1]
-                const isPastRow = (date < todayStr) || (date === todayStr && t < nowTime)
+                const isPastRow = isTickPast(t)
                 return (
                   <div key={`time-${t}`} className="relative z-0 grid items-stretch" 
                        style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)`, height: rowHeight }} 
                        data-row-index={i}>
                     {/* Time label (Sticky) */}
-                    <div className="sticky left-0 z-30 px-2 py-2 text-[11px] font-bold border-t border-slate-200 bg-slate-50 text-slate-600 flex items-center border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                    <div
+                      className="sticky left-0 z-30 px-2 pt-0.5 text-[12px] font-bold border-t flex items-start justify-center text-center border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)]"
+                      style={{ background: T.timeCol.background, color: T.timeCol.color, borderColor: T.cellBorder }}
+                    >
                       {timeLabel(t)}
                     </div>
                     {/* Cells per court */}
@@ -882,25 +828,16 @@ export default function TimelineGrid({
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
                       const isPending = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
-                      const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
-                  const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
+                      const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
                       const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
                       const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours
                       const clickable = !unavailable
-                      let stateClass = ''
-                      if (selected && !unavailable) stateClass = 'bg-emerald-300'
-                      else if (isBlocked) stateClass = 'bg-slate-200'
-                      else if (isPending) stateClass = 'bg-amber-100 animate-pulse'
-                      else if (isBooked) stateClass = 'bg-rose-200'
-                      else if (isPastRow || isOutsideHours) stateClass = 'bg-slate-100'
-                      else stateClass = 'bg-emerald-50 hover:bg-emerald-100 transition-colors'
                       const disabledClass = unavailable && !onAdminClick ? 'cursor-not-allowed pointer-events-none' : (unavailable ? 'cursor-not-allowed' : 'cursor-pointer')
-                      const outsideHoursStyle = isOutsideHours ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 7px, transparent 7px, transparent 14px)' } : undefined
                       return (
                         <div
                           key={`cell-${row.court.id}-${t}`}
-                          className={`border-t border-l border-slate-200 ${stateClass} ${disabledClass}`}
-                          style={{ minWidth: minCourtWidth, ...outsideHoursStyle }}
+                          className={`h-full transition-colors ${disabledClass}`}
+                          style={{ minWidth: minCourtWidth, boxSizing: 'border-box', borderLeft: `1px solid ${T.cellBorder}` }}
                           onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : 'LIBER'}`)}
                           onClick={(e) => {
                             if (onAdminClick && isBooked) {
@@ -1096,18 +1033,20 @@ export default function TimelineGrid({
           }}
         />
         <div
-          className="fixed z-[10000] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-sm flex flex-col overflow-hidden rounded-[2.5rem] bg-white shadow-2xl shadow-black/20 ring-1 ring-slate-900/5 transition-all p-1"
+          className="fixed z-[10000] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-sm flex flex-col overflow-hidden rounded-[2.5rem] shadow-2xl shadow-black/20 transition-all p-1 border"
+          style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-slate-50/50 backdrop-blur-md px-6 py-6 border-b border-slate-100 flex flex-col gap-1">
+          <div className="backdrop-blur-md px-6 py-6 border-b flex flex-col gap-1" style={{ background: isDark ? '#0b1120' : 'rgba(248,250,252,0.5)', borderColor: isDark ? '#1e293b' : '#f1f5f9' }}>
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">{row.court.name}</h3>
-                <p className="text-sm font-medium text-slate-500">{sportLabel(row.court.sportType)} • {row.court.indoor ? 'Indoor' : 'Outdoor'}</p>
+                <h3 className="text-xl font-black tracking-tight" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{row.court.name}</h3>
+                <p className="text-sm font-medium" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>{sportLabel(row.court.sportType)} • {row.court.indoor ? 'Indoor' : 'Outdoor'}</p>
               </div>
-              <button 
+              <button
                 onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200/50 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                style={{ background: isDark ? '#1e293b' : 'rgba(226,232,240,0.5)', color: isDark ? '#94a3b8' : '#64748b' }}
               >
                 ✕
               </button>
@@ -1116,14 +1055,14 @@ export default function TimelineGrid({
 
           <div className="p-4 flex flex-col gap-3">
              {!player && !onAdminClick && (
-               <div className="bg-lime-50 rounded-2xl p-4 border border-lime-100 text-[13px] font-medium text-lime-900 leading-relaxed shadow-sm">
-                 💡 Ai deja un cont? 
-                 <a href="/cont" className="text-lime-700 underline font-black mx-1 hover:text-lime-600 transition-colors">Loghează-te</a> 
+               <div className="rounded-2xl p-4 border text-[13px] font-medium leading-relaxed shadow-sm" style={{ background: 'rgba(163,230,53,0.1)', borderColor: 'rgba(163,230,53,0.25)', color: isDark ? '#e2e8f0' : '#365314' }}>
+                 💡 Ai deja un cont?
+                 <a href="/cont" className="underline font-black mx-1 hover:opacity-80 transition-colors" style={{ color: '#84cc16' }}>Loghează-te</a>
                  pentru a rezerva mai rapid și pentru a-ți urmări progresul în Rank-ul STAR ARENA!
                </div>
              )}
 
-             <div className="bg-emerald-50 text-emerald-700 px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border border-emerald-100/50 mb-1">
+             <div className="px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border mb-1" style={{ background: 'rgba(163,230,53,0.1)', borderColor: 'rgba(163,230,53,0.2)', color: isDark ? '#a3e635' : '#4d7c0f' }}>
                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider opacity-70 leading-tight shrink">
                   {selEnd ? 'Interval selectat' : 'Începere la ora'}
                 </span>
@@ -1133,28 +1072,29 @@ export default function TimelineGrid({
              </div>
 
              {reserveWarnVisible && (
-                <div className={'mx-1 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium animate-pulse transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')}>
+                <div className={'mx-1 px-4 py-2 rounded-xl border text-xs font-medium animate-pulse transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')} style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)', color: '#f59e0b' }}>
                   Vă rugăm selectați durata dorită mai jos!
                 </div>
              )}
 
              <div className="space-y-2.5">
                 {(options.every(mins => !isRangeFree(mins)) || (selEnd && selStart && minutesBetween(selStart, selEnd) >= 60 && !selectionValid)) ? (
-                  <div className="flex flex-col gap-4 items-center text-center p-5 bg-rose-50 rounded-3xl border border-rose-200/60 mt-2 mb-2 shadow-inner">
-                    <div className="w-12 h-12 bg-rose-200/50 rounded-full flex items-center justify-center text-xl shadow-sm">⚠️</div>
-                    <p className="text-[14px] text-rose-900 font-semibold leading-relaxed">
+                  <div className="flex flex-col gap-4 items-center text-center p-5 rounded-3xl border mt-2 mb-2 shadow-inner" style={{ background: 'rgba(244,63,94,0.08)', borderColor: 'rgba(244,63,94,0.25)' }}>
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: 'rgba(244,63,94,0.15)' }}>⚠️</div>
+                    <p className="text-[14px] font-semibold leading-relaxed" style={{ color: isDark ? '#fecdd3' : '#9f1239' }}>
                       {(row.court.sportType === 'TENNIS' || row.court.sportType === 'PADEL')
                         ? <>La <strong>{sportLabel(row.court.sportType)}</strong>, rezervările trebuie să fie una după alta (fără pauză) sau să lase cel puțin <strong>1 oră și 30 de minute</strong> libere între ele.</>
                         : <>La <strong>{sportLabel(row.court.sportType)}</strong>, regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări.</>}
                     </p>
                     {(row.court.sportType !== 'TENNIS' && row.court.sportType !== 'PADEL') && (
-                      <div className="bg-white/60 p-3 rounded-2xl border border-rose-200/50 text-[13px] text-rose-800 leading-snug w-full">
+                      <div className="p-3 rounded-2xl border text-[13px] leading-snug w-full" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)', borderColor: 'rgba(244,63,94,0.2)', color: isDark ? '#fecdd3' : '#9f1239' }}>
                         {getSuggestionText()}
                       </div>
                     )}
-                    <button 
-                      onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }} 
-                      className="mt-2 w-full px-4 py-3 bg-white text-rose-700 font-black uppercase text-[11px] tracking-widest rounded-2xl border border-rose-200 shadow-sm transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
+                    <button
+                      onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }}
+                      className="mt-2 w-full px-4 py-3 font-black uppercase text-[11px] tracking-widest rounded-2xl border shadow-sm transition-all active:scale-95"
+                      style={{ background: isDark ? '#1e293b' : '#ffffff', color: '#f43f5e', borderColor: 'rgba(244,63,94,0.3)' }}
                     >
                       {selEnd && !selectionValid ? "Reselectează Intervalul" : "Am înțeles"}
                     </button>
@@ -1163,27 +1103,26 @@ export default function TimelineGrid({
                   const ok = isRangeFree(mins)
                   const isSelectedCurrent = selEnd && (timeToMinutes(selEnd) - timeToMinutes(startTime) === mins)
                   const label = mins === 60 ? '1 oră' : mins === 90 ? '1h 30m' : '2 ore'
-                  
+
                   return (
-                    <button 
-                      key={mins} 
-                      disabled={!ok} 
-                      onClick={() => choose(mins)} 
-                      className={`group relative flex w-full items-center justify-between rounded-3xl border-2 px-5 py-4 transition-all duration-300 ${
-                        isSelectedCurrent 
-                          ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-[0.98]' 
-                          : ok 
-                            ? 'border-slate-100 bg-slate-50/50 hover:border-emerald-200 hover:bg-emerald-50/30 text-slate-700 active:scale-[0.99]' 
-                            : 'border-slate-50 bg-slate-50/30 text-slate-300 opacity-50 cursor-not-allowed'
-                      }`}
+                    <button
+                      key={mins}
+                      disabled={!ok}
+                      onClick={() => choose(mins)}
+                      className="group relative flex w-full items-center justify-between rounded-3xl border-2 px-5 py-4 transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={isSelectedCurrent
+                        ? { borderColor: '#a3e635', background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.3)' }
+                        : ok
+                          ? { borderColor: isDark ? '#1e293b' : '#f1f5f9', background: isDark ? '#0b1120' : '#f8fafc', color: isDark ? '#e2e8f0' : '#334155' }
+                          : { borderColor: isDark ? '#1e293b' : '#f1f5f9', background: isDark ? 'rgba(11,17,32,0.5)' : 'rgba(248,250,252,0.5)', color: isDark ? '#475569' : '#cbd5e1' }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelectedCurrent ? 'border-white bg-white/20' : 'border-slate-200 bg-white'}`}>
-                          {isSelectedCurrent && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                        <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors" style={isSelectedCurrent ? { borderColor: '#1a2e05', background: 'rgba(26,46,5,0.15)' } : { borderColor: isDark ? '#334155' : '#e2e8f0', background: isDark ? '#0f172a' : '#ffffff' }}>
+                          {isSelectedCurrent && <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#1a2e05' }} />}
                         </div>
                         <span className="font-bold text-lg">{label}</span>
                       </div>
-                      <span className={`font-black tracking-tight ${isSelectedCurrent ? 'text-white' : 'text-slate-900 opacity-80'}`}>{priceFor(mins)}</span>
+                      <span className="font-black tracking-tight" style={{ opacity: isSelectedCurrent ? 1 : 0.8 }}>{priceFor(mins)}</span>
                     </button>
                   )
                 })}
@@ -1191,13 +1130,12 @@ export default function TimelineGrid({
 
              {!(options.every(mins => !isRangeFree(mins)) || (selEnd && selStart && minutesBetween(selStart, selEnd) >= 60 && !selectionValid)) && (
                <div className="mt-4 pt-2 flex flex-col gap-3">
-                  <button 
+                  <button
                     onClick={handleReserveClick}
-                    className={`w-full py-5 rounded-[2rem] font-black text-xl tracking-tight transition-all shadow-xl active:scale-95 ${
-                      selectionValid 
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30' 
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
+                    className="w-full py-5 rounded-[2rem] font-black text-xl tracking-tight transition-all shadow-xl active:scale-95 disabled:cursor-not-allowed"
+                    style={selectionValid
+                      ? { background: '#a3e635', color: '#020617', boxShadow: '0 8px 24px rgba(163,230,53,0.3)' }
+                      : { background: isDark ? '#1e293b' : '#e2e8f0', color: isDark ? '#475569' : '#94a3b8' }}
                   >
                     Confirmă Rezervarea
                   </button>
@@ -1214,7 +1152,7 @@ export default function TimelineGrid({
 
   return (
     <div className="h-full min-h-0">
-      {isMobile ? renderMobile() : renderDesktop()}
+      {renderGrid()}
       {renderPopup()}
     </div>
   )

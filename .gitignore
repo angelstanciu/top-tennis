@@ -53,6 +53,7 @@ coverage/
 
 # Local/sensitive stray files
 twilio_2FA_recovery_code.txt
+start_log.txt
 
 # Assistant helper files
 task*.md

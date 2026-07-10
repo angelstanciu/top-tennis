@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
+import { useTheme } from '../ThemeContext'
 
 const POSTER_SRC = '/padel-vara.jpg'
 const BOOK_HREF = '/rezerva?sport=PADEL'
@@ -15,7 +16,7 @@ const STYLES = `
   .pf-wrap {
     position: relative;
     overflow: hidden;
-    background: #020617;
+    background: var(--pf-bg, #020617);
     padding: 28px 0 18px;
   }
   /* Fundal ambiental: o copie blurată a posterului umple banda pe desktop,
@@ -36,7 +37,7 @@ const STYLES = `
     background:
       radial-gradient(50% 40% at 50% 0%, rgba(56,189,248,0.18), transparent 70%),
       radial-gradient(60% 50% at 50% 100%, rgba(163,230,53,0.10), transparent 70%),
-      linear-gradient(180deg, rgba(2,6,23,0.55) 0%, rgba(2,6,23,0.78) 100%);
+      linear-gradient(180deg, var(--pf-glow-top, rgba(2,6,23,0.55)) 0%, var(--pf-glow-bottom, rgba(2,6,23,0.78)) 100%);
   }
 
   .pf-inner {
@@ -51,31 +52,6 @@ const STYLES = `
     text-align: center;
   }
 
-  .pf-pill {
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 8px 16px;
-    background: rgba(56,189,248,0.10);
-    border: 1px solid rgba(56,189,248,0.35);
-    border-radius: 999px;
-    color: #bae6fd;
-    font-size: 12.5px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    margin-bottom: 18px;
-  }
-  .pf-pill strong { color: #a3e635; font-weight: 800; }
-  .pf-dot {
-    width: 7px; height: 7px;
-    background: #a3e635;
-    border-radius: 50%;
-    flex-shrink: 0;
-    animation: pf-pulse 1.8s ease-out infinite;
-  }
-  @keyframes pf-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(163,230,53,0.7); }
-    70%  { box-shadow: 0 0 0 8px rgba(163,230,53,0); }
-    100% { box-shadow: 0 0 0 0 rgba(163,230,53,0); }
-  }
 
   .pf-frame {
     width: 100%;
@@ -106,7 +82,7 @@ const STYLES = `
   .pf-zoom-hint {
     margin-top: 11px;
     display: inline-flex; align-items: center; gap: 6px;
-    color: #64748b;
+    color: var(--pf-hint-color, #64748b);
     font-size: 11.5px;
     font-weight: 600;
   }
@@ -170,6 +146,8 @@ const STYLES = `
 
 export default function PadelSummerFeature() {
   const [lb, setLb] = useState(false)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     if (!lb) return
@@ -178,18 +156,22 @@ export default function PadelSummerFeature() {
     return () => window.removeEventListener('keydown', onKey)
   }, [lb])
 
+  const themeVars: Record<string, string> = isDark
+    ? {}
+    : {
+        '--pf-bg': '#f6f7f4',
+        '--pf-glow-top': 'rgba(246,247,244,0.55)',
+        '--pf-glow-bottom': 'rgba(246,247,244,0.82)',
+        '--pf-hint-color': '#475569',
+      }
+
   return (
-    <section className="pf-wrap">
+    <section className="pf-wrap" style={themeVars as CSSProperties}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <div className="pf-ambient" style={{ ['--pf-poster' as any]: `url(${POSTER_SRC})` }} />
       <div className="pf-glow" />
 
       <div className="pf-inner">
-        <span className="pf-pill">
-          <span className="pf-dot" aria-hidden="true" />
-          <span>Padel Indoor &middot; <strong>Climatizat 24&deg;C</strong></span>
-        </span>
-
         <div
           className="pf-frame"
           onClick={() => setLb(true)}

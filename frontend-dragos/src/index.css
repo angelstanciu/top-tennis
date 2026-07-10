@@ -84,3 +84,8 @@ select option:disabled { color: #94a3b8; background-color: #f8fafc; }
 .glass-dark {
   @apply bg-slate-950/40 backdrop-blur-3xl border border-white/5 shadow-2xl;
 }
+
+.sa-form-input:focus {
+  border-color: rgba(163,230,53,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(163,230,53,0.08);
+}

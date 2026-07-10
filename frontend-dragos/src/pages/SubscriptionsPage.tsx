@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trophy, CheckCircle2, Star, Clock, Zap, Target } from 'lucide-react'
 import Footer from '../components/Footer'
 import { useSeo } from '../seo'
+import { useTheme } from '../ThemeContext'
 
 export default function SubscriptionsPage() {
   useSeo({
@@ -11,6 +12,8 @@ export default function SubscriptionsPage() {
     description: 'Abonamente lunare pentru padel și tenis la Star Arena Bascov, lângă Pitești. Interval fix săptămânal, preț avantajos, prioritate la rezervări.',
   })
   const nav = useNavigate()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   const subscriptions = [
     {
@@ -51,18 +54,19 @@ export default function SubscriptionsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans" style={{ fontFamily: 'Outfit, sans-serif' }}>
+    <div className="min-h-screen font-sans transition-colors" style={{ fontFamily: 'Outfit, sans-serif', background: isDark ? '#020617' : '#f6f7f4', color: isDark ? '#f1f5f9' : '#0f172a' }}>
       {/* Header */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 py-4">
+      <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-xl border-b py-4 transition-colors" style={{ background: isDark ? 'rgba(2,6,23,0.8)' : 'rgba(255,255,255,0.85)', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}>
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-4">
-          <button 
+          <button
             onClick={() => nav(-1)}
-            className="p-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-2 rounded-full transition-colors"
+            style={{ background: isDark ? '#0f172a' : '#f1f5f9', border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}`, color: isDark ? '#94a3b8' : '#64748b' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <span className="font-extrabold text-xl tracking-tighter text-white">
-            STAR<span className="text-lime-400">ARENA</span> <span className="text-slate-500 font-medium ml-2">Abonamente</span>
+          <span className="font-extrabold text-xl tracking-tighter" style={{ color: isDark ? '#fff' : '#0f172a' }}>
+            STAR<span className="text-lime-400">ARENA</span> <span className="font-medium ml-2" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>Abonamente</span>
           </span>
         </div>
       </nav>
@@ -72,52 +76,55 @@ export default function SubscriptionsPage() {
           {/* Hero Section inside Subscriptions */}
           <div className="text-center mb-16 relative">
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-lime-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-             <span className="text-lime-400 font-bold uppercase tracking-[0.2em] text-xs mb-4 block">Tarif Padel 2026</span>
+             <span className="text-lime-500 font-bold uppercase tracking-[0.2em] text-xs mb-4 block">Tarif Padel 2026</span>
              <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">
                Evoluează la <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">Nivelul Următor</span>
              </h1>
-             <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-               Te așteaptă 5 terenuri de ultimă generație <span className="text-white font-bold">PREMIER PADEL</span>, dotate cu mocheta PGR și nocturnă LED profesională.
+             <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
+               Te așteaptă 5 terenuri de ultimă generație <span className="font-bold" style={{ color: isDark ? '#fff' : '#0f172a' }}>PREMIER PADEL</span>, dotate cu mocheta PGR și nocturnă LED profesională.
              </p>
           </div>
 
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {subscriptions.map((sub, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`relative rounded-[3rem] p-8 border transition-all duration-500 hover:scale-[1.02] flex flex-col h-full bg-slate-900/40 backdrop-blur-md ${
-                  sub.highlight ? 'border-lime-500/50 shadow-2xl shadow-lime-500/10' : 'border-slate-800 hover:border-slate-700'
-                }`}
+                className="relative rounded-[3rem] p-8 border transition-all duration-500 hover:scale-[1.02] flex flex-col h-full backdrop-blur-md"
+                style={{
+                  background: isDark ? 'rgba(15,23,42,0.4)' : '#ffffff',
+                  borderColor: sub.highlight ? 'rgba(163,230,53,0.5)' : (isDark ? '#1e293b' : '#e2e8f0'),
+                  boxShadow: sub.highlight ? '0 25px 50px -12px rgba(163,230,53,0.1)' : undefined,
+                }}
               >
                 {sub.highlight && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-lime-500 text-slate-950 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
                     Recomandat
                   </div>
                 )}
-                
+
                 <div className="mb-8 text-center md:text-left">
-                  <h3 className="text-xl font-black text-white mb-1">{sub.title}</h3>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">{sub.subtitle}</p>
+                  <h3 className="text-xl font-black mb-1" style={{ color: isDark ? '#fff' : '#0f172a' }}>{sub.title}</h3>
+                  <p className="text-xs font-medium uppercase tracking-wider" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>{sub.subtitle}</p>
                 </div>
 
                 <div className="mb-8 flex flex-col items-center md:items-start">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white tracking-tighter">{sub.price}</span>
-                    <span className="text-slate-500 font-bold text-sm tracking-wide">LEI/ORĂ</span>
+                    <span className="text-4xl font-black tracking-tighter" style={{ color: isDark ? '#fff' : '#0f172a' }}>{sub.price}</span>
+                    <span className="font-bold text-sm tracking-wide" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>LEI/ORĂ</span>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-10 flex-1">
                   {sub.features.map((feat, fidx) => (
                     <div key={fidx} className="flex items-start gap-3 text-sm">
-                      <CheckCircle2 className={`w-5 h-5 shrink-0 ${sub.highlight ? 'text-lime-400' : 'text-slate-600'}`} />
-                      <span className="text-slate-300 font-medium leading-tight">{feat}</span>
+                      <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: sub.highlight ? '#a3e635' : (isDark ? '#475569' : '#94a3b8') }} />
+                      <span className="font-medium leading-tight" style={{ color: isDark ? '#cbd5e1' : '#334155' }}>{feat}</span>
                     </div>
                   ))}
                 </div>
 
-                <button 
+                <button
                   onClick={() => {
                     if (sub.requestOnly) {
                       nav(`/abonamente/cere-oferta?type=${encodeURIComponent(sub.title)}`)
@@ -125,11 +132,10 @@ export default function SubscriptionsPage() {
                       nav('/rezerva?sport=PADEL')
                     }
                   }}
-                  className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
-                    sub.highlight 
-                      ? 'bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-xl shadow-lime-500/20' 
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
-                  }`}
+                  className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all"
+                  style={sub.highlight
+                    ? { background: '#a3e635', color: '#020617', boxShadow: '0 20px 25px -5px rgba(163,230,53,0.2)' }
+                    : { background: isDark ? '#1e293b' : '#f1f5f9', color: isDark ? '#fff' : '#0f172a' }}
                 >
                   {sub.requestOnly ? 'Cere Ofertă' : 'Rezervă Acum'}
                 </button>
@@ -138,22 +144,22 @@ export default function SubscriptionsPage() {
           </div>
 
           {/* Footer Info */}
-          <div className="mt-16 p-8 rounded-[2.5rem] bg-slate-900/30 border border-slate-800/50 text-center">
-             <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-sm text-slate-400">
+          <div className="mt-16 p-8 rounded-[2.5rem] border text-center" style={{ background: isDark ? 'rgba(15,23,42,0.3)' : '#ffffff', borderColor: isDark ? 'rgba(30,41,59,0.5)' : '#e2e8f0' }}>
+             <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-sm" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
                 <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-lime-400" />
+                  <Zap className="w-5 h-5 text-lime-500" />
                   <span>Nocturnă LED profesională</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-lime-400" />
+                  <Target className="w-5 h-5 text-lime-500" />
                   <span>Mochetă oficială PGR</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-lime-400" />
+                  <Clock className="w-5 h-5 text-lime-500" />
                   <span>Acces 08:00 - 24:00</span>
                 </div>
              </div>
-             <p className="mt-6 text-[10px] text-slate-500 uppercase tracking-[0.3em] max-w-2xl mx-auto leading-relaxed">
+             <p className="mt-6 text-[10px] uppercase tracking-[0.3em] max-w-2xl mx-auto leading-relaxed" style={{ color: isDark ? '#64748b' : '#94a3b8' }}>
                * În situația în care rezervarea nu poate fi onorată din motive ce țin de administrație sau de condițiile meteo, aceasta va fi reprogramată în perioada de valabilitate.
              </p>
           </div>
