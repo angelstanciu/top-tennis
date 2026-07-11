@@ -21,12 +21,12 @@ const GRID_TOKENS = {
   light: {
     free: { background: 'rgba(132,204,22,0.18)', borderTop: '1px solid rgba(101,163,13,0.45)' },
     selected: { background: '#84cc16', color: '#0f172a', boxShadow: '0 4px 18px rgba(132,204,22,0.3)' },
-    booked: { background: 'rgba(244,63,94,0.18)', border: '1px solid rgba(244,63,94,0.5)', name: '#be123c', time: 'rgba(190,18,60,0.75)' },
-    pending: { background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.55)', text: '#b45309', time: 'rgba(180,83,9,0.8)' },
+    booked: { background: 'rgba(244,63,94,0.26)', border: '1px solid rgba(225,29,72,0.65)', name: '#9f1239', time: 'rgba(159,18,57,0.8)' },
+    pending: { background: 'rgba(245,158,11,0.28)', border: '1px solid rgba(217,119,6,0.65)', text: '#92400e', time: 'rgba(146,64,14,0.85)' },
     timeCol: { background: '#f8fafc', color: '#475569' },
     headerCell: { background: '#ffffff', borderBottom: '1px solid #cbd5e1' },
-    outdoor: { background: '#e0f2fe', color: '#0284c7' },
-    indoor: { background: '#fef3c7', color: '#b45309' },
+    outdoor: { background: '#bae6fd', color: '#0369a1' },
+    indoor: { background: '#fde68a', color: '#92400e' },
     hatch: 'rgba(100,116,139,0.4)',
     legendUnavailableBorder: '#94a3b8',
     border: '#cbd5e1',
@@ -188,6 +188,7 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
 
 function BookingLabelBlock({
   label,
+  icon,
   timeRange,
   className,
   style,
@@ -200,6 +201,12 @@ function BookingLabelBlock({
   hatchColor,
 }: {
   label: string
+  // Optional leading icon (e.g. ⏳ for pending approval), rendered as its own
+  // rotated element instead of being embedded in the label string — emoji
+  // don't get auto-rotated by text-orientation:mixed the way Latin glyphs do,
+  // so inlining one into the vertical text left it sitting upright and
+  // misaligned against the rotated name/time columns next to it.
+  icon?: string
   timeRange?: string
   className?: string
   style?: React.CSSProperties
@@ -249,7 +256,20 @@ function BookingLabelBlock({
           }}
         />
       ))}
-      <div className="relative z-[1] flex flex-row items-center justify-center gap-1 w-full h-full">
+      {icon && (
+        // Positioned independently of the flex row (not just ordered first in
+        // it) so it's pinned to the left edge, vertically centered, on every
+        // browser — mixing a plain element with vertical-rl text siblings in
+        // a flex row left it drifting above the name instead of beside it.
+        // A full-height flex column (not a top:50%/translateY trick) so the
+        // centering can't drift depending on the icon's own box size.
+        <div className="absolute left-[3px] top-0 bottom-0 z-[2] flex items-center">
+          <div style={{ transform: 'rotate(90deg)', fontSize: '11px', lineHeight: 1 }}>
+            {icon}
+          </div>
+        </div>
+      )}
+      <div className="relative z-[1] flex flex-row items-center justify-center gap-1 w-full h-full" style={icon ? { paddingLeft: 13 } : undefined}>
         <div
           className="font-extrabold"
           style={{
@@ -613,7 +633,10 @@ export default function TimelineGrid({
     })
 
     return (
-      <div className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col overflow-hidden`}>
+      <div
+        className={`${flat ? '' : 'rounded border border-sky-200 bg-sky-50 shadow-md'} h-full min-h-0 flex flex-col overflow-hidden select-none`}
+        style={{ WebkitTouchCallout: 'none' }}
+      >
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" ref={mobileBodyRef}>
           <div style={{ minWidth: timeColWidth + courtCount * minCourtWidth }}>
             {/* Header: corner cell + court names */}
@@ -741,7 +764,8 @@ export default function TimelineGrid({
                             gridRow: `${block.startIndex + 1} / ${block.endIndex + 1}`,
                             ...blockStyle,
                           }}
-                          label={isPendingBlock ? `⏳ ${block.label}` : block.label}
+                          label={block.label}
+                          icon={isPendingBlock ? '⏳' : undefined}
                           timeRange={block.timeRange}
                           timeColor={isOpenMatch ? undefined : isPendingBlock ? T.pending.time : T.booked.time}
                           playerMatchesCount={block.playerMatchesCount}
@@ -785,15 +809,23 @@ export default function TimelineGrid({
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
                       const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
                       const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
-                      const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours
+                      // Un interval liber mai scurt de 1 oră (durata minimă de rezervare) nu poate
+                      // găzdui nicio rezervare validă — nu are rost să deschidem popup-ul pentru el.
+                      const freeSegment = bgSegmentsByCourt[rowIndex]?.find(seg => seg.kind === 'free' && i >= seg.startIndex && i < seg.endIndex)
+                      const tooShortToBook = !!freeSegment && (freeSegment.endIndex - freeSegment.startIndex) * 30 < 60
+                      const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours || tooShortToBook
                       const clickable = !unavailable
-                      const disabledClass = unavailable && !onAdminClick ? 'cursor-not-allowed pointer-events-none' : (unavailable ? 'cursor-not-allowed' : 'cursor-pointer')
+                      // Nu folosim pointer-events-none aici: scoate elementul din hit-testing,
+                      // deci cursor-not-allowed nu s-ar mai afișa (browserul ar arăta cursorul
+                      // elementului de dedesubt, de obicei I-beam). Click-ul e oricum blocat
+                      // mai jos prin `if (!clickable) return`.
+                      const disabledClass = unavailable ? 'cursor-not-allowed' : 'cursor-pointer'
                       return (
                         <div
                           key={`cell-${row.court.id}-${t}`}
                           className={`h-full transition-colors ${disabledClass}`}
                           style={{ minWidth: minCourtWidth, boxSizing: 'border-box', borderLeft: `1px solid ${T.cellBorder}` }}
-                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : 'LIBER'}`)}
+                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : tooShortToBook ? 'PREA SCURT (sub 1 oră)' : 'LIBER'}`)}
                           onClick={(e) => {
                             if (onAdminClick && isBooked) {
                               const b = bookedRanges.find(br => !(br.end <= t || br.start >= next))
