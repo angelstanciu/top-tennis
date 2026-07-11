@@ -5,32 +5,32 @@ import { useTheme } from '../ThemeContext'
 
 const GRID_TOKENS = {
   dark: {
-    free: { background: 'rgba(163,230,53,0.1)', borderTop: '1px solid rgba(163,230,53,0.18)' },
+    free: { background: 'rgba(163,230,53,0.18)', borderTop: '1px solid rgba(163,230,53,0.35)' },
     selected: { background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.35)' },
-    booked: { background: 'rgba(244,63,94,0.24)', border: '1px solid rgba(251,113,133,0.5)', name: '#ffe4e6', time: 'rgba(255,228,230,0.65)' },
-    pending: { background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.45)', text: '#fef3c7', time: 'rgba(254,243,199,0.65)' },
+    booked: { background: 'rgba(244,63,94,0.34)', border: '1px solid rgba(251,113,133,0.7)', name: '#ffe4e6', time: 'rgba(255,228,230,0.8)' },
+    pending: { background: 'rgba(251,191,36,0.32)', border: '1px solid rgba(251,191,36,0.65)', text: '#fef3c7', time: 'rgba(254,243,199,0.8)' },
     timeCol: { background: '#0b1120', color: '#cbd5e1' },
     headerCell: { background: '#0b1120', borderBottom: '1px solid #334155' },
     outdoor: { background: 'rgba(56,189,248,0.18)', color: '#7dd3fc' },
     indoor: { background: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
-    hatch: 'rgba(148,163,184,0.22)',
+    hatch: 'rgba(148,163,184,0.35)',
     legendUnavailableBorder: '#475569',
     border: '#263349',
-    cellBorder: '#263349',
+    cellBorder: '#334155',
   },
   light: {
-    free: { background: 'rgba(132,204,22,0.09)', borderTop: '1px solid #e2e8f0' },
+    free: { background: 'rgba(132,204,22,0.18)', borderTop: '1px solid rgba(101,163,13,0.45)' },
     selected: { background: '#84cc16', color: '#0f172a', boxShadow: '0 4px 18px rgba(132,204,22,0.3)' },
-    booked: { background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', name: '#be123c', time: 'rgba(190,18,60,0.6)' },
-    pending: { background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', text: '#b45309', time: 'rgba(180,83,9,0.65)' },
+    booked: { background: 'rgba(244,63,94,0.18)', border: '1px solid rgba(244,63,94,0.5)', name: '#be123c', time: 'rgba(190,18,60,0.75)' },
+    pending: { background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.55)', text: '#b45309', time: 'rgba(180,83,9,0.8)' },
     timeCol: { background: '#f8fafc', color: '#475569' },
     headerCell: { background: '#ffffff', borderBottom: '1px solid #cbd5e1' },
     outdoor: { background: '#e0f2fe', color: '#0284c7' },
     indoor: { background: '#fef3c7', color: '#b45309' },
-    hatch: 'rgba(148,163,184,0.3)',
+    hatch: 'rgba(100,116,139,0.4)',
     legendUnavailableBorder: '#94a3b8',
-    border: '#e2e8f0',
-    cellBorder: '#e2e8f0',
+    border: '#cbd5e1',
+    cellBorder: '#cbd5e1',
   },
 }
 
@@ -423,11 +423,6 @@ export default function TimelineGrid({
     onSelectionChange?.(courtId, t, next, false, false)
   }
 
-  function minutesSinceMidnightStr(s: string) {
-    const [h,m] = s.split(":").map(Number)
-    return h*60 + m
-  }
-
   function isSelectedSlot(t: string, next: string) {
     if (!selStart || !selEnd) return false
     const wraps = selStart > selEnd
@@ -435,66 +430,9 @@ export default function TimelineGrid({
     return t >= selStart
   }
 
-  function leavesThirtyMinuteGap(booked: {start:string,end:string,status?:string}[], selStart: string, selEnd: string, sportType?: string, isValidationOnly: boolean = false, clickStartCell?: string, adminOverride: boolean = false): string | false {
-    if (adminOverride) return false
-    const active = booked.filter(b => b.status !== 'CANCELLED')
-    
-    const startMin = minutesSinceMidnightStr(selStart)
-    let endMin = minutesSinceMidnightStr(selEnd)
-    if (endMin < startMin) endMin += 24 * 60
-
-    // Find the free block [blockStart, blockEnd] surrounding our selection
-    let blockStart = 0 // represents grid start time in reality, approximated as 0 here
-    let blockEnd = endMin > 1440 ? 1440 + 24 * 60 : 1440
-
-    active.forEach(b => {
-      let bStart = minutesSinceMidnightStr(b.start)
-      let bEnd = minutesSinceMidnightStr(b.end)
-      if (bEnd < bStart) bEnd += 24 * 60
-      if (bStart < startMin && bStart < 1440 && endMin > 1440) bStart += 24 * 60 // Normalize next day blocks if needed
-      
-      if (bEnd <= startMin) {
-        if (bEnd > blockStart) blockStart = bEnd
-      }
-      if (bStart >= endMin) {
-        if (bStart < blockEnd) blockEnd = bStart
-      }
-    })
-
-    const gapBefore = startMin - blockStart
-    const gapAfter = blockEnd - endMin
-
-    const isTennis = sportType === 'TENNIS'
-    const isPadel = sportType === 'PADEL'
-    const isToday = date === todayISO()
-    let isLeftEdge: boolean
-    if (isToday) {
-      // Azi: left edge daca rezervarea incepe aproape de ora curenta (zona gri din stanga)
-      const nowHHMM = new Date().toTimeString().slice(0, 5)
-      isLeftEdge = gapBefore >= 10 * 60
-      if (minutesSinceMidnightStr(nowHHMM) >= startMin - gapBefore - 65) isLeftEdge = true
-    } else {
-      // Data viitoare: nu exista "grid din stanga" — regula stricta, fara exceptii de margine
-      isLeftEdge = false
-    }
-    const isRightEdge = blockEnd >= 24 * 60 - 2
-
-    // Tennis si Padel: 0 min pauza (consecutive) SAU minim 90 min pauza
-    // Margine stanga (ora curenta) si dreapta (sfarsit de zi): 30 sau 60 min permise
-    if (isTennis || isPadel) {
-      const isBeforeValid = (gapBefore === 0) || (gapBefore >= 90) || (isLeftEdge && (gapBefore === 30 || gapBefore === 60))
-      const isAfterValid = (gapAfter === 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter === 30 || gapAfter === 60))
-      if (isBeforeValid && isAfterValid) return false
-      const sportName = isTennis ? 'Tenis' : 'Padel'
-      return `La ${sportName}, intervalul liber trebuie să fie 0 (consecutive) sau minim 1h 30m. Lipeste rezervarea de meciul vecin sau lasă minim 1h 30m distanță.`
-    }
-
-    // Alte sporturi: nu se lasa goluri de exact 30 min
-    if (gapBefore === 0 || gapAfter === 0) return false
-    const standardErrorMsg = "Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora."
-    if (gapBefore === 30 && gapAfter === 30) return standardErrorMsg
-    if ((gapBefore === 30 || gapBefore === 60) && gapAfter >= 60 && !isLeftEdge) return standardErrorMsg
-    if (gapAfter === 30 && gapBefore >= 60 && !isRightEdge) return standardErrorMsg
+  // Clienții pot lăsa orice interval liber doresc între rezervări — nu mai
+  // impunem reguli de gol minim/maxim între selecție și meciurile vecine.
+  function leavesThirtyMinuteGap(_booked: {start:string,end:string,status?:string}[], _selStart: string, _selEnd: string, _sportType?: string, _isValidationOnly: boolean = false, _clickStartCell?: string, _adminOverride: boolean = false): string | false {
     return false
   }
 
@@ -723,7 +661,7 @@ export default function TimelineGrid({
                         ? { background: T.selected.background, boxShadow: T.selected.boxShadow }
                         : seg.kind === 'unavailable'
                           ? { background: theme === 'dark' ? '#0f172a' : '#f1f5f9', backgroundImage: `repeating-linear-gradient(45deg, ${T.hatch} 0, ${T.hatch} 10px, transparent 10px, transparent 20px)` }
-                          : { background: T.free.background }
+                          : { background: T.free.background, border: T.free.borderTop }
                       return (
                         <div
                           key={`bg-${row.court.id}-${seg.startIndex}-${seg.endIndex}`}

@@ -633,28 +633,12 @@ public class BookingService {
             throw new IllegalArgumentException("Durata minimă a rezervării este de 1 oră.");
         }
         
-        LocalTime effectiveStart = LocalTime.MIN;
-        if (date.equals(LocalDate.now())) {
-            LocalTime now = LocalTime.now();
-            int minute = now.getMinute();
-            int hour = now.getHour();
-            if (minute > 0 && minute <= 30) {
-                effectiveStart = LocalTime.of(hour, 30);
-            } else if (minute > 30) {
-                effectiveStart = LocalTime.of(hour + 1, 0);
-            } else {
-                effectiveStart = LocalTime.of(hour, 0);
-            }
-        }
-        
         // Court early-close restriction (e.g. court 5 tennis has no lighting → closes at 20:00)
         if (!adminOverride && court.getCloseTime() != null && court.getCloseTime().isBefore(LocalTime.of(23, 59))) {
             if (end.isAfter(court.getCloseTime())) {
                 throw new IllegalArgumentException("Terenul " + court.getName() + " se inchide la ora " + court.getCloseTime() + " (nocturna indisponibila). Va rugam alegeti un interval inainte de " + court.getCloseTime() + ".");
             }
         }
-
-        if (!adminOverride) validateGaps(court, date, start, end, effectiveStart, isTennis);
     }
 
     @Transactional
@@ -728,95 +712,6 @@ public class BookingService {
             sibling.setStatus(BookingStatus.CANCELLED);
             sibling.setUpdatedAt(LocalDateTime.now());
         });
-    }
-
-    private void validateGaps(Court court, LocalDate date, LocalTime start, LocalTime end, LocalTime effectiveGridStart, boolean isTennis) {
-        List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
-        List<Booking> dayBookings = bookingRepository.findByCourtIdAndBookingDateOrderByStartTimeAsc(court.getId(), date).stream()
-                .filter(b -> activeStatuses.contains(b.getStatus()))
-                .toList();
-        
-        LocalTime blockStart = effectiveGridStart;
-        LocalTime blockEnd = LocalTime.of(23, 59);
-
-        for (Booking b : dayBookings) {
-            if (!b.getEndTime().isAfter(start)) {
-                if (b.getEndTime().isAfter(blockStart)) blockStart = b.getEndTime();
-            }
-            if (!b.getStartTime().isBefore(end)) {
-                if (b.getStartTime().isBefore(blockEnd)) blockEnd = b.getStartTime();
-            }
-        }
-
-        int blockStartMin = minutesSinceMidnight(blockStart);
-        int blockEndMin = minutesSinceMidnight(blockEnd);
-        int bookingStartMin = minutesSinceMidnight(start);
-        int bookingEndMin = minutesSinceMidnight(end);
-        
-        int gapBefore = bookingStartMin - blockStartMin;
-        int gapAfter = blockEndMin - bookingEndMin;
-
-        log.debug("[GAP_LOG] court={} isTennis={} start={} gapBefore={} gapAfter={}", court.getId(), isTennis, start, gapBefore, gapAfter);
-
-        boolean isLeftEdge = false;
-        if (date.equals(LocalDate.now())) {
-            int nowMin = minutesSinceMidnight(LocalTime.now());
-            if (bookingStartMin - nowMin <= 65 && bookingStartMin >= nowMin) {
-                isLeftEdge = true;
-            }
-        }
-        if (start.equals(effectiveGridStart) || blockStartMin == minutesSinceMidnight(effectiveGridStart)) {
-            isLeftEdge = true;
-        }
-        boolean isRightEdge = blockEndMin >= 23 * 60 + 59;
-
-        boolean isPadel = court.getSportType() == SportType.PADEL;
-
-        // Tennis si Padel: rezervarile consecutive (0 min pauza) SAU minim 90 min pauza.
-        // Margine stanga (ora curenta) si dreapta (sfarsit de zi): se permit goluri de 30 sau 60 min.
-        if (isTennis || isPadel) {
-            boolean isBeforeValid = (gapBefore == 0) || (gapBefore >= 90) || (isLeftEdge && (gapBefore == 30 || gapBefore == 60));
-            boolean isAfterValid = (gapAfter == 0) || (gapAfter >= 90) || (isRightEdge && (gapAfter == 30 || gapAfter == 60));
-            if (isBeforeValid && isAfterValid) {
-                return;
-            }
-            String sport = isTennis ? "Tenis" : "Padel";
-            throw new IllegalArgumentException("La " + sport + ", intervalul liber dintre rezervări trebuie să fie 0 (consecutive) sau minim 1h 30m. Te rugăm să lipești rezervarea de meciul vecin sau să lași minim 1h 30m distanță.");
-        }
-
-        // Alte sporturi: nu se lasa goluri de exact 30 de minute
-        if (gapBefore == 0 || gapAfter == 0) {
-            return; // Snapped perfect
-        }
-
-        if (gapBefore == 30 && gapAfter == 30) {
-            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
-        }
-
-        if ((gapBefore == 30 || gapBefore == 60) && gapAfter >= 60) {
-            if (isLeftEdge) {
-                return;
-            }
-            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
-        }
-
-        if (gapAfter == 30 && gapBefore >= 60) {
-            if (isRightEdge) {
-                return;
-            }
-            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
-        }
-
-        if (gapBefore >= 60 && gapAfter >= 60) {
-            return;
-        }
-
-        if (gapBefore == 30 || gapAfter == 30) {
-            if ((gapBefore == 30 && isLeftEdge) || (gapAfter == 30 && isRightEdge)) {
-                return;
-            }
-            throw new IllegalArgumentException("Pentru a nu bloca calendarul, nu pot rămâne goluri de exact 30 de minute. Te rugăm să lipești rezervarea ta de un alt meci sau să muți ora.");
-        }
     }
 
     private String normalizePhone(String phone) {
