@@ -216,10 +216,24 @@ function BookingLabelBlock({
 }) {
   // For long blocks, we want the text to appear centered and truncated if necessary
   const displayText = label
+  // Vertical writing (rotated 180° on top of vertical-rl) reads bottom-to-top,
+  // which lets a much taller axis (the block's height, which grows with
+  // booking duration) carry the text instead of the narrow, fixed column
+  // width — this is what keeps long names/times from getting cropped on
+  // narrow screens with many courts.
+  const verticalTextStyle: React.CSSProperties = {
+    writingMode: 'vertical-rl',
+    transform: 'rotate(180deg)',
+    textOrientation: 'mixed',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxHeight: '100%',
+  }
 
   return (
     <div
-      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} relative flex flex-col ${vertical ? 'justify-start py-2' : 'justify-center items-center'} overflow-hidden px-2 ${className || ""}`}
+      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} relative flex flex-col justify-center items-center overflow-hidden px-1 ${className || ""}`}
       style={style}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -235,11 +249,12 @@ function BookingLabelBlock({
           }}
         />
       ))}
-      <div className={`relative z-[1] flex flex-col ${vertical ? '' : 'items-center'} w-full`}>
+      <div className="relative z-[1] flex flex-row items-center justify-center gap-1 w-full h-full">
         <div
-          className="font-extrabold truncate w-full text-center px-2"
+          className="font-extrabold"
           style={{
-            fontSize: isBlocked ? "13px" : "13px",
+            ...verticalTextStyle,
+            fontSize: isBlocked ? "11px" : "11px",
             lineHeight: 1.2,
             letterSpacing: '0.01em',
             color: 'inherit',
@@ -247,8 +262,18 @@ function BookingLabelBlock({
         >
           {displayText}
         </div>
+        {timeRange && (
+          <div
+            className="font-semibold"
+            style={timeColor
+              ? { ...verticalTextStyle, fontSize: "9px", lineHeight: 1.2, color: timeColor }
+              : { ...verticalTextStyle, fontSize: "9px", lineHeight: 1.2, color: 'inherit', opacity: 0.75 }}
+          >
+            {timeRange}
+          </div>
+        )}
         {playerMatchesCount !== undefined && playerMatchesCount !== null && (
-          <div className="mt-0.5 scale-75 transform-gpu opacity-90">
+          <div className="scale-75 transform-gpu opacity-90">
                {(() => {
                   const RANKS = [
                     { name: 'Bronze', min: 0, max: 6, color: 'bg-orange-400/10 text-orange-600 border-orange-400/20' },
@@ -264,14 +289,6 @@ function BookingLabelBlock({
                     </span>
                   );
                })()}
-          </div>
-        )}
-        {timeRange && (
-          <div
-            className="truncate w-full text-center mt-0.5 font-semibold"
-            style={timeColor ? { fontSize: "10px", lineHeight: 1.2, color: timeColor } : { fontSize: "10px", lineHeight: 1.2, color: 'inherit', opacity: 0.75 }}
-          >
-            {timeRange}
           </div>
         )}
       </div>
@@ -811,12 +828,12 @@ export default function TimelineGrid({
                 const next = ticks[i+1]
                 const isPastRow = isTickPast(t)
                 return (
-                  <div key={`time-${t}`} className="relative z-0 grid items-stretch" 
+                  <div key={`time-${t}`} className="relative grid items-stretch"
                        style={{ gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)`, height: rowHeight }} 
                        data-row-index={i}>
                     {/* Time label (Sticky) */}
                     <div
-                      className="sticky left-0 z-30 px-2 pt-0.5 text-[12px] font-bold border-t flex items-start justify-center text-center border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)]"
+                      className="sticky left-0 z-30 px-1 pt-px text-[15px] font-bold leading-none border-t flex items-start justify-center text-center border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)]"
                       style={{ background: T.timeCol.background, color: T.timeCol.color, borderColor: T.cellBorder }}
                     >
                       {timeLabel(t)}

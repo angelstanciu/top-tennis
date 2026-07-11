@@ -50,13 +50,6 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
     else nav('/cont')
   }
 
-  function handleLogout() {
-    localStorage.removeItem('playerToken')
-    localStorage.removeItem('playerData')
-    window.dispatchEvent(new Event('auth-change'))
-    nav('/')
-  }
-
   return (
     <nav
       className={variant === 'floating' ? 'fixed top-0 inset-x-0 z-50' : 'shrink-0 z-20'}
@@ -122,16 +115,6 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 rounded-full" style={{ borderColor: isDark ? '#020617' : '#fff' }}></span>
             )}
           </button>
-          {player && (
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-full transition-all flex items-center justify-center"
-              style={{ background: isDark ? '#0f172a' : '#f1f5f9', color: isDark ? '#94a3b8' : '#64748b' }}
-              title="Ieșire"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-          )}
         </div>
       </div>
     </nav>
