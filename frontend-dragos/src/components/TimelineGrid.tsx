@@ -7,8 +7,8 @@ const GRID_TOKENS = {
   dark: {
     free: { background: 'rgba(163,230,53,0.18)', borderTop: '1px solid rgba(163,230,53,0.35)' },
     selected: { background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.35)' },
-    booked: { background: 'rgba(244,63,94,0.34)', border: '1px solid rgba(251,113,133,0.7)', name: '#ffe4e6', time: 'rgba(255,228,230,0.8)' },
-    pending: { background: 'rgba(251,191,36,0.32)', border: '1px solid rgba(251,191,36,0.65)', text: '#fef3c7', time: 'rgba(254,243,199,0.8)' },
+    booked: { background: '#5c1a2e', border: '1px solid rgba(190,18,60,0.6)', name: '#ffe4e6', time: 'rgba(255,228,230,0.75)' },
+    pending: { background: '#78350f', border: '1px solid rgba(251,191,36,0.65)', text: '#fef3c7', time: 'rgba(254,243,199,0.8)' },
     timeCol: { background: '#0b1120', color: '#cbd5e1' },
     headerCell: { background: '#0b1120', borderBottom: '1px solid #334155' },
     outdoor: { background: 'rgba(56,189,248,0.18)', color: '#7dd3fc' },
@@ -21,8 +21,8 @@ const GRID_TOKENS = {
   light: {
     free: { background: 'rgba(132,204,22,0.18)', borderTop: '1px solid rgba(101,163,13,0.45)' },
     selected: { background: '#84cc16', color: '#0f172a', boxShadow: '0 4px 18px rgba(132,204,22,0.3)' },
-    booked: { background: 'rgba(244,63,94,0.26)', border: '1px solid rgba(225,29,72,0.65)', name: '#9f1239', time: 'rgba(159,18,57,0.8)' },
-    pending: { background: 'rgba(245,158,11,0.28)', border: '1px solid rgba(217,119,6,0.65)', text: '#92400e', time: 'rgba(146,64,14,0.85)' },
+    booked: { background: '#fecdd3', border: '1px solid rgba(225,29,72,0.65)', name: '#9f1239', time: 'rgba(159,18,57,0.8)' },
+    pending: { background: '#fde68a', border: '1px solid rgba(217,119,6,0.65)', text: '#92400e', time: 'rgba(146,64,14,0.85)' },
     timeCol: { background: '#f8fafc', color: '#475569' },
     headerCell: { background: '#ffffff', borderBottom: '1px solid #cbd5e1' },
     outdoor: { background: '#bae6fd', color: '#0369a1' },
@@ -186,6 +186,20 @@ function computeBookingBlocks(booked: { start: string, end: string, customerName
   return blocks
 }
 
+// Vector hourglass used for pending-approval blocks instead of the ⏳ emoji —
+// color-emoji glyphs get rotated (via CSS transform, to align with the
+// vertical text next to them) inconsistently across platforms/browsers,
+// often rasterizing into a blurry or wrong-glyph mess in production. A plain
+// currentColor SVG rotates cleanly everywhere and always matches the block's
+// own text color.
+function HourglassIcon({ size = 11 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6 2h12v2.2c0 3.4-2.4 5.6-4.5 6.8 2.1 1.2 4.5 3.4 4.5 6.8V20H6v-2.2c0-3.4 2.4-5.6 4.5-6.8C8.4 9.8 6 7.6 6 4.2V2z" />
+    </svg>
+  )
+}
+
 function BookingLabelBlock({
   label,
   icon,
@@ -197,16 +211,16 @@ function BookingLabelBlock({
   playerMatchesCount,
   onClick,
   timeColor,
-  unavailableOverlays,
-  hatchColor,
+  fillColor,
+  pastRanges,
 }: {
   label: string
-  // Optional leading icon (e.g. ⏳ for pending approval), rendered as its own
-  // rotated element instead of being embedded in the label string — emoji
-  // don't get auto-rotated by text-orientation:mixed the way Latin glyphs do,
-  // so inlining one into the vertical text left it sitting upright and
-  // misaligned against the rotated name/time columns next to it.
-  icon?: string
+  // Optional leading icon (e.g. the pending-approval hourglass), rendered as
+  // its own rotated element instead of being embedded in the label string —
+  // plain glyphs don't get auto-rotated by text-orientation:mixed the way
+  // Latin text does, so inlining one into the vertical text left it sitting
+  // upright and misaligned against the rotated name/time columns next to it.
+  icon?: React.ReactNode
   timeRange?: string
   className?: string
   style?: React.CSSProperties
@@ -215,11 +229,17 @@ function BookingLabelBlock({
   playerMatchesCount?: number
   onClick?: () => void
   timeColor?: string
-  // Sub-ranges (as % of this block's own height) that also fall in an
-  // "unavailable" window (e.g. already past) — rendered as a striped overlay
-  // on top of the block's own background, never replacing it.
-  unavailableOverlays?: { topPct: number; heightPct: number }[]
-  hatchColor?: string
+  // The block's own flat color, painted as internal fill layer(s) instead of
+  // as the wrapper's `background` — so a past sub-range can be painted at
+  // reduced opacity and let the shared grid stripe pattern (positioned behind
+  // this block, covering its full cell incl. the rounding margin — see
+  // unavailableRangesByCourt) show through, instead of this block drawing its
+  // own separate repeating-gradient with its own phase.
+  fillColor?: string
+  // Sub-ranges (as % of this block's own height) that fall in an "unavailable"
+  // window (e.g. already past) — the complement is painted at full opacity,
+  // these are painted at reduced opacity over the shared stripe layer.
+  pastRanges?: { topPct: number; heightPct: number }[]
 }) {
   // For long blocks, we want the text to appear centered and truncated if necessary
   const displayText = label
@@ -238,49 +258,66 @@ function BookingLabelBlock({
     maxHeight: '100%',
   }
 
+  // Past sub-ranges are painted at reduced opacity so the shared grid stripe
+  // layer (sitting behind this block, at the exact same real position) reads
+  // through — the complement (still-future ranges, or the whole block when
+  // nothing is past) is painted at full opacity. Both use the SAME fillColor,
+  // so a fully-future block renders identically to before this overlay logic
+  // existed. Clamped with a tiny epsilon so float rounding on the % math
+  // can't leave a hairline unfilled sliver between adjacent segments.
+  const past = (pastRanges || []).slice().sort((a, b) => a.topPct - b.topPct)
+  const normalRanges: { topPct: number; heightPct: number }[] = []
+  let cursor = 0
+  past.forEach(seg => {
+    if (seg.topPct > cursor + 0.01) normalRanges.push({ topPct: cursor, heightPct: seg.topPct - cursor })
+    cursor = seg.topPct + seg.heightPct
+  })
+  if (cursor < 99.99) normalRanges.push({ topPct: cursor, heightPct: 100 - cursor })
+
   return (
     <div
-      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} relative flex flex-col justify-center items-center overflow-hidden px-1 ${className || ""}`}
+      className={`${onClick ? 'pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform' : 'pointer-events-none'} relative flex flex-col justify-center items-center overflow-hidden ${className || ""}`}
       style={style}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
     >
-      {unavailableOverlays?.map((seg, idx) => (
+      {fillColor && normalRanges.map((seg, idx) => (
         <div
-          key={`unavail-${idx}`}
+          key={`fill-${idx}`}
           className="absolute left-0 right-0"
-          style={{
-            top: `${seg.topPct}%`,
-            height: `${seg.heightPct}%`,
-            backgroundImage: `repeating-linear-gradient(45deg, ${hatchColor} 0, ${hatchColor} 10px, transparent 10px, transparent 20px)`,
-          }}
+          style={{ top: `${seg.topPct}%`, height: `${seg.heightPct}%`, background: fillColor }}
         />
       ))}
-      {icon && (
-        // Positioned independently of the flex row (not just ordered first in
-        // it) so it's pinned to the left edge, vertically centered, on every
-        // browser — mixing a plain element with vertical-rl text siblings in
-        // a flex row left it drifting above the name instead of beside it.
-        // A full-height flex column (not a top:50%/translateY trick) so the
-        // centering can't drift depending on the icon's own box size.
-        <div className="absolute left-[3px] top-0 bottom-0 z-[2] flex items-center">
-          <div style={{ transform: 'rotate(90deg)', fontSize: '11px', lineHeight: 1 }}>
-            {icon}
-          </div>
-        </div>
-      )}
-      <div className="relative z-[1] flex flex-row items-center justify-center gap-1 w-full h-full" style={icon ? { paddingLeft: 13 } : undefined}>
+      {fillColor && past.map((seg, idx) => (
         <div
-          className="font-extrabold"
-          style={{
-            ...verticalTextStyle,
-            fontSize: isBlocked ? "11px" : "11px",
-            lineHeight: 1.2,
-            letterSpacing: '0.01em',
-            color: 'inherit',
-          }}
-        >
-          {displayText}
+          key={`past-${idx}`}
+          className="absolute left-0 right-0"
+          style={{ top: `${seg.topPct}%`, height: `${seg.heightPct}%`, background: fillColor, opacity: 0.3 }}
+        />
+      ))}
+      <div className="relative z-[1] flex flex-row items-center justify-center gap-1 w-full h-full px-1">
+        <div className="flex flex-col items-center gap-0.5">
+          {icon && (
+            // Anchored right below the name (self-end on the row's cross axis)
+            // instead of spanning the whole block height — keeps it next to the
+            // name it's flagging instead of drifting to the middle of a tall
+            // (long-duration) booking block.
+            <div className="self-end" style={{ transform: 'rotate(90deg)', lineHeight: 0 }}>
+              {icon}
+            </div>
+          )}
+          <div
+            className="font-extrabold"
+            style={{
+              ...verticalTextStyle,
+              fontSize: isBlocked ? "11px" : "11px",
+              lineHeight: 1.2,
+              letterSpacing: '0.01em',
+              color: 'inherit',
+            }}
+          >
+            {displayText}
+          </div>
         </div>
         {timeRange && (
           <div
@@ -605,6 +642,52 @@ export default function TimelineGrid({
       return segments
     })
 
+    // Unavailable ranges (past time / outside hours) per court, INDEPENDENT of whether
+    // a booking block sits on top. Unlike bgSegmentsByCourt (which skips booked cells
+    // entirely, since it only drives the plain free/selected cell backgrounds), this
+    // drives the shared stripe mask below and must cover booked cells too — otherwise
+    // the stripe layer has a hole under every booking, and the flat green backdrop
+    // (z-4) shows through the block's own rounding/margin gap for past bookings.
+    const unavailableRangesByCourt: { startIndex: number; endIndex: number }[][] = sortedDataList.map(row => {
+      const N = ticks.length - 1
+      const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
+      const segments: { startIndex: number; endIndex: number }[] = []
+      let curStart = -1
+      for (let i = 0; i < N; i++) {
+        const t = ticks[i]
+        const next = ticks[i + 1]
+        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        if (isTickPast(t) || isOutsideHours) {
+          if (curStart === -1) curStart = i
+        } else if (curStart !== -1) {
+          segments.push({ startIndex: curStart, endIndex: i })
+          curStart = -1
+        }
+      }
+      if (curStart !== -1) segments.push({ startIndex: curStart, endIndex: N })
+      return segments
+    })
+
+    // Single continuous stripe pattern for "unavailable" (past time / outside hours)
+    // cells, masked to the exact per-column ranges above. Drawing this as ONE element
+    // spanning the whole grid — instead of one per column — keeps the diagonal lines
+    // aligned across column borders instead of each column restarting its own pattern
+    // origin (which read as "broken" stripes at every seam). Because it covers booked
+    // cells too, this same layer is what shows through a past booking's own margin
+    // gap and (via the block's translucent past-fill) through the block itself.
+    const gridRowCount = ticks.length - 1
+    const unavailableMaskUrl = useMemo(() => {
+      const rects: string[] = []
+      unavailableRangesByCourt.forEach((segments, colIndex) => {
+        segments.forEach(seg => {
+          rects.push(`<rect x="${colIndex}" y="${seg.startIndex}" width="1" height="${seg.endIndex - seg.startIndex}" fill="#fff"/>`)
+        })
+      })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${courtCount} ${gridRowCount}" preserveAspectRatio="none">${rects.join('')}</svg>`
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+    }, [unavailableRangesByCourt, courtCount, gridRowCount])
+    const hatchSolid = theme === 'dark' ? '#334155' : '#94a3b8'
+
     // For each booking block, the sub-ranges (in the same tick-index space as the
     // block itself) that overlap an "unavailable" window — past time or outside
     // operating hours. Rendered as a striped overlay on top of the block's own
@@ -669,9 +752,45 @@ export default function TimelineGrid({
 
             {/* Body: each row is a time slot */}
             <div className="relative">
-              {/* Background segments: free / unavailable / selected, merged per contiguous run so each state renders as one rounded shape */}
+              {/* Solid green backdrop for the whole free area — flat fill, no per-slot
+                  rounded corners/seams. Sits under everything; unavailable/selected/booked
+                  segments paint their own rounded shapes on top of it. */}
               <div
-                className="absolute inset-0 pointer-events-none z-[5] grid"
+                className="absolute pointer-events-none z-[4]"
+                style={{
+                  left: timeColWidth,
+                  right: 0,
+                  top: 0,
+                  height: (ticks.length - 1) * rowHeight,
+                  background: T.free.background,
+                }}
+              />
+
+              {/* Unavailable (past time / outside hours) cells: one continuous, fully
+                  opaque stripe pattern spanning the whole grid, cut to shape with a
+                  mask built from the per-column ranges above — so the diagonal lines
+                  never break at a column border. */}
+              <div
+                className="absolute pointer-events-none z-[5]"
+                style={{
+                  left: timeColWidth,
+                  right: 0,
+                  top: 0,
+                  height: gridRowCount * rowHeight,
+                  background: theme === 'dark' ? '#0f172a' : '#f1f5f9',
+                  backgroundImage: `repeating-linear-gradient(45deg, ${hatchSolid} 0, ${hatchSolid} 10px, transparent 10px, transparent 20px)`,
+                  WebkitMaskImage: unavailableMaskUrl,
+                  maskImage: unavailableMaskUrl,
+                  WebkitMaskSize: '100% 100%',
+                  maskSize: '100% 100%',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                } as React.CSSProperties}
+              />
+
+              {/* Background segments: selected slot, merged per contiguous run so it renders as one rounded shape */}
+              <div
+                className="absolute inset-0 pointer-events-none z-[6] grid"
                 style={{
                   gridTemplateColumns: `${timeColWidth}px repeat(${courtCount}, 1fr)`,
                   gridTemplateRows: `repeat(${ticks.length - 1}, ${rowHeight}px)`,
@@ -679,12 +798,8 @@ export default function TimelineGrid({
               >
                 {sortedData.map((row, colIndex) => (
                   <React.Fragment key={`bg-col-${row.court.id}`}>
-                    {bgSegmentsByCourt[colIndex].map((seg, segIndex) => {
-                      const segStyle: React.CSSProperties = seg.kind === 'selected'
-                        ? { background: T.selected.background, boxShadow: T.selected.boxShadow }
-                        : seg.kind === 'unavailable'
-                          ? { background: theme === 'dark' ? '#0f172a' : '#f1f5f9', backgroundImage: `repeating-linear-gradient(45deg, ${T.hatch} 0, ${T.hatch} 10px, transparent 10px, transparent 20px)` }
-                          : { background: T.free.background, border: T.free.borderTop }
+                    {bgSegmentsByCourt[colIndex].filter(seg => seg.kind === 'selected').map((seg, segIndex) => {
+                      const segStyle: React.CSSProperties = { background: T.selected.background, boxShadow: T.selected.boxShadow }
                       return (
                         <div
                           key={`bg-${row.court.id}-${seg.startIndex}-${seg.endIndex}`}
@@ -741,17 +856,22 @@ export default function TimelineGrid({
                       {blocksByCourt[colIndex].map((block, blockIndex) => {
                         const isOpenMatch = block.openMatchId != null
                         const isPendingBlock = block.status === 'PENDING_APPROVAL'
+                        // Border/color only here — the fill color is painted internally by
+                        // BookingLabelBlock (see fillColor/pastRanges below) so its past
+                        // sub-range can be dimmed while letting the shared grid stripe
+                        // layer show through instead of drawing a separate local pattern.
                         const blockStyle: React.CSSProperties = isOpenMatch
-                          ? { background: 'rgba(163,230,53,0.3)', border: '1px solid rgba(163,230,53,0.5)' }
+                          ? { border: '1px solid rgba(163,230,53,0.5)' }
                           : isPendingBlock
-                            ? { background: T.pending.background, border: T.pending.border, color: T.pending.text }
-                            : { background: T.booked.background, border: T.booked.border, color: T.booked.name }
+                            ? { border: T.pending.border, color: T.pending.text }
+                            : { border: T.booked.border, color: T.booked.name }
+                        const fillColor = isOpenMatch ? 'rgba(163,230,53,0.3)' : isPendingBlock ? T.pending.background : T.booked.background
                         // Portions of this block that are also "unavailable" (already past,
-                        // or past the court's closing time) get a striped overlay on top of
-                        // the block's own color instead of replacing it — the reservation
-                        // itself is never shortened, moved, or split.
+                        // or past the court's closing time) — painted at reduced opacity so
+                        // the shared stripe layer behind the block shows through, instead of
+                        // shortening, moving, or splitting the reservation itself.
                         const totalRows = block.endIndex - block.startIndex
-                        const overlays = (blockOverlaysByCourt[colIndex]?.[blockIndex] || []).map(seg => ({
+                        const pastRanges = (blockOverlaysByCourt[colIndex]?.[blockIndex] || []).map(seg => ({
                           topPct: ((seg.startIndex - block.startIndex) / totalRows) * 100,
                           heightPct: ((seg.endIndex - seg.startIndex) / totalRows) * 100,
                         }))
@@ -765,12 +885,12 @@ export default function TimelineGrid({
                             ...blockStyle,
                           }}
                           label={block.label}
-                          icon={isPendingBlock ? '⏳' : undefined}
+                          icon={isPendingBlock ? <HourglassIcon /> : undefined}
                           timeRange={block.timeRange}
                           timeColor={isOpenMatch ? undefined : isPendingBlock ? T.pending.time : T.booked.time}
                           playerMatchesCount={block.playerMatchesCount}
-                          unavailableOverlays={overlays}
-                          hatchColor={T.hatch}
+                          fillColor={fillColor}
+                          pastRanges={pastRanges}
                           onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
                             matchId: block.openMatchId!,
                             spotsLeft: block.openMatchSpotsLeft ?? 0,
