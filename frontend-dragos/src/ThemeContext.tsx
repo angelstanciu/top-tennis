@@ -10,13 +10,23 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+// Tema default a devenit 'light'; utilizatorii care aveau deja 'dark' salvat
+// din versiunea anterioară sunt migrați o singură dată la 'light', apoi orice
+// alegere ulterioară (inclusiv revenirea la dark) este respectată normal.
+const THEME_MIGRATION_KEY = 'themeDefaultMigratedToLightV1'
+
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark'
+  if (typeof window === 'undefined') return 'light'
   try {
+    if (!localStorage.getItem(THEME_MIGRATION_KEY)) {
+      localStorage.setItem(THEME_MIGRATION_KEY, '1')
+      localStorage.setItem('theme', 'light')
+      return 'light'
+    }
     const stored = localStorage.getItem('theme')
     if (stored === 'light' || stored === 'dark') return stored
   } catch {}
-  return 'dark'
+  return 'light'
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
