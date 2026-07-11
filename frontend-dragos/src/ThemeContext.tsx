@@ -13,7 +13,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 // Tema default a devenit 'light'; utilizatorii care aveau deja 'dark' salvat
 // din versiunea anterioară sunt migrați o singură dată la 'light', apoi orice
 // alegere ulterioară (inclusiv revenirea la dark) este respectată normal.
-const THEME_MIGRATION_KEY = 'themeDefaultMigratedToLightV1'
+// V2: unii useri tot porneau în dark (cel mai probabil PWA/browser cu build
+// vechi cache-uit) — schimbarea cheii forțează încă un reset la light pentru
+// toată lumea, indiferent dacă au trecut deja prin V1 sau nu.
+const THEME_MIGRATION_KEY = 'themeDefaultMigratedToLightV2'
 
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light'

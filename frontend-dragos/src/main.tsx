@@ -65,9 +65,17 @@ function Lazy({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Fără polling explicit, un tab/PWA ținut deschis mult timp poate să nu observe
+// niciodată un build nou (deci nici resetări precum cea a temei default) până
+// nu e relansat manual — verificăm activ, ca onNeedRefresh să prindă update-ul
+// și să reîncarce în timp util după fiecare deploy.
 registerSW({
   onNeedRefresh() {
     window.location.reload()
+  },
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    setInterval(() => { registration.update() }, 60 * 1000)
   }
 })
 
