@@ -531,6 +531,7 @@ export default function App() {
     }
     const apiBase = (import.meta as any).env.VITE_API_BASE_URL || '/api'
     const es = new EventSource(`${apiBase}/bookings/stream`)
+    es.onerror = (e) => console.warn('[SSE] bookings/stream connection error', e)
     const onBookingEvent = () => quietRefetch()
     es.addEventListener('UPDATED', onBookingEvent)
     es.addEventListener('CANCELLED', onBookingEvent)
@@ -552,9 +553,15 @@ export default function App() {
       } catch {}
     })
 
+    // Plasă de siguranță: dacă SSE e blocat/căzut (proxy de producție care nu
+    // lasă streaming-ul să treacă), grid-ul tot se corectează singur în cel
+    // mult 20s, indiferent de infra dintre browser și backend.
+    const fallbackPoll = setInterval(quietRefetch, 20000)
+
     return () => {
       window.removeEventListener('storage', onStorage)
       try { ch?.close() } catch {}
+      clearInterval(fallbackPoll)
       es.close()
     }
   }, [date, sport])

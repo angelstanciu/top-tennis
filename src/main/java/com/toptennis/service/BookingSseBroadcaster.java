@@ -2,6 +2,7 @@ package com.toptennis.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -45,6 +46,21 @@ public class BookingSseBroadcaster {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name(event.type().name()).data(event));
+            } catch (IOException | IllegalStateException e) {
+                emitter.complete();
+                emitters.remove(emitter);
+            }
+        }
+    }
+
+    // Fara asta, o conexiune fara evenimente de rezervare o perioada lunga poate fi
+    // considerata idle si taiata de un reverse proxy intermediar (ex. nginx
+    // proxy_read_timeout), iar aplicatia nu ar afla decat la urmatorul send() esuat.
+    @Scheduled(fixedRate = 15000)
+    public void sendHeartbeat() {
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event().comment("keep-alive"));
             } catch (IOException | IllegalStateException e) {
                 emitter.complete();
                 emitters.remove(emitter);
