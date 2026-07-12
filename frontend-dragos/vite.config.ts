@@ -102,7 +102,14 @@ export default defineConfig({
             '/login': {
                 target: 'http://127.0.0.1:8080',
                 changeOrigin: true,
-                secure: false
+                secure: false,
+                // Doar POST-ul din LoginPage (submit-ul formularului) trebuie să ajungă
+                // la Spring Security. O navigare GET (refresh, link direct către /login)
+                // trebuie servită de SPA, altfel userul vede pagina default urâtă
+                // generată de Spring în loc de LoginPage.tsx.
+                bypass: (req) => {
+                    if (req.method !== 'POST') return '/index.html'
+                }
             },
             '/logout': {
                 target: 'http://127.0.0.1:8080',

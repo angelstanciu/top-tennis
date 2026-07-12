@@ -1,36 +1,85 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AvailabilityDto, calculateGranularPrice } from '../types'
+import { AvailabilityDto, calculateGranularPrice, sportLabel } from '../types'
 import { useTheme } from '../ThemeContext'
+
+// Brand accent RGB triples, reused at varying alpha across the grid and the
+// reservation popup — named once so every accent (lime "free/selected", rose
+// "warning/conflict", amber "pick a duration") has a single source instead of
+// the same digits retyped at each opacity.
+const LIME_RGB = '163,230,53'       // dark-theme lime accent; also used theme-invariantly in the popup
+const LIME_LIGHT_RGB = '132,204,22' // light-theme lime accent (grid free/selected only)
+const ROSE_RGB = '244,63,94'        // popup warning/conflict accent
+const AMBER_RGB = '245,158,11'      // popup "pick a duration" nudge accent
+const rgba = (rgb: string, a: number) => `rgba(${rgb},${a})`
+
+// Theme-invariant popup accents: unlike GRID_TOKENS/POPUP_TOKENS below, these
+// stay the same lime/rose in both light and dark mode.
+const LIME = '#a3e635'
+const LIME_TEXT = '#1a2e05'
+const LIME_TEXT_RGB = '26,46,5'
+const LIME_LINK = '#84cc16'
+const ROSE = '#f43f5e'
+const AMBER = '#f59e0b'
 
 const GRID_TOKENS = {
   dark: {
-    free: { background: 'rgba(163,230,53,0.18)', borderTop: '1px solid rgba(163,230,53,0.35)' },
-    selected: { background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.35)' },
+    free: { background: rgba(LIME_RGB, 0.18), borderTop: `1px solid ${rgba(LIME_RGB, 0.35)}` },
+    selected: { background: LIME, color: LIME_TEXT, boxShadow: `0 4px 18px ${rgba(LIME_RGB, 0.35)}` },
     booked: { background: '#5c1a2e', border: '1px solid rgba(190,18,60,0.6)', name: '#ffe4e6', time: 'rgba(255,228,230,0.75)' },
     pending: { background: '#78350f', border: '1px solid rgba(251,191,36,0.65)', text: '#fef3c7', time: 'rgba(254,243,199,0.8)' },
     timeCol: { background: '#0b1120', color: '#cbd5e1' },
     headerCell: { background: '#0b1120', borderBottom: '1px solid #334155' },
     outdoor: { background: 'rgba(56,189,248,0.18)', color: '#7dd3fc' },
     indoor: { background: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
-    hatch: 'rgba(148,163,184,0.35)',
-    legendUnavailableBorder: '#475569',
-    border: '#263349',
     cellBorder: '#334155',
+    hatchLine: '#334155',
+    courtName: '#ffffff',
+    unavailableBg: '#0f172a',
   },
   light: {
-    free: { background: 'rgba(132,204,22,0.18)', borderTop: '1px solid rgba(101,163,13,0.45)' },
-    selected: { background: '#84cc16', color: '#0f172a', boxShadow: '0 4px 18px rgba(132,204,22,0.3)' },
+    free: { background: rgba(LIME_LIGHT_RGB, 0.18), borderTop: '1px solid rgba(101,163,13,0.45)' },
+    selected: { background: '#84cc16', color: '#0f172a', boxShadow: `0 4px 18px ${rgba(LIME_LIGHT_RGB, 0.3)}` },
     booked: { background: '#fecdd3', border: '1px solid rgba(225,29,72,0.65)', name: '#9f1239', time: 'rgba(159,18,57,0.8)' },
     pending: { background: '#fde68a', border: '1px solid rgba(217,119,6,0.65)', text: '#92400e', time: 'rgba(146,64,14,0.85)' },
     timeCol: { background: '#f8fafc', color: '#475569' },
     headerCell: { background: '#ffffff', borderBottom: '1px solid #cbd5e1' },
     outdoor: { background: '#bae6fd', color: '#0369a1' },
     indoor: { background: '#fde68a', color: '#92400e' },
-    hatch: 'rgba(100,116,139,0.4)',
-    legendUnavailableBorder: '#94a3b8',
-    border: '#cbd5e1',
     cellBorder: '#cbd5e1',
+    hatchLine: '#94a3b8',
+    courtName: '#0f172a',
+    unavailableBg: '#f1f5f9',
+  },
+}
+
+// Reservation-confirmation popup: same theme-branch shape as GRID_TOKENS, but
+// for the booking dialog rather than grid cells — no keys overlap with cell
+// states, so it's kept as its own table instead of being merged into one.
+const POPUP_TOKENS = {
+  dark: {
+    modalBg: '#0f172a', modalBorder: '#1e293b',
+    headerBg: '#0b1120', headerBorder: '#1e293b',
+    title: '#f8fafc', subtle: '#94a3b8', closeBg: '#1e293b',
+    loginText: '#e2e8f0', intervalText: '#a3e635', errorText: '#fecdd3',
+    suggestionBg: 'rgba(255,255,255,0.05)',
+    reselectBg: '#1e293b',
+    optionBorder: '#1e293b', optionBg: '#0b1120', optionColor: '#e2e8f0',
+    optionDisabledBg: 'rgba(11,17,32,0.5)', optionDisabledColor: '#475569',
+    radioBorder: '#334155', radioBg: '#0f172a',
+    confirmDisabledBg: '#1e293b', confirmDisabledColor: '#475569',
+  },
+  light: {
+    modalBg: '#ffffff', modalBorder: '#e2e8f0',
+    headerBg: 'rgba(248,250,252,0.5)', headerBorder: '#f1f5f9',
+    title: '#0f172a', subtle: '#64748b', closeBg: 'rgba(226,232,240,0.5)',
+    loginText: '#365314', intervalText: '#4d7c0f', errorText: '#9f1239',
+    suggestionBg: 'rgba(255,255,255,0.6)',
+    reselectBg: '#ffffff',
+    optionBorder: '#f1f5f9', optionBg: '#f8fafc', optionColor: '#334155',
+    optionDisabledBg: 'rgba(248,250,252,0.5)', optionDisabledColor: '#cbd5e1',
+    radioBorder: '#e2e8f0', radioBg: '#ffffff',
+    confirmDisabledBg: '#e2e8f0', confirmDisabledColor: '#94a3b8',
   },
 }
 
@@ -89,18 +138,6 @@ type TimelineGridProps = {
   isAdmin?: boolean
   // Meciuri deschise: click pe un bloc „Caută jucători" din grilă
   onOpenMatchClick?: (info: { matchId: number; spotsLeft: number; takeover: boolean; courtId: number; start: string; end: string }) => void
-}
-
-function sportLabel(s: string) {
-  switch (s) {
-    case 'TENNIS': return 'Tenis'
-    case 'PADEL': return 'Padel 🎾'
-    case 'BEACH_VOLLEY': return 'Volei'
-    case 'BASKETBALL': return 'Baschet'
-    case 'FOOTVOLLEY': return 'Tenis de picior'
-    case 'TABLE_TENNIS': return 'Tenis de masă'
-    default: return s
-  }
 }
 
 function getDisplayName(booking: { customerName?: string } | null | undefined) {
@@ -213,6 +250,7 @@ function BookingLabelBlock({
   timeColor,
   fillColor,
   pastRanges,
+  compact,
 }: {
   label: string
   // Optional leading icon (e.g. the pending-approval hourglass), rendered as
@@ -240,6 +278,11 @@ function BookingLabelBlock({
   // window (e.g. already past) — the complement is painted at full opacity,
   // these are painted at reduced opacity over the shared stripe layer.
   pastRanges?: { topPct: number; heightPct: number }[]
+  // Single 30-min-slot blocks (~40px usable height once margins are removed)
+  // can't fit the vertical name text plus a separate time-range line plus an
+  // icon without truncating — so on these we drop the time line and shrink
+  // the name, instead of letting all three fight over ~40px of height.
+  compact?: boolean
 }) {
   // For long blocks, we want the text to appear centered and truncated if necessary
   const displayText = label
@@ -280,6 +323,7 @@ function BookingLabelBlock({
       style={style}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
+      title={timeRange ? `${label} • ${timeRange}` : label}
     >
       {fillColor && normalRanges.map((seg, idx) => (
         <div
@@ -310,7 +354,7 @@ function BookingLabelBlock({
             className="font-extrabold"
             style={{
               ...verticalTextStyle,
-              fontSize: isBlocked ? "11px" : "11px",
+              fontSize: compact ? "9px" : isBlocked ? "11px" : "11px",
               lineHeight: 1.2,
               letterSpacing: '0.01em',
               color: 'inherit',
@@ -319,7 +363,7 @@ function BookingLabelBlock({
             {displayText}
           </div>
         </div>
-        {timeRange && (
+        {timeRange && !compact && (
           <div
             className="font-semibold"
             style={timeColor
@@ -361,7 +405,6 @@ export default function TimelineGrid({
   onOpenMatchClick
 }: TimelineGridProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
   const T = GRID_TOKENS[theme]
   if (data.length === 0) return <div>Nu au fost găsite terenuri</div>
   // Non-stop base: show full day 00:00-24:00 without outside intervals
@@ -516,13 +559,25 @@ export default function TimelineGrid({
     }
     requestAnimationFrame(step)
   }
+  // Closes the popup AND clears the in-progress selection together — the popup
+  // is just a UI surface for editing that selection, so leaving the selection
+  // (and its "Selecția ta" highlight in the grid) behind after the popup goes
+  // away would strand a highlighted block with no popup to explain it.
+  function closePopup() {
+    setPopup(null)
+    setSelCourtId(null)
+    setSelStart(null)
+    setSelEnd(null)
+    onSelectionChange?.(null, null, null, false, false)
+  }
+
   // Close popup on date/data changes
   useEffect(() => {
     setPopup(null)
   }, [date, data.length])
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setPopup(null) }
-    function onResize() { setPopup(null) }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') closePopup() }
+    function onResize() { closePopup() }
     window.addEventListener('keydown', onKey)
     window.addEventListener('resize', onResize)
     return () => {
@@ -540,11 +595,7 @@ export default function TimelineGrid({
   // Respond to external clear selection signal
   useEffect(() => {
     if (clearSignal === undefined) return
-    setSelCourtId(null)
-    setSelStart(null)
-    setSelEnd(null)
-    setPopup(null)
-    onSelectionChange?.(null, null, null, false, false)
+    closePopup()
   }, [clearSignal])
 
   // Shared: index of the first clickable (free, within hours, not past) slot across all courts
@@ -686,7 +737,7 @@ export default function TimelineGrid({
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${courtCount} ${gridRowCount}" preserveAspectRatio="none">${rects.join('')}</svg>`
       return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
     }, [unavailableRangesByCourt, courtCount, gridRowCount])
-    const hatchSolid = theme === 'dark' ? '#334155' : '#94a3b8'
+    const hatchSolid = T.hatchLine
 
     // For each booking block, the sub-ranges (in the same tick-index space as the
     // block itself) that overlap an "unavailable" window — past time or outside
@@ -732,7 +783,7 @@ export default function TimelineGrid({
                 <div key={`head-${row.court.id}`}
                      className="px-1 py-2 text-[13px] font-bold border-l text-center leading-tight flex flex-col items-center justify-center gap-0.5"
                      style={{ minWidth: minCourtWidth, background: T.headerCell.background, borderColor: T.cellBorder }}>
-                  <span className="truncate w-full px-0.5 font-extrabold" style={{ color: theme === 'dark' ? '#ffffff' : '#0f172a' }}>{row.court.name}</span>
+                  <span className="truncate w-full px-0.5 font-extrabold" style={{ color: T.courtName }}>{row.court.name}</span>
                   <div className="flex flex-col gap-0.5">
                     <span
                       className="text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase tracking-[0.08em]"
@@ -777,7 +828,7 @@ export default function TimelineGrid({
                   right: 0,
                   top: 0,
                   height: gridRowCount * rowHeight,
-                  background: theme === 'dark' ? '#0f172a' : '#f1f5f9',
+                  background: T.unavailableBg,
                   backgroundImage: `repeating-linear-gradient(45deg, ${hatchSolid} 0, ${hatchSolid} 10px, transparent 10px, transparent 20px)`,
                   WebkitMaskImage: unavailableMaskUrl,
                   maskImage: unavailableMaskUrl,
@@ -861,11 +912,11 @@ export default function TimelineGrid({
                         // sub-range can be dimmed while letting the shared grid stripe
                         // layer show through instead of drawing a separate local pattern.
                         const blockStyle: React.CSSProperties = isOpenMatch
-                          ? { border: '1px solid rgba(163,230,53,0.5)' }
+                          ? { border: `1px solid ${rgba(LIME_RGB, 0.5)}` }
                           : isPendingBlock
                             ? { border: T.pending.border, color: T.pending.text }
                             : { border: T.booked.border, color: T.booked.name }
-                        const fillColor = isOpenMatch ? 'rgba(163,230,53,0.3)' : isPendingBlock ? T.pending.background : T.booked.background
+                        const fillColor = isOpenMatch ? rgba(LIME_RGB, 0.3) : isPendingBlock ? T.pending.background : T.booked.background
                         // Portions of this block that are also "unavailable" (already past,
                         // or past the court's closing time) — painted at reduced opacity so
                         // the shared stripe layer behind the block shows through, instead of
@@ -885,12 +936,13 @@ export default function TimelineGrid({
                             ...blockStyle,
                           }}
                           label={block.label}
-                          icon={isPendingBlock ? <HourglassIcon /> : undefined}
+                          icon={isPendingBlock ? <HourglassIcon size={totalRows <= 1 ? 9 : 11} /> : undefined}
                           timeRange={block.timeRange}
                           timeColor={isOpenMatch ? undefined : isPendingBlock ? T.pending.time : T.booked.time}
                           playerMatchesCount={block.playerMatchesCount}
                           fillColor={fillColor}
                           pastRanges={pastRanges}
+                          compact={totalRows <= 1}
                           onClick={block.openMatchId != null && onOpenMatchClick ? () => onOpenMatchClick({
                             matchId: block.openMatchId!,
                             spotsLeft: block.openMatchSpotsLeft ?? 0,
@@ -931,8 +983,14 @@ export default function TimelineGrid({
                       const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
                       // Un interval liber mai scurt de 1 oră (durata minimă de rezervare) nu poate
                       // găzdui nicio rezervare validă — nu are rost să deschidem popup-ul pentru el.
+                      // Excepție: dacă intervalul liber ajunge chiar până la miezul nopții (nimic
+                      // nu îl blochează înainte de ora 24:00 a zilei afișate), o rezervare pornită
+                      // oriunde în el tot poate continua în ziua următoare — deci nu e „prea scurt",
+                      // doar tăiat de granița zilei din grilă. Blocăm doar golurile prinse efectiv
+                      // între două rezervări (sau înainte de închiderea terenului).
                       const freeSegment = bgSegmentsByCourt[rowIndex]?.find(seg => seg.kind === 'free' && i >= seg.startIndex && i < seg.endIndex)
-                      const tooShortToBook = !!freeSegment && (freeSegment.endIndex - freeSegment.startIndex) * 30 < 60
+                      const touchesMidnight = !!freeSegment && freeSegment.endIndex === ticks.length - 1
+                      const tooShortToBook = !!freeSegment && !touchesMidnight && (freeSegment.endIndex - i) * 30 < 60
                       const unavailable = isPastRow || isBooked || isBlocked || isPending || isOutsideHours || tooShortToBook
                       const clickable = !unavailable
                       // Nu folosim pointer-events-none aici: scoate elementul din hit-testing,
@@ -978,6 +1036,7 @@ export default function TimelineGrid({
 
   function renderPopup() {
     if (!popup || typeof document === 'undefined') return null
+    const P = POPUP_TOKENS[theme]
     const { courtId, rowIndex, startIndex } = popup // ignore left/top; centered via CSS
     const row = sortedData[rowIndex]  // FIX: was data[rowIndex] - must use sortedData to match displayed order
     if (!row || !ticks[startIndex]) return null
@@ -1131,29 +1190,23 @@ export default function TimelineGrid({
       <>
         <div
           className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm"
-          onClick={() => {
-            setPopup(null)
-            setSelCourtId(null)
-            setSelStart(null)
-            setSelEnd(null)
-            onSelectionChange?.(null, null, null, false, false)
-          }}
+          onClick={closePopup}
         />
         <div
           className="fixed z-[10000] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-sm flex flex-col overflow-hidden rounded-[2.5rem] shadow-2xl shadow-black/20 transition-all p-1 border"
-          style={{ background: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
+          style={{ background: P.modalBg, borderColor: P.modalBorder }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="backdrop-blur-md px-6 py-6 border-b flex flex-col gap-1" style={{ background: isDark ? '#0b1120' : 'rgba(248,250,252,0.5)', borderColor: isDark ? '#1e293b' : '#f1f5f9' }}>
+          <div className="backdrop-blur-md px-6 py-6 border-b flex flex-col gap-1" style={{ background: P.headerBg, borderColor: P.headerBorder }}>
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-xl font-black tracking-tight" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{row.court.name}</h3>
-                <p className="text-sm font-medium" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>{sportLabel(row.court.sportType)} • {row.court.indoor ? 'Indoor' : 'Outdoor'}</p>
+                <h3 className="text-xl font-black tracking-tight" style={{ color: P.title }}>{row.court.name}</h3>
+                <p className="text-sm font-medium" style={{ color: P.subtle }}>{sportLabel(row.court.sportType)} • {row.court.indoor ? 'Indoor' : 'Outdoor'}</p>
               </div>
               <button
-                onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }}
+                onClick={closePopup}
                 className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-                style={{ background: isDark ? '#1e293b' : 'rgba(226,232,240,0.5)', color: isDark ? '#94a3b8' : '#64748b' }}
+                style={{ background: P.closeBg, color: P.subtle }}
               >
                 ✕
               </button>
@@ -1162,14 +1215,14 @@ export default function TimelineGrid({
 
           <div className="p-4 flex flex-col gap-3">
              {!player && !onAdminClick && (
-               <div className="rounded-2xl p-4 border text-[13px] font-medium leading-relaxed shadow-sm" style={{ background: 'rgba(163,230,53,0.1)', borderColor: 'rgba(163,230,53,0.25)', color: isDark ? '#e2e8f0' : '#365314' }}>
+               <div className="rounded-2xl p-4 border text-[13px] font-medium leading-relaxed shadow-sm" style={{ background: rgba(LIME_RGB, 0.1), borderColor: rgba(LIME_RGB, 0.25), color: P.loginText }}>
                  💡 Ai deja un cont?
-                 <a href="/cont" className="underline font-black mx-1 hover:opacity-80 transition-colors" style={{ color: '#84cc16' }}>Loghează-te</a>
+                 <a href="/cont" className="underline font-black mx-1 hover:opacity-80 transition-colors" style={{ color: LIME_LINK }}>Loghează-te</a>
                  pentru a rezerva mai rapid și pentru a-ți urmări progresul în Rank-ul STAR ARENA!
                </div>
              )}
 
-             <div className="px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border mb-1" style={{ background: 'rgba(163,230,53,0.1)', borderColor: 'rgba(163,230,53,0.2)', color: isDark ? '#a3e635' : '#4d7c0f' }}>
+             <div className="px-3 py-3 rounded-2xl flex items-center justify-between gap-2 border mb-1" style={{ background: rgba(LIME_RGB, 0.1), borderColor: rgba(LIME_RGB, 0.2), color: P.intervalText }}>
                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider opacity-70 leading-tight shrink">
                   {selEnd ? 'Interval selectat' : 'Începere la ora'}
                 </span>
@@ -1179,29 +1232,29 @@ export default function TimelineGrid({
              </div>
 
              {reserveWarnVisible && (
-                <div className={'mx-1 px-4 py-2 rounded-xl border text-xs font-medium animate-pulse transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')} style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)', color: '#f59e0b' }}>
+                <div className={'mx-1 px-4 py-2 rounded-xl border text-xs font-medium animate-pulse transition-opacity ' + (reserveWarnFading ? 'opacity-0' : 'opacity-100')} style={{ background: rgba(AMBER_RGB, 0.1), borderColor: rgba(AMBER_RGB, 0.3), color: AMBER }}>
                   Vă rugăm selectați durata dorită mai jos!
                 </div>
              )}
 
              <div className="space-y-2.5">
                 {(options.every(mins => !isRangeFree(mins)) || (selEnd && selStart && minutesBetween(selStart, selEnd) >= 60 && !selectionValid)) ? (
-                  <div className="flex flex-col gap-4 items-center text-center p-5 rounded-3xl border mt-2 mb-2 shadow-inner" style={{ background: 'rgba(244,63,94,0.08)', borderColor: 'rgba(244,63,94,0.25)' }}>
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: 'rgba(244,63,94,0.15)' }}>⚠️</div>
-                    <p className="text-[14px] font-semibold leading-relaxed" style={{ color: isDark ? '#fecdd3' : '#9f1239' }}>
+                  <div className="flex flex-col gap-4 items-center text-center p-5 rounded-3xl border mt-2 mb-2 shadow-inner" style={{ background: rgba(ROSE_RGB, 0.08), borderColor: rgba(ROSE_RGB, 0.25) }}>
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: rgba(ROSE_RGB, 0.15) }}>⚠️</div>
+                    <p className="text-[14px] font-semibold leading-relaxed" style={{ color: P.errorText }}>
                       {(row.court.sportType === 'TENNIS' || row.court.sportType === 'PADEL')
                         ? <>La <strong>{sportLabel(row.court.sportType)}</strong>, rezervările trebuie să fie una după alta (fără pauză) sau să lase cel puțin <strong>1 oră și 30 de minute</strong> libere între ele.</>
                         : <>La <strong>{sportLabel(row.court.sportType)}</strong>, regulile noastre nu permit lăsarea unui spațiu liber de exact 30 sau 60 de minute între rezervări.</>}
                     </p>
                     {(row.court.sportType !== 'TENNIS' && row.court.sportType !== 'PADEL') && (
-                      <div className="p-3 rounded-2xl border text-[13px] leading-snug w-full" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)', borderColor: 'rgba(244,63,94,0.2)', color: isDark ? '#fecdd3' : '#9f1239' }}>
+                      <div className="p-3 rounded-2xl border text-[13px] leading-snug w-full" style={{ background: P.suggestionBg, borderColor: rgba(ROSE_RGB, 0.2), color: P.errorText }}>
                         {getSuggestionText()}
                       </div>
                     )}
                     <button
-                      onClick={() => { setPopup(null); setSelCourtId(null); setSelStart(null); setSelEnd(null); onSelectionChange?.(null, null, null, false, false) }}
+                      onClick={closePopup}
                       className="mt-2 w-full px-4 py-3 font-black uppercase text-[11px] tracking-widest rounded-2xl border shadow-sm transition-all active:scale-95"
-                      style={{ background: isDark ? '#1e293b' : '#ffffff', color: '#f43f5e', borderColor: 'rgba(244,63,94,0.3)' }}
+                      style={{ background: P.reselectBg, color: ROSE, borderColor: rgba(ROSE_RGB, 0.3) }}
                     >
                       {selEnd && !selectionValid ? "Reselectează Intervalul" : "Am înțeles"}
                     </button>
@@ -1218,14 +1271,14 @@ export default function TimelineGrid({
                       onClick={() => choose(mins)}
                       className="group relative flex w-full items-center justify-between rounded-3xl border-2 px-5 py-4 transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                       style={isSelectedCurrent
-                        ? { borderColor: '#a3e635', background: '#a3e635', color: '#1a2e05', boxShadow: '0 4px 18px rgba(163,230,53,0.3)' }
+                        ? { borderColor: LIME, background: LIME, color: LIME_TEXT, boxShadow: `0 4px 18px ${rgba(LIME_RGB, 0.3)}` }
                         : ok
-                          ? { borderColor: isDark ? '#1e293b' : '#f1f5f9', background: isDark ? '#0b1120' : '#f8fafc', color: isDark ? '#e2e8f0' : '#334155' }
-                          : { borderColor: isDark ? '#1e293b' : '#f1f5f9', background: isDark ? 'rgba(11,17,32,0.5)' : 'rgba(248,250,252,0.5)', color: isDark ? '#475569' : '#cbd5e1' }}
+                          ? { borderColor: P.optionBorder, background: P.optionBg, color: P.optionColor }
+                          : { borderColor: P.optionBorder, background: P.optionDisabledBg, color: P.optionDisabledColor }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors" style={isSelectedCurrent ? { borderColor: '#1a2e05', background: 'rgba(26,46,5,0.15)' } : { borderColor: isDark ? '#334155' : '#e2e8f0', background: isDark ? '#0f172a' : '#ffffff' }}>
-                          {isSelectedCurrent && <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#1a2e05' }} />}
+                        <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors" style={isSelectedCurrent ? { borderColor: LIME_TEXT, background: rgba(LIME_TEXT_RGB, 0.15) } : { borderColor: P.radioBorder, background: P.radioBg }}>
+                          {isSelectedCurrent && <div className="w-2.5 h-2.5 rounded-full" style={{ background: LIME_TEXT }} />}
                         </div>
                         <span className="font-bold text-lg">{label}</span>
                       </div>
@@ -1241,8 +1294,8 @@ export default function TimelineGrid({
                     onClick={handleReserveClick}
                     className="w-full py-5 rounded-[2rem] font-black text-xl tracking-tight transition-all shadow-xl active:scale-95 disabled:cursor-not-allowed"
                     style={selectionValid
-                      ? { background: '#a3e635', color: '#020617', boxShadow: '0 8px 24px rgba(163,230,53,0.3)' }
-                      : { background: isDark ? '#1e293b' : '#e2e8f0', color: isDark ? '#475569' : '#94a3b8' }}
+                      ? { background: LIME, color: '#020617', boxShadow: `0 8px 24px ${rgba(LIME_RGB, 0.3)}` }
+                      : { background: P.confirmDisabledBg, color: P.confirmDisabledColor }}
                   >
                     Confirmă Rezervarea
                   </button>

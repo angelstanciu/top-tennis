@@ -68,6 +68,18 @@ export interface PlayerUser {
   phoneVerified?: boolean
 }
 
+export function sportLabel(s: string) {
+  switch (s) {
+    case 'TENNIS': return 'Tenis'
+    case 'PADEL': return 'Padel 🎾'
+    case 'BEACH_VOLLEY': return 'Volei'
+    case 'BASKETBALL': return 'Baschet'
+    case 'FOOTVOLLEY': return 'Tenis de picior'
+    case 'TABLE_TENNIS': return 'Tenis de masă'
+    default: return s
+  }
+}
+
 export function getPricePerHour(sport: SportType, indoor: boolean, date?: string): number {
   const isOutdoor = !indoor
   if (sport === 'TENNIS' && indoor) return 50

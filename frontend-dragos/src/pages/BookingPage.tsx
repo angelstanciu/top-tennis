@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBooking } from '../api'
-import { CourtDto, calculateGranularPrice, LOCATION_TAGS } from '../types'
+import { CourtDto, calculateGranularPrice, LOCATION_TAGS, sportLabel } from '../types'
 import fastCat from '../assets/fast-cat.svg'
 import { createOpenMatch, getMyLevel, takeoverOpenMatch } from '../openmatch/api'
 import {
@@ -340,7 +340,7 @@ export default function BookingPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div className="text-center">
-            <h1 className="text-lg font-black tracking-tighter leading-tight" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>Rezervare {court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name || ''}</h1>
+            <h1 className="text-lg font-black tracking-tighter leading-tight" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{court ? `Teren ${sportLabel(court.sportType)} ${court.name}` : 'Rezervare'}</h1>
             <p className="text-[9px] font-black uppercase tracking-[0.16em] mt-0.5" style={{ color: '#a3e635' }}>{displayDate} • {startTime} - {endTime}</p>
           </div>
           <div className="w-9" />
@@ -540,7 +540,7 @@ export default function BookingPage() {
               <div className="text-slate-600 text-sm font-medium leading-relaxed mb-6 text-center space-y-2">
                 <p>Rezervarea ta a fost înregistrată, dar <strong>necesită aprobare manuală</strong> de către recepție deoarece ai depășit limita de anulări permise recent.</p>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-left mt-4">
-                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Teren</span><strong className="text-slate-700">{court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name}</strong></div>
+                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Teren</span><strong className="text-slate-700">{court ? `${sportLabel(court.sportType)} ${court.name}` : ''}</strong></div>
                   <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Data</span><strong className="text-slate-700">{displayDate}</strong></div>
                   <div className="flex justify-between items-center text-xs"><span className="text-slate-400">Interval</span><strong className="text-slate-700">{startTime} - {endTime}</strong></div>
                 </div>
@@ -622,7 +622,7 @@ export default function BookingPage() {
               <div className="text-slate-600 text-sm font-medium leading-relaxed mb-6 text-center space-y-2">
                 <p>Mulțumim pentru rezervare! Datele tale au fost înregistrate cu succes.</p>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-left">
-                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Teren</span><strong className="text-slate-700">{court?.sportType === 'PADEL' ? 'Padel ' : ''}{court?.name}</strong></div>
+                  <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Teren</span><strong className="text-slate-700">{court ? `${sportLabel(court.sportType)} ${court.name}` : ''}</strong></div>
                   <div className="flex justify-between items-center text-xs mb-1"><span className="text-slate-400">Data</span><strong className="text-slate-700">{displayDate}</strong></div>
                   <div className="flex justify-between items-center text-xs"><span className="text-slate-400">Interval</span><strong className="text-slate-700">{startTime} - {endTime}</strong></div>
                 </div>
