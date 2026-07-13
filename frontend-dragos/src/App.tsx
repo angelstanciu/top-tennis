@@ -419,7 +419,11 @@ export default function App() {
   function shiftDate(days: number) {
     const d = new Date(date)
     d.setDate(d.getDate() + days)
-    setDate(d.toISOString().slice(0, 10))
+    const next = d.toISOString().slice(0, 10)
+    // Nu permitem navigarea in trecut (indiferent de sport). Zilele trecute
+    // raman inaccesibile: nu se mai vede nivelul de ocupare de ieri.
+    if (next < todayISO()) return
+    setDate(next)
   }
 
   function handleSelectionChange(courtId: number | null, start: string | null, end: string | null, valid: boolean, gapInvalid?: boolean | string) {
@@ -678,10 +682,12 @@ export default function App() {
           <div className="flex items-center gap-1 min-w-0 justify-between pl-2">
             <button
               type="button"
-              className="w-6 h-7 shrink-0 flex items-center justify-center rounded-lg transition-colors text-lg font-bold"
-              style={{ color: isDark ? '#94a3b8' : '#64748b' }}
+              disabled={date <= todayISO()}
+              className="w-6 h-7 shrink-0 flex items-center justify-center rounded-lg transition-colors text-lg font-bold disabled:cursor-not-allowed"
+              style={{ color: isDark ? '#94a3b8' : '#64748b', opacity: date <= todayISO() ? 0.3 : 1 }}
               onClick={() => shiftDate(-1)}
               aria-label="Ziua anterioară"
+              title={date <= todayISO() ? 'Zilele trecute nu sunt disponibile' : 'Ziua anterioară'}
             >
               ‹
             </button>
