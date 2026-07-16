@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
 import { AvailabilityDto, SportType, CourtDto, getPricePerHour, LOCATION_TAGS } from './types'
@@ -83,6 +85,10 @@ const SPORT_OPTIONS: { value: SportType; label: string }[] = [
 // Promo "Găsește parteneri" la selectarea Padel — nu-l arătăm la nesfârșit.
 const PARTNERS_PROMO_KEY = 'padelPartnersPromo'
 const PARTNERS_PROMO_MAX_SHOWS = 3
+
+// Poster turneu Padel — afișat o singură dată, la prima selectare a sportului Padel.
+const PADEL_TOURNAMENT_POSTER_KEY = 'padelTournamentPosterShown_1aug'
+const PADEL_TOURNAMENT_POSTER_SRC = '/turneu-padel-1-august.jpeg'
 
 function readPartnersPromoState(): { count: number; dismissedPermanently: boolean } {
   try {
@@ -183,6 +189,8 @@ export default function App() {
   // Promo "Găsește parteneri" — o singură dată pe încărcare de pagină, respectă istoricul din localStorage
   const [showPartnersPromo, setShowPartnersPromo] = useState(false)
   const partnersPromoShownRef = React.useRef(false)
+  // Poster turneu Padel — afișat o singură dată (per browser), la prima selectare a sportului Padel
+  const [showTournamentPoster, setShowTournamentPoster] = useState(false)
   const [showInstall, setShowInstall] = useState(false)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [unavailableVisible, setUnavailableVisible] = useState(false)
@@ -369,7 +377,7 @@ export default function App() {
   // Promo "Găsește parteneri": o dată pe încărcare de pagină, doar dacă userul
   // n-a confirmat/interacționat deja și nu a atins limita de afișări.
   useEffect(() => {
-    if (sport !== 'PADEL' || partnersPromoShownRef.current) return
+    if (sport !== 'PADEL' || partnersPromoShownRef.current || showTournamentPoster) return
     const state = readPartnersPromoState()
     if (state.dismissedPermanently || state.count >= PARTNERS_PROMO_MAX_SHOWS) return
     const timer = setTimeout(() => {
@@ -377,13 +385,37 @@ export default function App() {
       setShowPartnersPromo(true)
     }, 1500)
     return () => clearTimeout(timer)
-  }, [sport])
+  }, [sport, showTournamentPoster])
 
   function closePartnersPromo(dismissedPermanently: boolean) {
     const state = readPartnersPromoState()
     writePartnersPromoState({ count: state.count + 1, dismissedPermanently })
     setShowPartnersPromo(false)
   }
+
+  // Poster turneu Padel: prima dată când userul ajunge pe sportul Padel în acest
+  // browser, îl afișăm pe tot ecranul; apoi nu mai apare niciodată.
+  useEffect(() => {
+    if (sport !== 'PADEL') return
+    try {
+      if (localStorage.getItem(PADEL_TOURNAMENT_POSTER_KEY)) return
+      localStorage.setItem(PADEL_TOURNAMENT_POSTER_KEY, '1')
+    } catch {}
+    setShowTournamentPoster(true)
+  }, [sport])
+
+  // AnimatePresence rulează animația "exit" a posterului înainte să-l demonteze
+  // efectiv, deci aici doar schimbăm starea — nu mai avem nevoie de setTimeout.
+  function closeTournamentPoster() {
+    setShowTournamentPoster(false)
+  }
+
+  useEffect(() => {
+    if (!showTournamentPoster) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeTournamentPoster() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showTournamentPoster])
 
   useEffect(() => {
     function onBeforeInstallPrompt(e: Event) {
@@ -884,6 +916,81 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {createPortal(
+        <AnimatePresence>
+        {showTournamentPoster && (
+          <motion.div
+            className="fixed inset-0 z-[60000] flex items-center justify-center p-1.5 bg-slate-950 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={closeTournamentPoster}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Poster turneu Padel"
+          >
+            {/* Fundal ambient: o copie blurată a posterului umple zona din jur, ca
+                spațiul rămas sus/jos (din diferența de aspect ratio) să nu pară gol. */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `url(${PADEL_TOURNAMENT_POSTER_SRC})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(60px) saturate(1.3) brightness(0.5)',
+                transform: 'scale(1.3)',
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(60% 35% at 50% 0%, rgba(56,189,248,0.20), transparent 70%), ' +
+                  'radial-gradient(65% 40% at 50% 100%, rgba(163,230,53,0.16), transparent 70%), ' +
+                  'rgba(2,6,23,0.55)',
+              }}
+            />
+
+            {/* Inele de undă — posterul "cade" ca o picătură din colțul butonului. */}
+            <motion.span
+              className="absolute rounded-full border-2 border-lime-300/70 pointer-events-none"
+              style={{ width: 220, height: 220, top: 26, right: 26 }}
+              initial={{ scale: 0.1, opacity: 0.6 }}
+              animate={{ scale: 1, opacity: 0 }}
+              transition={{ duration: 0.9, ease: 'easeOut' }}
+            />
+            <motion.span
+              className="absolute rounded-full border-2 border-sky-300/50 pointer-events-none"
+              style={{ width: 340, height: 340, top: 26, right: 26 }}
+              initial={{ scale: 0.1, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 0 }}
+              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.14 }}
+            />
+
+            <button
+              aria-label="Închide"
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 rounded-full bg-white/10 border border-white/15 text-white text-xl grid place-items-center hover:bg-white/20 transition-colors z-10"
+              onClick={(e) => { e.stopPropagation(); closeTournamentPoster() }}
+            >
+              {'×'}
+            </button>
+            <motion.img
+              src={PADEL_TOURNAMENT_POSTER_SRC}
+              alt="Turneu de Padel — Star Arena"
+              className="relative max-w-full max-h-full w-auto h-auto object-contain rounded-xl shadow-2xl"
+              style={{ transformOrigin: 'top right' }}
+              initial={{ clipPath: 'circle(0% at 100% 0%)', scale: 0.3, opacity: 0 }}
+              animate={{ clipPath: 'circle(150% at 100% 0%)', scale: 1, opacity: 1 }}
+              exit={{ clipPath: 'circle(0% at 100% 0%)', scale: 0.25, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 160, damping: 16, mass: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+        </AnimatePresence>,
+        document.body
       )}
       {showPartnersPromo && (
         <PartnersPromoModal
