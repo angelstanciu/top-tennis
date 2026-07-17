@@ -604,6 +604,25 @@ export default function TimelineGrid({
     closePopup()
   }, [clearSignal])
 
+  // For today's grid, land the scroll on "now minus 1 hour" instead of the first free
+  // slot — that way you see a bit of recent context plus what's coming up right now,
+  // rather than jumping to wherever the day happens to first be free.
+  function nowMinusOneHourIndex() {
+    if (date !== todayStr) return null
+    const [h, m] = nowTime.split(':').map(Number)
+    const targetMin = Math.max(0, h * 60 + m - 60)
+    const roundedMin = Math.floor(targetMin / 30) * 30
+    const hh = String(Math.floor(roundedMin / 60)).padStart(2, '0')
+    const mm = String(roundedMin % 60).padStart(2, '0')
+    const idx = ticks.indexOf(`${hh}:${mm}`)
+    return idx >= 0 ? idx : null
+  }
+
+  function computeScrollIndex() {
+    const nowIdx = nowMinusOneHourIndex()
+    return nowIdx !== null ? nowIdx : findFirstClickableIndex()
+  }
+
   // Shared: index of the first clickable (free, within hours, not past) slot across all courts
   function findFirstClickableIndex() {
     for (let i = 0; i < ticks.length - 1; i++) {
@@ -640,16 +659,16 @@ export default function TimelineGrid({
     }
   }
 
-  // Auto-scroll to first clickable interval
+  // Auto-scroll to today's "now minus 1h", or the first clickable interval on other days
   useEffect(() => {
     if (!data.length) return
-    scrollToFirstAvailable(findFirstClickableIndex())
+    scrollToFirstAvailable(computeScrollIndex())
   }, [date, sportLabel(data[0]?.court.sportType || ''), ticks.length]) // Stabilized dependencies
 
   // Reinforce auto-scroll shortly after layout settles
   useEffect(() => {
     if (!data.length) return
-    const idx = findFirstClickableIndex()
+    const idx = computeScrollIndex()
     const timer = setTimeout(() => scrollToFirstAvailable(idx), 80)
     return () => clearTimeout(timer)
   }, [date, sportLabel(data[0]?.court.sportType || '')]) // Stabilized dependencies
