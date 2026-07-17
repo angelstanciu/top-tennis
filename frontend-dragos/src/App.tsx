@@ -86,8 +86,10 @@ const SPORT_OPTIONS: { value: SportType; label: string }[] = [
 const PARTNERS_PROMO_KEY = 'padelPartnersPromo'
 const PARTNERS_PROMO_MAX_SHOWS = 3
 
-// Poster turneu Padel — afișat o singură dată, la prima selectare a sportului Padel.
-const PADEL_TOURNAMENT_POSTER_KEY = 'padelTournamentPosterShown_1aug'
+// Poster turneu Padel — afișat o dată pe zi la selectarea sportului Padel,
+// doar până în 31 iulie 2026 inclusiv (ziua dinaintea turneului).
+const PADEL_TOURNAMENT_POSTER_KEY = 'padelTournamentPosterLastShown'
+const PADEL_TOURNAMENT_POSTER_CUTOFF = '2026-07-31'
 const PADEL_TOURNAMENT_POSTER_SRC = '/turneu-padel-1-august.jpeg'
 
 function readPartnersPromoState(): { count: number; dismissedPermanently: boolean } {
@@ -393,13 +395,15 @@ export default function App() {
     setShowPartnersPromo(false)
   }
 
-  // Poster turneu Padel: prima dată când userul ajunge pe sportul Padel în acest
-  // browser, îl afișăm pe tot ecranul; apoi nu mai apare niciodată.
+  // Poster turneu Padel: o dată pe zi când userul ajunge pe sportul Padel,
+  // doar până în PADEL_TOURNAMENT_POSTER_CUTOFF inclusiv.
   useEffect(() => {
     if (sport !== 'PADEL') return
+    const today = todayISO()
+    if (today > PADEL_TOURNAMENT_POSTER_CUTOFF) return
     try {
-      if (localStorage.getItem(PADEL_TOURNAMENT_POSTER_KEY)) return
-      localStorage.setItem(PADEL_TOURNAMENT_POSTER_KEY, '1')
+      if (localStorage.getItem(PADEL_TOURNAMENT_POSTER_KEY) === today) return
+      localStorage.setItem(PADEL_TOURNAMENT_POSTER_KEY, today)
     } catch {}
     setShowTournamentPoster(true)
   }, [sport])
