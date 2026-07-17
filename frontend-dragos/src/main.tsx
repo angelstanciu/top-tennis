@@ -37,6 +37,7 @@ const FreePositionsPage              = React.lazy(() => import('./pages/FreePosi
 const AdminBlockDayPage              = React.lazy(() => import('./pages/AdminBlockDayPage'))
 const AdminWeeklyBookingPage         = React.lazy(() => import('./pages/AdminWeeklyBookingPage'))
 const AdminSubscriptionRequestsPage  = React.lazy(() => import('./pages/AdminSubscriptionRequestsPage'))
+const AdminCourtsPage                = React.lazy(() => import('./pages/AdminCourtsPage'))
 
 // ─── Fallback vizibil cât se încarcă un chunk lazy ───────────────────────
 function PageLoader() {
@@ -109,6 +110,7 @@ const router = createBrowserRouter([
   { path: '/admin/block-day',               element: <Lazy><AdminBlockDayPage /></Lazy> },
   { path: '/admin/weekly',                  element: <Lazy><AdminWeeklyBookingPage /></Lazy> },
   { path: '/admin/abonamente',              element: <Lazy><AdminSubscriptionRequestsPage /></Lazy> },
+  { path: '/admin/terenuri',                element: <Lazy><AdminCourtsPage /></Lazy> },
 ])
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID

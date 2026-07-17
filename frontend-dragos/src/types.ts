@@ -18,6 +18,9 @@ export interface CourtDto {
   openTime: string
   closeTime: string
   active: boolean
+  nightPrice: number
+  nightRateStartTime: string
+  morningPrice: number
 }
 
 export interface AvailabilityTimeRange {
@@ -80,20 +83,9 @@ export function sportLabel(s: string) {
   }
 }
 
-export function getPricePerHour(sport: SportType, indoor: boolean, date?: string): number {
-  const isOutdoor = !indoor
-  if (sport === 'TENNIS' && indoor) return 50
-  if (sport === 'TENNIS' && isOutdoor) return 35
-  if (sport === 'FOOTVOLLEY') return 75
-  if (sport === 'PADEL' && isOutdoor) return 80
-  if (sport === 'PADEL' && indoor) return 150
-  if (sport === 'BASKETBALL') return 80
-  if (sport === 'TABLE_TENNIS') return 35
-  if (sport === 'BEACH_VOLLEY') return 90
-  return 0
-}
+const PADEL_OUTDOOR_MORNING_END = 14 * 60 // 14:00, fixed boundary (not admin-editable)
 
-export function calculateGranularPrice(sport: SportType, indoor: boolean, start: string, end: string, date: string): number {
+export function calculateGranularPrice(court: CourtDto, start: string, end: string, date: string): number {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
   let startMin = sh * 60 + sm
@@ -102,64 +94,59 @@ export function calculateGranularPrice(sport: SportType, indoor: boolean, start:
 
   const d = date ? new Date(date) : new Date()
   const isBeforeNovember = d.getMonth() < 10 // 0-indexed, 10 is November
+  const bookingDate = date ? new Date(date + 'T00:00:00') : new Date()
+  const dayOfWeek = bookingDate.getDay() // 0=Dum, 6=Sam
+  const isWeekday = dayOfWeek !== 0 && dayOfWeek !== 6
 
-  // Day window: 08:00–20:00. Night: 20:00–08:00 (includes early morning past midnight).
-  function splitDayNight(dayRate: number, nightRate: number): number {
-    const MORNING = 8 * 60   // 480
-    const EVENING = 20 * 60  // 1200
-    const DAY    = 24 * 60   // 1440
+  const timeToMin = (t: string) => {
+    const [h, m] = (t || '00:00').slice(0, 5).split(':').map(Number)
+    return h * 60 + m
+  }
+
+  function splitDayNight(dayRate: number, nightRate: number, splitAt: number): number {
+    const DAY = 24 * 60
     const dayMins =
-      Math.max(0, Math.min(endMin, EVENING)       - Math.max(startMin, MORNING)) +
-      Math.max(0, Math.min(endMin, EVENING + DAY) - Math.max(startMin, MORNING + DAY))
+      Math.max(0, Math.min(endMin, splitAt)       - Math.max(startMin, 0)) +
+      Math.max(0, Math.min(endMin, splitAt + DAY) - Math.max(startMin, DAY))
     const nightMins = (endMin - startMin) - dayMins
     return (dayMins * dayRate + nightMins * nightRate) / 60
   }
 
-  // Tennis outdoor: 35 lei/h ziua, 50 lei/h dupa 20:00 (nocturna) — doar inainte de noiembrie
-  if (sport === 'TENNIS' && !indoor && isBeforeNovember) {
-    return splitDayNight(35, 50)
+  function splitThreeTier(rate1: number, rate2: number, rate3: number, b1: number, b2: number): number {
+    const DAY = 24 * 60
+    const seg1 =
+      Math.max(0, Math.min(endMin, b1)       - Math.max(startMin, 0)) +
+      Math.max(0, Math.min(endMin, b1 + DAY) - Math.max(startMin, DAY))
+    const seg2 =
+      Math.max(0, Math.min(endMin, b2)       - Math.max(startMin, b1)) +
+      Math.max(0, Math.min(endMin, b2 + DAY) - Math.max(startMin, b1 + DAY))
+    const seg3 =
+      Math.max(0, Math.min(endMin, DAY)       - Math.max(startMin, b2)) +
+      Math.max(0, Math.min(endMin, DAY + DAY) - Math.max(startMin, b2 + DAY))
+    return (seg1 * rate1 + seg2 * rate2 + seg3 * rate3) / 60
   }
 
-  // Padel indoor: tarif variabil dupa zi (L-V vs S-D) si data (inainte/dupa 1 mai 2026)
-  // Pana la 1 mai 2026: L-V 100/h<14:00 + 150/h>=14:00; S-D 150/h tot
-  // Dupa 1 mai 2026:    L-V 100/h<14:00 + 120/h>=14:00; S-D 120/h tot
-  if (sport === 'PADEL' && indoor) {
-    const bookingDate = date ? new Date(date + 'T00:00:00') : new Date()
-    const dayOfWeek = bookingDate.getDay() // 0=Dum, 6=Sam
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-    const isAfterMay1 = bookingDate >= new Date('2026-05-01T00:00:00')
-    const SPLIT = 14 * 60
-    let morningRate: number
-    let afternoonRate: number
-    if (isWeekend) {
-      morningRate = afternoonRate = isAfterMay1 ? 120 : 150
-    } else {
-      morningRate = 100
-      afternoonRate = isAfterMay1 ? 120 : 150
+  // Padel outdoor: weekday morning discount (fixed 14:00) + regular + nocturnă,
+  // all three prices admin-editable (pricePerHour / morningPrice / nightPrice).
+  if (court.sportType === 'PADEL' && !court.indoor) {
+    const nightStart = timeToMin(court.nightRateStartTime)
+    if (!court.lighting) {
+      if (isWeekday) return splitDayNight(court.morningPrice, court.pricePerHour, PADEL_OUTDOOR_MORNING_END)
+      return ((endMin - startMin) * court.pricePerHour) / 60
     }
-    let price = 0
-    if (startMin < SPLIT) {
-      const dayEnd = Math.min(endMin, SPLIT)
-      price += ((dayEnd - startMin) * morningRate) / 60
-    }
-    if (endMin > SPLIT) {
-      const nightStart = Math.max(startMin, SPLIT)
-      price += ((endMin - nightStart) * afternoonRate) / 60
-    }
-    return price
+    if (!isWeekday) return splitDayNight(court.pricePerHour, court.nightPrice, nightStart)
+    if (PADEL_OUTDOOR_MORNING_END >= nightStart) return splitDayNight(court.morningPrice, court.nightPrice, nightStart)
+    return splitThreeTier(court.morningPrice, court.pricePerHour, court.nightPrice, PADEL_OUTDOOR_MORNING_END, nightStart)
   }
 
-  // Padel outdoor: 80 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
-  if (sport === 'PADEL' && !indoor) {
-    return splitDayNight(80, 100)
+  // Generic outdoor + nocturnă split — covers Tennis outdoor (before November), Footvolley,
+  // Beach Volley, and any other outdoor court with Nocturnă checked (not a fixed sport list).
+  const tennisSeasonal = court.sportType !== 'TENNIS' || isBeforeNovember
+  if (!court.indoor && court.lighting && tennisSeasonal) {
+    return splitDayNight(court.pricePerHour, court.nightPrice, timeToMin(court.nightRateStartTime))
   }
 
-  // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00 (nocturna)
-  if (sport === 'FOOTVOLLEY') {
-    return splitDayNight(75, 100)
-  }
-
-  const pricePerHour = getPricePerHour(sport, indoor, date)
-  const diff = endMin - startMin
-  return (diff * pricePerHour) / 60
+  // Default: flat rate from the actual court (indoor courts incl. Padel indoor, Basketball,
+  // Table Tennis, non-lit outdoor courts, Tennis outdoor without lighting or in/after November).
+  return ((endMin - startMin) * court.pricePerHour) / 60
 }

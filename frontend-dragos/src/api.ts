@@ -119,6 +119,24 @@ export async function adminBlockSlot(payload: {
   return res.json()
 }
 
+export async function adminUpdateCourtHours(courtId: number, payload: {
+  openTime: string
+  closeTime: string
+  lighting: boolean
+  pricePerHour: number
+  nightPrice: number
+  nightRateStartTime: string
+  morningPrice: number
+}, auth: string): Promise<CourtDto> {
+  const res = await fetch(`${BASE_URL}/admin/courts/${courtId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json()
+}
+
 export async function adminCreateWeeklyBooking(payload: {
   courtId: number
   startDate: string

@@ -17,5 +17,8 @@ public class CourtDto {
     public LocalTime openTime;
     public LocalTime closeTime;
     public boolean active;
+    public BigDecimal nightPrice;
+    public LocalTime nightRateStartTime;
+    public BigDecimal morningPrice;
 }
 

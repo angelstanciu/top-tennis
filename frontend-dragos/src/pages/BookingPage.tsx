@@ -138,7 +138,7 @@ export default function BookingPage() {
   const totalPrice = useMemo(() => {
     try {
       if (!court || !startTime || !endTime) return null
-      return calculateGranularPrice(court.sportType, court.indoor, startTime, endTime, date || '')
+      return calculateGranularPrice(court, startTime, endTime, date || '')
     } catch { return null }
   }, [court, startTime, endTime, date])
 

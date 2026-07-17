@@ -639,6 +639,13 @@ public class BookingService {
                 throw new IllegalArgumentException("Terenul " + court.getName() + " se inchide la ora " + court.getCloseTime() + " (nocturna indisponibila). Va rugam alegeti un interval inainte de " + court.getCloseTime() + ".");
             }
         }
+
+        // Court late-open restriction, symmetric to the close-time one above.
+        if (!adminOverride && court.getOpenTime() != null && court.getOpenTime().isAfter(LocalTime.MIDNIGHT)) {
+            if (start.isBefore(court.getOpenTime())) {
+                throw new IllegalArgumentException("Terenul " + court.getName() + " se deschide la ora " + court.getOpenTime() + ". Va rugam alegeti un interval dupa " + court.getOpenTime() + ".");
+            }
+        }
     }
 
     @Transactional
@@ -740,48 +747,84 @@ public class BookingService {
         return t.getHour() == 23 && t.getMinute() == 59 && t.getSecond() == 0 && t.getNano() == 0;
     }
 
+    private static final LocalTime PADEL_OUTDOOR_MORNING_END = LocalTime.of(14, 0);
+
     private BigDecimal calculatePrice(Court court, LocalDate date, LocalTime start, LocalTime end) {
-        LocalTime splitTime = LocalTime.of(20, 0);
         SportType sport = court.getSportType();
         boolean isIndoor = court.isIndoor();
 
-        // Tennis outdoor (courts 1-5) before November: 35 lei/h ziua, 50 lei/h dupa 20:00
-        if (sport == SportType.TENNIS && !isIndoor && date.getMonthValue() < 11) {
-            return splitDayNightPrice(start, end, splitTime, new BigDecimal("35.00"), new BigDecimal("50.00"));
-        }
-
-        // Padel outdoor: 80 lei/h ziua, 100 lei/h dupa 20:00
+        // Padel outdoor: weekday morning discount (fixed 14:00 boundary) + regular + nocturnă,
+        // all three prices admin-editable (pricePerHour / morningPrice / nightPrice).
         if (sport == SportType.PADEL && !isIndoor) {
-            return splitDayNightPrice(start, end, splitTime, new BigDecimal("80.00"), new BigDecimal("100.00"));
+            return calculatePadelOutdoorPrice(court, date, start, end);
         }
 
-        // Footvolley: 75 lei/h ziua, 100 lei/h dupa 20:00
-        if (sport == SportType.FOOTVOLLEY) {
-            return splitDayNightPrice(start, end, splitTime, new BigDecimal("75.00"), new BigDecimal("100.00"));
+        // Generic outdoor + nocturnă split — covers Tennis outdoor (before November), Footvolley,
+        // Beach Volley, and any other outdoor court an admin lights up going forward. Keyed purely
+        // on indoor/lighting, not a hardcoded sport list, so toggling Nocturnă on for e.g. Basketball
+        // or Tenis 5 actually applies a night rate rather than staying cosmetic.
+        boolean tennisSeasonal = sport != SportType.TENNIS || date.getMonthValue() < 11;
+        if (!isIndoor && court.isLighting() && tennisSeasonal) {
+            return splitDayNightPrice(start, end, court.getNightRateStartTime(), court.getPricePerHour(), court.getNightPrice());
         }
 
-        // Padel indoor: tarif variabil dupa zi (L-V vs S-D) si data (inainte/dupa 1 mai 2026)
-        // Pana la 1 mai 2026: L-V 100/h<14:00 + 150/h>=14:00; S-D 150/h tot
-        // Dupa 1 mai 2026:    L-V 100/h<14:00 + 120/h>=14:00; S-D 120/h tot
-        if (sport == SportType.PADEL && isIndoor) {
-            boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
-            boolean isAfterMay1 = !date.isBefore(LocalDate.of(2026, 5, 1));
-            BigDecimal morningRate;
-            BigDecimal afternoonRate;
-            if (isWeekend) {
-                morningRate = afternoonRate = isAfterMay1 ? new BigDecimal("120.00") : new BigDecimal("150.00");
-            } else {
-                morningRate = new BigDecimal("100.00");
-                afternoonRate = isAfterMay1 ? new BigDecimal("120.00") : new BigDecimal("150.00");
-            }
-            return splitDayNightPrice(start, end, LocalTime.of(14, 0), morningRate, afternoonRate);
-        }
-
-        // Default: tarif fix din baza de date
+        // Default: flat rate from the database (indoor courts incl. Padel indoor, Basketball,
+        // Table Tennis, non-lit outdoor courts, Tennis outdoor without lighting or in/after November).
         BigDecimal hourly = court.getPricePerHour();
         int minutes = minutesSinceMidnight(end) - minutesSinceMidnight(start);
         BigDecimal hours = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         return hourly.multiply(hours).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculatePadelOutdoorPrice(Court court, LocalDate date, LocalTime start, LocalTime end) {
+        boolean isWeekday = date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY;
+        BigDecimal regularRate = court.getPricePerHour();
+
+        if (!court.isLighting()) {
+            // No nocturnă at all: weekday morning discount vs regular, no night tier.
+            if (isWeekday) {
+                return splitDayNightPrice(start, end, PADEL_OUTDOOR_MORNING_END, court.getMorningPrice(), regularRate);
+            }
+            int minutes = minutesSinceMidnight(end) - minutesSinceMidnight(start);
+            return regularRate.multiply(BigDecimal.valueOf(minutes)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        }
+
+        LocalTime nightStart = court.getNightRateStartTime();
+        BigDecimal nightRate = court.getNightPrice();
+
+        if (!isWeekday) {
+            // Weekend: regular rate until nocturnă, then night rate — no morning discount.
+            return splitDayNightPrice(start, end, nightStart, regularRate, nightRate);
+        }
+
+        if (!PADEL_OUTDOOR_MORNING_END.isBefore(nightStart)) {
+            // Nocturnă hour configured at/before 14:00 — collapse to a 2-tier morning/night split.
+            return splitDayNightPrice(start, end, nightStart, court.getMorningPrice(), nightRate);
+        }
+
+        return splitThreeTierPrice(start, end, PADEL_OUTDOOR_MORNING_END, nightStart,
+                court.getMorningPrice(), regularRate, nightRate);
+    }
+
+    private BigDecimal splitThreeTierPrice(LocalTime start, LocalTime end, LocalTime firstBoundary, LocalTime secondBoundary,
+                                            BigDecimal rate1, BigDecimal rate2, BigDecimal rate3) {
+        int s = minutesSinceMidnight(start);
+        int e = minutesSinceMidnight(end);
+        int b1 = minutesSinceMidnight(firstBoundary);
+        int b2 = minutesSinceMidnight(secondBoundary);
+        int dayLen = 24 * 60;
+
+        int seg1 = Math.max(0, Math.min(e, b1) - Math.max(s, 0))
+                 + Math.max(0, Math.min(e, b1 + dayLen) - Math.max(s, dayLen));
+        int seg2 = Math.max(0, Math.min(e, b2) - Math.max(s, b1))
+                 + Math.max(0, Math.min(e, b2 + dayLen) - Math.max(s, b1 + dayLen));
+        int seg3 = Math.max(0, Math.min(e, dayLen) - Math.max(s, b2))
+                 + Math.max(0, Math.min(e, dayLen + dayLen) - Math.max(s, b2 + dayLen));
+
+        BigDecimal totalMinutes = rate1.multiply(BigDecimal.valueOf(seg1))
+                .add(rate2.multiply(BigDecimal.valueOf(seg2)))
+                .add(rate3.multiply(BigDecimal.valueOf(seg3)));
+        return totalMinutes.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal splitDayNightPrice(LocalTime start, LocalTime end, LocalTime splitTime,

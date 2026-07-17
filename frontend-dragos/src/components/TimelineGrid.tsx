@@ -112,6 +112,12 @@ function courtCloseLimitOf(closeTime?: string) {
   return normalizedClose === '23:59' ? null : normalizedClose
 }
 
+// Normalized court open time, or null when the court runs non-stop (00:00 = no limit).
+function courtOpenLimitOf(openTime?: string) {
+  const normalizedOpen = (openTime || '00:00').substring(0, 5)
+  return normalizedOpen === '00:00' ? null : normalizedOpen
+}
+
 function enumerateSlots(start: string, end: string) {
   const out: string[] = []
   let [h, m] = start.split(':').map(Number)
@@ -606,8 +612,9 @@ export default function TimelineGrid({
       const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
       if (isPast) continue
       for (const row of sortedData) {
-        const closeTime = row.court.closeTime === '23:59' ? '24:00' : row.court.closeTime
-        const isWithin = t >= row.court.openTime && next <= closeTime
+        const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
+        const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
+        const isWithin = (courtOpenLimit == null || t >= courtOpenLimit) && (courtCloseLimit == null || next <= courtCloseLimit)
         if (!isWithin) continue
         const isBooked = row.booked.some(b => !(b.end <= t || b.start >= next))
         if (!isBooked) return i
@@ -669,6 +676,7 @@ export default function TimelineGrid({
       blocks.forEach(b => {
         for (let i = Math.max(0, b.startIndex); i < Math.min(N, b.endIndex); i++) covered[i] = true
       })
+      const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
       const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
       const segments: BgSegment[] = []
       let curKind: BgSegment['kind'] | null = null
@@ -680,7 +688,7 @@ export default function TimelineGrid({
         }
         const t = ticks[i]
         const next = ticks[i + 1]
-        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        const isOutsideHours = (courtCloseLimit != null && next > courtCloseLimit) || (courtOpenLimit != null && t < courtOpenLimit)
         const isSelectedHere = selCourtId === row.court.id && isSelectedSlot(t, next)
         const kind: BgSegment['kind'] = isSelectedHere ? 'selected' : (isTickPast(t) || isOutsideHours) ? 'unavailable' : 'free'
         if (kind !== curKind) {
@@ -701,13 +709,14 @@ export default function TimelineGrid({
     // (z-4) shows through the block's own rounding/margin gap for past bookings.
     const unavailableRangesByCourt: { startIndex: number; endIndex: number }[][] = sortedDataList.map(row => {
       const N = ticks.length - 1
+      const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
       const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
       const segments: { startIndex: number; endIndex: number }[] = []
       let curStart = -1
       for (let i = 0; i < N; i++) {
         const t = ticks[i]
         const next = ticks[i + 1]
-        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        const isOutsideHours = (courtCloseLimit != null && next > courtCloseLimit) || (courtOpenLimit != null && t < courtOpenLimit)
         if (isTickPast(t) || isOutsideHours) {
           if (curStart === -1) curStart = i
         } else if (curStart !== -1) {
@@ -745,6 +754,7 @@ export default function TimelineGrid({
     // color, never shortening/splitting the block or replacing its background.
     type OverlaySeg = { startIndex: number; endIndex: number }
     const blockOverlaysByCourt: OverlaySeg[][][] = sortedDataList.map((row, colIndex) => {
+      const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
       const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
       const blocks = blocksByCourt[colIndex] || []
       return blocks.map(block => {
@@ -753,7 +763,7 @@ export default function TimelineGrid({
         for (let i = block.startIndex; i < block.endIndex; i++) {
           const t = ticks[i]
           const next = ticks[i + 1]
-          const isUnavailable = isTickPast(t) || (courtCloseLimit != null && next > courtCloseLimit)
+          const isUnavailable = isTickPast(t) || (courtCloseLimit != null && next > courtCloseLimit) || (courtOpenLimit != null && t < courtOpenLimit)
           if (isUnavailable) {
             if (curStart === -1) curStart = i
           } else if (curStart !== -1) {
@@ -979,8 +989,11 @@ export default function TimelineGrid({
                       const isBlocked = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'BLOCKED')
                       const isPending = bookedRanges.some(b => !(b.end <= t || b.start >= next) && b.status === 'PENDING_APPROVAL')
                       const selected = selCourtId === row.court.id && isSelectedSlot(t, next)
+                      const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
                       const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
-                      const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+                      const isBeforeOpen = courtOpenLimit != null && t < courtOpenLimit
+                      const isAfterClose = courtCloseLimit != null && next > courtCloseLimit
+                      const isOutsideHours = isBeforeOpen || isAfterClose
                       // Un interval liber mai scurt de 1 oră (durata minimă de rezervare) nu poate
                       // găzdui nicio rezervare validă — nu are rost să deschidem popup-ul pentru el.
                       // Excepție: dacă intervalul liber ajunge chiar până la miezul nopții (nimic
@@ -1003,7 +1016,7 @@ export default function TimelineGrid({
                           key={`cell-${row.court.id}-${t}`}
                           className={`h-full transition-colors ${disabledClass}`}
                           style={{ minWidth: minCourtWidth, boxSizing: 'border-box', borderLeft: `1px solid ${T.cellBorder}` }}
-                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isOutsideHours ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : tooShortToBook ? 'PREA SCURT (sub 1 oră)' : 'LIBER'}`)}
+                          onMouseEnter={() => onHover?.(`${row.court.name} • ${t} - ${next} • ${isBeforeOpen ? 'INDISPONIBIL (inainte de deschidere)' : isAfterClose ? 'INDISPONIBIL (nocturna)' : isBlocked ? 'INDISPONIBIL' : isBooked ? 'REZERVAT' : tooShortToBook ? 'PREA SCURT (sub 1 oră)' : 'LIBER'}`)}
                           onClick={(e) => {
                             if (onAdminClick && isBooked) {
                               const b = bookedRanges.find(br => !(br.end <= t || br.start >= next))
@@ -1049,8 +1062,8 @@ export default function TimelineGrid({
     const options = [60, 90, 120]
     function isRangeFree(mins: number) {
       const slots = mins / 30
-      const normalizedClose = (row.court.closeTime || '23:59').substring(0, 5)
-      const courtCloseLimit = normalizedClose === '23:59' ? null : normalizedClose
+      const courtOpenLimit = courtOpenLimitOf(row.court.openTime)
+      const courtCloseLimit = courtCloseLimitOf(row.court.closeTime)
       for (let i = 0; i < slots; i++) {
         const t = ticks[startIndex + i]
         const next = ticks[startIndex + i + 1]
@@ -1059,7 +1072,7 @@ export default function TimelineGrid({
 
         const isPast = (date < todayStr) || (date === todayStr && t < nowTime)
         const isBooked = booked.some(b => !(b.end <= t || b.start >= next))
-        const isOutsideHours = courtCloseLimit != null && next > courtCloseLimit
+        const isOutsideHours = (courtCloseLimit != null && next > courtCloseLimit) || (courtOpenLimit != null && t < courtOpenLimit)
         if (isPast || isBooked || isOutsideHours) return false
       }
       
@@ -1088,7 +1101,7 @@ export default function TimelineGrid({
         endTime = `${eh}:${em}`
       }
 
-      const total = calculateGranularPrice(row.court.sportType, row.court.indoor, startTime, endTime, date)
+      const total = calculateGranularPrice(row.court, startTime, endTime, date)
       return `lei ${total.toFixed(2)}`
     }
     function choose(mins: number) {

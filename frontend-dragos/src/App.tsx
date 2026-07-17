@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import SportPicker from './components/SportPicker'
 import TimelineGrid from './components/TimelineGrid'
-import { AvailabilityDto, SportType, CourtDto, getPricePerHour, LOCATION_TAGS } from './types'
+import { AvailabilityDto, SportType, CourtDto, LOCATION_TAGS } from './types'
 import { fetchAvailability, fetchActiveCourts, isTokenExpired, clearPlayerAuth } from './api'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -29,6 +29,29 @@ function isAppInstalled() {
   const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
   const iOSStandalone = (window.navigator as any).standalone === true
   return !!(standalone || iOSStandalone)
+}
+
+// h-dvh can briefly report a taller-than-visible height right after a full
+// reload inside the installed (standalone) app window, before the window
+// chrome has finished settling. Nothing forces a re-measure on its own
+// because the grid card below clips overflow instead of scrolling, so a
+// stale-tall reading leaves its bottom edge (the legend) cut off. Track the
+// real height in JS and re-check shortly after mount so it self-corrects.
+function useViewportHeight() {
+  const [vh, setVh] = useState(() => (typeof window === 'undefined' ? 0 : window.innerHeight))
+  useEffect(() => {
+    const measure = () => setVh(window.innerHeight)
+    measure()
+    const raf = requestAnimationFrame(measure)
+    const timer = setTimeout(measure, 300)
+    window.addEventListener('resize', measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+  return vh
 }
 
 function shouldShowInstallPrompt() {
@@ -139,6 +162,7 @@ function formatDateDisplay(iso?: string) {
 export default function App() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const vh = useViewportHeight()
   useSeo({
     path: '/rezerva',
     title: 'Rezervă Teren Online – Padel, Tenis, Baschet | Star Arena Pitești',
@@ -271,9 +295,6 @@ export default function App() {
           const isTableTennis = row.court.sportType === 'TABLE_TENNIS'
           const isVolley = row.court.sportType === 'BEACH_VOLLEY'
           const isOutdoor = !row.court.indoor
-
-          // Pricing logic from types.ts
-          newRow.court.pricePerHour = getPricePerHour(row.court.sportType, row.court.indoor, date)
 
           // Seasonal unavailability
           let forceUnavailable = false
@@ -634,7 +655,10 @@ export default function App() {
         <div className="absolute inset-0" style={{ background: isDark ? 'rgba(2,6,23,0.82)' : 'rgba(246,247,244,0.85)', backdropFilter: 'blur(1px)' }} />
       </div>
 
-      <div className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-0.5 relative z-10">
+      <div
+        className="max-w-7xl mx-auto px-0 pt-0 h-dvh overflow-hidden flex flex-col gap-0.5 relative z-10"
+        style={vh ? { height: vh } : undefined}
+      >
       {showInstall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[90vw] max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-xl">
