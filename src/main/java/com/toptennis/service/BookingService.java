@@ -519,6 +519,10 @@ public class BookingService {
         if (b.getStatus() != BookingStatus.CANCELLED) {
             return b;
         }
+        LocalDateTime startDateTime = LocalDateTime.of(b.getBookingDate(), b.getStartTime());
+        if (!startDateTime.isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Intervalul este în trecut și nu mai poate fi restabilit.");
+        }
         List<BookingStatus> activeStatuses = Arrays.asList(BookingStatus.CONFIRMED, BookingStatus.BLOCKED, BookingStatus.PENDING_APPROVAL);
         boolean overlaps = !bookingRepository.findOverlappingExcludingId(
                 b.getId(),

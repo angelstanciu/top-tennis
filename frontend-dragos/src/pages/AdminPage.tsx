@@ -5,8 +5,7 @@ import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import TimelineGrid from '../components/TimelineGrid'
-import fastCat from '../assets/fast-cat.svg'
-import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award } from 'lucide-react'
+import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award, Phone, Check, Hourglass } from 'lucide-react'
 import { RevenueChart } from '../components/RevenueChart'
 import FilterBar from '../components/admin/FilterBar'
 import SegmentedControl from '../components/admin/SegmentedControl'
@@ -20,6 +19,27 @@ function statusChipStyle(s?: BookingDto['status']) {
     case 'CANCELLED': return { bg: 'rgba(244,63,94,0.14)', color: '#fb7185' }
     default: return { bg: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }
   }
+}
+
+function StatusIcon({ status, label }: { status?: BookingDto['status']; label: string }) {
+  let bg = '#94a3b8'
+  let Icon = Hourglass
+  switch (status) {
+    case 'CONFIRMED': bg = '#10b981'; Icon = Check; break
+    case 'PENDING_APPROVAL': bg = '#f59e0b'; Icon = Hourglass; break
+    case 'CANCELLED': bg = '#f43f5e'; Icon = X; break
+    case 'NO_SHOW': bg = '#64748b'; Icon = X; break
+    case 'BLOCKED': bg = '#64748b'; Icon = X; break
+  }
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-full shrink-0"
+      style={{ width: 16, height: 16, background: bg }}
+      title={label}
+    >
+      <Icon className="w-2.5 h-2.5" style={{ color: '#fff' }} strokeWidth={3} />
+    </span>
+  )
 }
 
 // Rank Config (same as ProfilePage)
@@ -60,7 +80,13 @@ async function adminPatch(path: string, auth: string) {
   const base = import.meta.env.VITE_API_BASE_URL || '/api'
   const res = await fetch(`${base}${path.startsWith('/api') ? path.substring(4) : path}`, { method: 'PATCH', headers: { Authorization: `Basic ${auth}` } })
   if (!res.ok) {
-    const msg = await res.text()
+    let msg = ''
+    try {
+      const data = await res.json()
+      msg = data?.message || ''
+    } catch {
+      msg = await res.text()
+    }
     throw new Error(msg || 'Actiunea a esuat')
   }
 }
@@ -85,6 +111,7 @@ export default function AdminPage() {
   const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
+  const unavailableHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<BookingStatusFilter>('ALL')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
@@ -384,6 +411,8 @@ export default function AdminPage() {
   function showUnavailable(message: string) {
     setUnavailableMessage(message)
     setUnavailableVisible(true)
+    if (unavailableHideTimer.current) clearTimeout(unavailableHideTimer.current)
+    unavailableHideTimer.current = setTimeout(() => setUnavailableVisible(false), 4000)
   }
 
   async function reload() {
@@ -430,8 +459,8 @@ export default function AdminPage() {
       await adminPatch(`/admin/bookings/${id}/restore`, auth)
       broadcastUpdate()
       await reload()
-    } catch {
-      showUnavailable('Ups, teren ocupat! Alt juc\u0103tor a fost mai iute de lab\u0103! \uD83D\uDC31')
+    } catch (e: any) {
+      showUnavailable(e?.message || 'Eroare la restabilire')
     } finally {
       setRestoringIds(prev => {
         const next = new Set(prev)
@@ -565,39 +594,6 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="space-y-3">
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="p-4 rounded-3xl shadow-lg rotate-3" style={{ background: 'var(--lime)', color: 'var(--lime-on)', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
-                  <DollarSign className="w-8 h-8" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--faint)' }}>Încasări Azi</div>
-                  <div className="text-3xl font-black tracking-tighter">
-                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold italic" style={{ color: 'var(--muted)' }}>RON</span>
-                  </div>
-                  <div className="text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1" style={{ background: 'rgba(163,230,53,0.14)', color: 'var(--lime-link)' }}>
-                    <TrendingUp className="w-2 h-2" />
-                    + {stats.collectedRevenue.toFixed(0)} colectat
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="p-4 rounded-3xl shadow-lg -rotate-3" style={{ background: '#38bdf8', color: '#020617', boxShadow: '0 8px 20px rgba(56,189,248,0.2)' }}>
-                  <Percent className="w-8 h-8" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--faint)' }}>Grad Ocupare</div>
-                  <div className="text-3xl font-black tracking-tighter">
-                    {stats.occupancyRate}%
-                  </div>
-                  <div className="h-1.5 w-full rounded-full mt-2 overflow-hidden" style={{ background: 'var(--surface2)' }}>
-                    <div className="h-full transition-all duration-1000" style={{ width: `${stats.occupancyRate}%`, background: '#38bdf8' }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <FilterBar
               sportValue={sport}
               onSportChange={v => setSport(v)}
@@ -723,13 +719,14 @@ export default function AdminPage() {
             <>
               <div className="md:hidden rounded-[24px] border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)', boxShadow: 'var(--card-shadow)' }}>
                 {filteredBookings.map(b => {
-                  const nowStr = new Date().toTimeString().slice(0, 5)
-                  const todayStr = new Date().toISOString().slice(0, 10)
+                  const nowDate = new Date()
+                  const nowStr = nowDate.toTimeString().slice(0, 5)
+                  const todayStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`
                   const isPassed = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.endTime <= nowStr) || b.status === 'CANCELLED'
                   const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
                   const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
                   const isOld = hoursSinceEnd >= 2
-                  const chip = statusChipStyle(b.status)
+                  const intervalStarted = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.startTime <= nowStr)
 
                   return (
                     <div
@@ -740,10 +737,20 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[15px] font-extrabold truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>{b.customerName}</span>
-                          <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0" style={{ background: chip.bg, color: chip.color, fontFamily: "'Outfit', sans-serif" }}>{statusLabel(b.status)}</span>
+                          <StatusIcon status={b.status} label={statusLabel(b.status)} />
                         </div>
                         <div className="text-xs font-semibold mt-1" style={{ color: 'var(--faint)' }}>Teren {b.court.name} · {sportLabel(b.court?.sportType)}</div>
                         <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--faint)' }}>{formatTime(b.startTime)} – {formatTime(b.endTime)} · {(b.price as unknown as number)?.toFixed?.(0)} RON</div>
+                        {b.customerPhone && (
+                          <a
+                            href={`tel:${b.customerPhone}`}
+                            onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-1.5 mt-1 text-xs font-bold transition-colors hover:opacity-70"
+                            style={{ color: 'var(--lime-link)' }}
+                          >
+                            <Phone className="w-3 h-3 shrink-0" /> {b.customerPhone}
+                          </a>
+                        )}
                         {b.status === 'PENDING_APPROVAL' && ((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
                           <div className="flex gap-1.5 flex-wrap mt-1.5">
                             {(b.playerCancellationsCount ?? 0) > 0 && (
@@ -756,7 +763,8 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0 items-stretch">
-                        {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
+                        {b.status === 'CANCELLED' ? (
+                          !intervalStarted && (
                           <button
                             className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center transition-opacity disabled:opacity-50"
                             style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}
@@ -765,7 +773,8 @@ export default function AdminPage() {
                           >
                             Restabilește
                           </button>
-                        ) : b.status === 'PENDING_APPROVAL' ? (
+                          )
+                        ) : b.status === 'NO_SHOW' ? null : b.status === 'PENDING_APPROVAL' ? (
                           <>
                             <button
                               className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center"
@@ -834,12 +843,14 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {filteredBookings.map(b => {
-                      const nowStr = new Date().toTimeString().slice(0, 5)
-                      const todayStr = new Date().toISOString().slice(0, 10)
+                      const nowDate = new Date()
+                      const nowStr = nowDate.toTimeString().slice(0, 5)
+                      const todayStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`
                       const isPassed = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.endTime <= nowStr) || b.status === 'CANCELLED'
                       const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
                       const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
                       const isOld = hoursSinceEnd >= 2
+                      const intervalStarted = (b.bookingDate < todayStr) || (b.bookingDate === todayStr && b.startTime <= nowStr)
                       const chip = statusChipStyle(b.status)
 
                       return (
@@ -868,14 +879,20 @@ export default function AdminPage() {
                              <div className="font-black uppercase tracking-tight text-[13px]" style={{ color: 'var(--text)' }}>{b.customerName}</div>
                              {getRankBadge(b.playerMatchesCount)}
                           </div>
-                          <div className="text-[10px] font-bold tracking-wider lowercase" style={{ color: 'var(--faint)' }}>tel: {b.customerPhone}{b.customerEmail ? ` • ${b.customerEmail}` : ''}</div>
+                          <div className="text-[10px] font-bold tracking-wider lowercase" style={{ color: 'var(--faint)' }}>
+                            tel: {b.customerPhone ? (
+                              <a href={`tel:${b.customerPhone}`} className="hover:underline" style={{ color: 'var(--lime-link)' }}>{b.customerPhone}</a>
+                            ) : b.customerPhone}
+                            {b.customerEmail ? ` • ${b.customerEmail}` : ''}
+                          </div>
                         </td>
                         <td className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
                           <span className="text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-full inline-flex items-center" style={{ background: chip.bg, color: chip.color, fontFamily: "'Outfit', sans-serif" }}>{statusLabel(b.status)}</span>
                         </td>
                         <td className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
                          <div className="flex justify-center flex-wrap gap-2">
-                             {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
+                             {b.status === 'CANCELLED' ? (
+                               !intervalStarted && (
                                <button
                                  className="text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity disabled:opacity-50"
                                  style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}
@@ -884,7 +901,8 @@ export default function AdminPage() {
                                >
                                  Restabilește
                                </button>
-                             ) : b.status === 'PENDING_APPROVAL' ? (
+                               )
+                             ) : b.status === 'NO_SHOW' ? null : b.status === 'PENDING_APPROVAL' ? (
                                <div className="flex flex-col gap-1.5 items-center">
                                  <div className="flex gap-1.5">
                                    <button onClick={() => approve(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}>Aprobă</button>
@@ -1085,26 +1103,23 @@ export default function AdminPage() {
       )}
 
       {unavailableVisible && (
-        <div className="fixed inset-0 w-screen h-screen z-[10010] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-[2rem] border shadow-2xl animate-in zoom-in-95" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-            <div className="p-6 rounded-t-[2rem] border-b flex items-center gap-4" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'var(--border)' }}>
-               <div className="p-3 rounded-2xl" style={{ background: 'rgba(245,158,11,0.18)' }}>
-                  <img src={fastCat} alt="Pisica" className="w-10 h-10" />
-               </div>
-               <div>
-                  <div className="font-black uppercase tracking-widest text-xs" style={{ color: '#f59e0b' }}>Eroare Intervenție</div>
-                  <div className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>Conflict detectat în calendar</div>
-               </div>
-            </div>
-            <div className="p-6">
-              <div className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text2)' }}>{unavailableMessage}</div>
-              <button
-                className="w-full mt-6 py-4 rounded-2xl bg-amber-500 text-white font-black uppercase tracking-widest text-[11px] shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95"
-                onClick={() => setUnavailableVisible(false)}
-              >
-                Am înțeles, verific din nou
-              </button>
-            </div>
+        <div className="fixed inset-x-0 bottom-5 z-[100] flex justify-center px-4 pointer-events-none">
+          <div
+            className="pointer-events-auto max-w-md w-full flex items-center justify-between gap-3 px-5 py-3 rounded-2xl text-sm font-medium shadow-xl"
+            style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185', border: '1px solid rgba(244,63,94,0.3)', backdropFilter: 'blur(8px)' }}
+          >
+            <span>{unavailableMessage}</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (unavailableHideTimer.current) clearTimeout(unavailableHideTimer.current)
+                setUnavailableVisible(false)
+              }}
+              aria-label="Închide"
+              className="shrink-0 text-lg leading-none opacity-70 hover:opacity-100"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
