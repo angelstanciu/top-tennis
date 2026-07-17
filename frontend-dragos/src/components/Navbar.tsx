@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import ThemeSwitcher from './ThemeSwitcher'
 import { useTheme } from '../ThemeContext'
 
@@ -9,9 +10,15 @@ type NavbarProps = {
   //           (pagini fără scroll la nivel de document, ex. grila de rezervare)
   variant?: 'floating' | 'static'
   showReserveButton?: boolean
+  // Folosite de AdminHeader ca să reutilizeze exact aceeași bară (padding, logo, theme switcher)
+  // în loc de un component separat — doar butonul de back și eticheta admin diferă.
+  showAccountButton?: boolean
+  backTo?: string
+  badge?: string
+  rightExtra?: React.ReactNode
 }
 
-export default function Navbar({ variant = 'floating', showReserveButton = true }: NavbarProps) {
+export default function Navbar({ variant = 'floating', showReserveButton = true, showAccountButton = true, backTo, badge, rightExtra }: NavbarProps) {
   const nav = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -64,7 +71,23 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
       }}
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {backTo && (
+            <button
+              onClick={() => nav(backTo)}
+              aria-label="Înapoi"
+              className="shrink-0 flex items-center justify-center rounded-full transition-all active:scale-95"
+              style={{
+                width: 36,
+                height: 36,
+                background: isDark ? '#a3e635' : '#84cc16',
+                color: isDark ? '#020617' : '#0f172a',
+                boxShadow: isDark ? '0 4px 14px rgba(163,230,53,0.3)' : '0 4px 14px rgba(132,204,22,0.3)',
+              }}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => nav('/')}
             className="font-extrabold truncate active:scale-95 transition-transform"
@@ -73,8 +96,17 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
           >
             STAR<span style={{ color: isDark ? '#a3e635' : '#65a30d' }}>ARENA</span>
           </button>
+          {badge && (
+            <span
+              className="shrink-0 font-black uppercase"
+              style={{ fontSize: 10, padding: '3px 8px', borderRadius: 999, letterSpacing: '0.1em', background: 'rgba(163,230,53,0.12)', color: isDark ? '#a3e635' : '#65a30d', fontFamily: "'Outfit', sans-serif" }}
+            >
+              {badge}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {rightExtra}
           {showReserveButton && (
             <button
               onClick={() => nav('/rezerva')}
@@ -95,6 +127,7 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
             </button>
           )}
           <ThemeSwitcher size="xl" />
+          {showAccountButton && (
           <button
             onClick={handleAccountClick}
             aria-label="Contul Meu"
@@ -115,6 +148,7 @@ export default function Navbar({ variant = 'floating', showReserveButton = true 
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 rounded-full" style={{ borderColor: isDark ? '#020617' : '#fff' }}></span>
             )}
           </button>
+          )}
         </div>
       </div>
     </nav>
