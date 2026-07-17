@@ -4,6 +4,8 @@ import { CourtDto, SportType } from '../types'
 import { fetchActiveCourts, adminCreateWeeklyBooking } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
+import { SportChips, SelectField, DateStepperField, TextField, FieldLabel } from '../components/admin/FilterBar'
+import SegmentedControl from '../components/admin/SegmentedControl'
 
 function generateTimeOptions(isEnd = false) {
   const opts = []
@@ -168,138 +170,111 @@ export default function AdminWeeklyBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
+    <div className="min-h-screen font-sans pb-20" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       {auth && (
         <>
-          <AdminHeader active="landing" />
-          
-          <div className="max-w-2xl mx-auto px-4 mt-8">
-            <button onClick={() => navigate('/admin')} className="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-2 mb-6">
-              <span>&larr;</span> Înapoi la Panou
-            </button>
-            
-            <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
-              <h2 className="text-2xl font-black text-amber-600 mb-2">Adaugă Rezervare / Abonament</h2>
-              <p className="text-slate-500 mb-8 text-sm">Creați o rezervare rapidă sau un slot fix recurent (Abonament). Sistemul va replica rezervarea conform frecvenței alese.</p>
+          <AdminHeader active="weekly" />
+          <div className="max-w-2xl mx-auto px-4 pt-6">
+            <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+              <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#fbbf24', fontFamily: "'Outfit', sans-serif" }}>Clienți de casă</span>
+              <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Rezervare / abonament</h2>
+              <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Creați o rezervare rapidă sau un slot fix recurent (abonament). Sistemul va replica rezervarea conform frecvenței alese.</p>
 
-              {success && <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">{success}</div>}
-              {error && <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">{error}</div>}
+              {success && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(16,185,129,0.14)', color: '#34d399' }}>{success}</div>}
+              {error && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>{error}</div>}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Alege Sportul</label>
-                    <select className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={sport} onChange={e => {setSport(e.target.value as SportType | ''); setCourtId('')}}>
-                      <option value="">Toate Sporturile</option>
-                      <option value="TENNIS">Tenis</option>
-                      <option value="PADEL">Padel</option>
-                      <option value="BASKETBALL">Baschet</option>
-                      <option value="FOOTVOLLEY">Fotbal-Tenis</option>
-                      <option value="BEACH_VOLLEY">Volei pe Plajă</option>
-                      <option value="TABLE_TENNIS">Tenis de Masă</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Alege Terenul *</label>
-                    <select required className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={courtId} onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}>
-                      <option value="">-- Selectează un teren --</option>
-                      {filteredCourts.map(c => (
-                        <option key={c.id} value={c.id}>{c.sportType === 'TENNIS' ? 'Teren' : c.sportType === 'BEACH_VOLLEY' ? 'Volei Plajă' : c.sportType === 'TABLE_TENNIS' ? 'Tenis Masă' : c.sportType === 'FOOTVOLLEY' ? 'Fotbal Tenis' : c.sportType === 'BASKETBALL' ? 'Baschet' : c.sportType === 'PADEL' ? 'Padel' : c.sportType} {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <SportChips
+                  value={sport}
+                  onChange={v => { setSport(v); setCourtId('') }}
+                  includeAll
+                />
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Prima Dată *</label>
-                    <div className="relative flex items-stretch bg-slate-50 rounded-xl overflow-hidden shadow-sm h-12 border border-slate-200">
-                      <button type="button" className="px-3 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-r border-slate-200 focus:outline-none transition-colors" onClick={() => shiftDate(-1)}>{'\u2039'}</button>
-                      <CalendarDemo value={startDate} onChange={newDate => setStartDate(newDate)} maxDate={maxAdminDate}>
-                        <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4 bg-white">
-                          <div className="font-semibold text-slate-800 text-center select-none truncate group-hover:text-amber-600 transition-colors">
-                            {formatDateDisplay(startDate)}
-                          </div>
-                          <button type="button" className="absolute right-2 p-1 text-slate-400 pointer-events-none z-10 group-hover:text-amber-500 transition-colors">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                          </button>
+                <div className="flex gap-2.5">
+                  <SelectField label="Teren" required value={courtId as any} onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')} className="flex-[1.4]">
+                    <option value="">Selectează un teren</option>
+                    {filteredCourts.map(c => (
+                      <option key={c.id} value={c.id}>{c.sportType === 'TENNIS' ? 'Teren' : c.sportType === 'BEACH_VOLLEY' ? 'Volei Plajă' : c.sportType === 'TABLE_TENNIS' ? 'Tenis Masă' : c.sportType === 'FOOTVOLLEY' ? 'Fotbal Tenis' : c.sportType === 'BASKETBALL' ? 'Baschet' : c.sportType === 'PADEL' ? 'Padel' : c.sportType} {c.name}</option>
+                    ))}
+                  </SelectField>
+                  <DateStepperField
+                    label="Prima dată"
+                    display={formatDateDisplay(startDate)}
+                    onPrev={() => shiftDate(-1)}
+                    onNext={() => shiftDate(1)}
+                    className="flex-1"
+                  >
+                    <CalendarDemo value={startDate} onChange={newDate => setStartDate(newDate)} maxDate={maxAdminDate}>
+                      <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group w-full">
+                        <div className="text-[13px] font-extrabold text-center select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
+                          {formatDateDisplay(startDate)}
                         </div>
-                      </CalendarDemo>
-                      <button type="button" className="px-3 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-l border-slate-200 focus:outline-none transition-colors" onClick={() => shiftDate(1)}>{'\u203A'}</button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1 md:col-span-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Start *</label>
-                    <div className="relative w-full">
-                      <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={startTime} onChange={e => setStartTime(e.target.value)}>
-                        {generateTimeOptions(false).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       </div>
-                    </div>
-                  </div>
-                  <div className="space-y-1 md:col-span-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Stop *</label>
-                    <div className="relative w-full">
-                      <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" value={endTime} onChange={e => setEndTime(e.target.value)}>
-                         {generateTimeOptions(true).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      </div>
-                    </div>
-                  </div>
+                    </CalendarDemo>
+                  </DateStepperField>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Nume Jucător *</label>
-                    <input required type="text" className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" placeholder="Marian Padel" value={customerName} onChange={e => setCustomerName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Telefon Jucător (Opțional)</label>
-                    <input type="tel" className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-amber-500 focus:border-amber-500" placeholder="07XX XXX XXX" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectField label="Start" required value={startTime} onChange={e => setStartTime(e.target.value)}>
+                    {generateTimeOptions(false).map(t => <option key={t} value={t}>{t}</option>)}
+                  </SelectField>
+                  <SelectField label="Stop" required value={endTime} onChange={e => setEndTime(e.target.value)}>
+                    {generateTimeOptions(true).map(t => <option key={t} value={t}>{t}</option>)}
+                  </SelectField>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Frecvență / Recurență *</label>
-                    <select required className="w-full rounded-xl border-slate-200 bg-amber-50 p-4 text-amber-900 font-bold focus:ring-amber-500 focus:border-amber-500 shadow-sm transition-all" value={frequency} onChange={e => {
-                        const val = Number(e.target.value)
-                        setFrequency(val)
-                        if (val === 0) setCount(1)
-                      }}>
-                      <option value={0}>O singură dată (Fără repetiție)</option>
-                      <option value={2}>La fiecare 2 zile</option>
-                      <option value={3}>La fiecare 3 zile</option>
-                      <option value={7}>Săptămânal (Aceeași zi)</option>
-                    </select>
-                  </div>
-                  
-                  {frequency !== 0 && (
-                    <div className="space-y-1 animate-in fade-in slide-in-from-left-2 transition-all">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Număr Apariții *</label>
-                      <select required className="w-full rounded-xl border-slate-200 bg-white p-4 text-slate-800 font-bold focus:ring-amber-500 focus:border-amber-500 shadow-sm" value={count} onChange={e => setCount(Number(e.target.value))}>
-                        <option value={4}>4 Apariții</option>
-                        <option value={8}>8 Apariții</option>
-                        <option value={12}>12 Apariții</option>
-                        <option value={24}>24 Apariții</option>
-                        <option value={52}>52 Apariții (1 An)</option>
-                      </select>
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField
+                    label="Nume jucător"
+                    required
+                    type="text"
+                    placeholder="Marian Padel"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                  />
+                  <TextField
+                    label="Telefon"
+                    type="tel"
+                    placeholder="07XX XXX XXX"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                  />
                 </div>
+
+                <div>
+                  <FieldLabel>Frecvență</FieldLabel>
+                  <SegmentedControl
+                    options={[
+                      { value: 0, label: 'O dată' },
+                      { value: 7, label: 'Săptămânal' },
+                      { value: 2, label: 'La 2 zile' },
+                      { value: 3, label: 'La 3 zile' },
+                    ]}
+                    value={frequency}
+                    onChange={val => {
+                      setFrequency(val)
+                      if (val === 0) setCount(1)
+                    }}
+                  />
+                </div>
+
+                {frequency !== 0 && (
+                  <SelectField label="Număr apariții" required value={count} onChange={e => setCount(Number(e.target.value))}>
+                    <option value={4}>4 apariții</option>
+                    <option value={8}>8 apariții</option>
+                    <option value={12}>12 apariții</option>
+                    <option value={24}>24 apariții</option>
+                    <option value={52}>52 apariții (1 an)</option>
+                  </SelectField>
+                )}
 
                 <button
                   type="submit"
                   disabled={loading || courtId === ''}
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-all disabled:opacity-50 mt-6 disabled:cursor-not-allowed active:scale-[0.98]"
+                  className="w-full font-black uppercase tracking-widest text-[11px] py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50 mt-2 disabled:cursor-not-allowed active:scale-95"
+                  style={{ background: '#f59e0b', color: '#020617', boxShadow: '0 8px 20px rgba(245,158,11,0.25)' }}
                 >
-                  {loading ? 'Se procesează...' : frequency === 0 ? 'Crează Rezervarea' : 'Generați Abonamentul'}
+                  {loading ? 'Se procesează...' : frequency === 0 ? 'Creează rezervarea' : 'Generează abonamentul'}
                 </button>
               </form>
             </div>

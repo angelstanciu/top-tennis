@@ -6,6 +6,46 @@
   --brand-primary: #10b981; /* Emerald 500 */
   --brand-dark: #064e3b;   /* Emerald 900 */
   --bg-main: #f8fafc;
+
+  /* StarArena admin design tokens — light (default) */
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #475569;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --lime: #84cc16;
+  --lime-on: #0f172a;
+  --lime-link: #4d7c0f;
+  --lime-nav: #65a30d;
+  --card-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.dark {
+  /* StarArena admin design tokens — dark */
+  --bg: #020617;
+  --surface: #0f172a;
+  --surface2: #0b1120;
+  --border: #1e293b;
+  --text: #f8fafc;
+  --text2: #cbd5e1;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --lime: #a3e635;
+  --lime-on: #020617;
+  --lime-link: #84cc16;
+  --lime-nav: #a3e635;
+  --card-shadow: none;
+}
+
+.admin-chip-row {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.admin-chip-row::-webkit-scrollbar {
+  display: none;
 }
 
 html, body {
@@ -89,3 +129,4 @@ select option:disabled { color: #94a3b8; background-color: #f8fafc; }
   border-color: rgba(163,230,53,0.5) !important;
   box-shadow: 0 0 0 3px rgba(163,230,53,0.08);
 }
+

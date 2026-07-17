@@ -8,6 +8,19 @@ import TimelineGrid from '../components/TimelineGrid'
 import fastCat from '../assets/fast-cat.svg'
 import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award } from 'lucide-react'
 import { RevenueChart } from '../components/RevenueChart'
+import FilterBar from '../components/admin/FilterBar'
+import SegmentedControl from '../components/admin/SegmentedControl'
+
+type BookingStatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING_APPROVAL' | 'CANCELLED'
+
+function statusChipStyle(s?: BookingDto['status']) {
+  switch (s) {
+    case 'CONFIRMED': return { bg: 'rgba(16,185,129,0.14)', color: '#34d399' }
+    case 'PENDING_APPROVAL': return { bg: 'rgba(245,158,11,0.14)', color: '#fbbf24' }
+    case 'CANCELLED': return { bg: 'rgba(244,63,94,0.14)', color: '#fb7185' }
+    default: return { bg: 'rgba(148,163,184,0.16)', color: '#cbd5e1' }
+  }
+}
 
 // Rank Config (same as ProfilePage)
 const RANKS = [
@@ -73,7 +86,7 @@ export default function AdminPage() {
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [showCancelled, setShowCancelled] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<BookingStatusFilter>('ALL')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [approvingAll, setApprovingAll] = useState(false)
   const [approveAllResult, setApproveAllResult] = useState<string | null>(null)
@@ -132,25 +145,6 @@ export default function AdminPage() {
       case 'PENDING_APPROVAL': return 'Aprobare'
       case 'NO_SHOW': return 'Neprezentat'
       default: return s || ''
-    }
-  }
-
-  function statusChipClass(s?: BookingDto['status']) {
-    // Minimal, readable chips
-    const base = 'text-xs px-2 py-0.5 rounded border inline-flex items-center'
-    switch (s) {
-      case 'CONFIRMED':
-        return `${base} bg-emerald-50 text-emerald-700 border-emerald-300`
-      case 'CANCELLED':
-        return `${base} bg-rose-100 text-rose-800 border-rose-300`
-      case 'NO_SHOW':
-        return `${base} bg-slate-800 text-white border-slate-900`
-      case 'BLOCKED':
-        return `${base} bg-slate-100 text-slate-700 border-slate-300`
-      case 'PENDING_APPROVAL':
-        return `${base} bg-amber-100 text-amber-700 border-amber-300 animate-pulse`
-      default:
-        return `${base} bg-slate-100 text-slate-700 border-slate-300`
     }
   }
 
@@ -235,8 +229,10 @@ export default function AdminPage() {
 
   const filteredBookings = useMemo(() => {
     let list = courtId ? bookings.filter(b => b.court?.id === courtId) : bookings
-    if (!showCancelled) {
-      list = list.filter(b => b.status !== 'CANCELLED')
+    if (statusFilter === 'CANCELLED') {
+      list = list.filter(b => b.status === 'CANCELLED' || b.status === 'NO_SHOW')
+    } else if (statusFilter !== 'ALL') {
+      list = list.filter(b => b.status === statusFilter)
     }
     if (searchTerm) {
       const low = searchTerm.toLowerCase()
@@ -265,7 +261,7 @@ export default function AdminPage() {
       // Both upcoming: earliest first
       return a.startTime.localeCompare(b.startTime)
     })
-  }, [bookings, courtId, searchTerm, date])
+  }, [bookings, courtId, searchTerm, date, statusFilter])
 
   const { stats, chartData } = useMemo(() => {
     // Filter bookings by selected sport if "Toate Sporturile" is NOT selected
@@ -509,29 +505,29 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen relative font-sans selection:bg-lime-400 selection:text-slate-950" style={{ background: '#020617', color: '#f8fafc' }}>
+    <div className="min-h-screen relative font-sans selection:bg-lime-400 selection:text-slate-950" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      <AdminHeader active="bookings" />
       <div className="max-w-6xl mx-auto p-4 space-y-4 relative z-10">
-        <AdminHeader active="bookings" />
       {!logged ? (
         <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="w-full max-w-sm rounded-[2.5rem] border p-10 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-500" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
-            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-8 shadow-xl rotate-3 group hover:rotate-6 transition-all" style={{ background: '#a3e635', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
-              <TrendingUp className="w-10 h-10" style={{ color: '#020617' }} />
+          <div className="w-full max-w-sm rounded-[2.5rem] border p-10 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-500" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-8 shadow-xl rotate-3 group hover:rotate-6 transition-all" style={{ background: 'var(--lime)', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
+              <TrendingUp className="w-10 h-10" style={{ color: 'var(--lime-on)' }} />
             </div>
-            
+
             <h2 className="text-3xl font-black tracking-tighter uppercase mb-2">Panou Admin</h2>
-            <p className="text-slate-400 text-sm font-bold mb-8 uppercase tracking-widest text-[10px]">Acces Securizat Star-Arena</p>
+            <p className="text-sm font-bold mb-8 uppercase tracking-widest text-[10px]" style={{ color: 'var(--muted)' }}>Acces Securizat Star-Arena</p>
 
             <form onSubmit={login} className="w-full space-y-5">
               {error && <div className="p-4 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl text-[11px] font-black uppercase text-center backdrop-blur-sm">{error}</div>}
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Utilizator</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: 'var(--muted)' }}>Utilizator</label>
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--faint)' }} />
                   <input
                     className="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold outline-none transition-all sa-form-input"
-                    style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
+                    style={{ background: 'var(--surface2)', border: '1.5px solid var(--border)', color: 'var(--text)' }}
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     placeholder="ex: admin"
@@ -540,15 +536,15 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parola</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: 'var(--muted)' }}>Parola</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--faint)' }}>
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                   </div>
                   <input
                     type="password"
                     className="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold outline-none transition-all sa-form-input"
-                    style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
+                    style={{ background: 'var(--surface2)', border: '1.5px solid var(--border)', color: 'var(--text)' }}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
@@ -558,7 +554,7 @@ export default function AdminPage() {
 
               <button
                 className="w-full rounded-2xl py-4 font-black uppercase tracking-[0.2em] text-[11px] shadow-xl transition-all active:scale-95 disabled:opacity-50 mt-4"
-                style={{ background: '#a3e635', color: '#020617', boxShadow: '0 8px 24px rgba(163,230,53,0.25)' }}
+                style={{ background: 'var(--lime)', color: 'var(--lime-on)', boxShadow: '0 8px 24px rgba(163,230,53,0.25)' }}
                 type="submit"
                 disabled={!username || !password}
               >
@@ -570,201 +566,162 @@ export default function AdminPage() {
       ) : (
         <div className="space-y-3">
             <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
-                <div className="p-4 rounded-3xl shadow-lg rotate-3" style={{ background: '#a3e635', color: '#020617', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
+              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                <div className="p-4 rounded-3xl shadow-lg rotate-3" style={{ background: 'var(--lime)', color: 'var(--lime-on)', boxShadow: '0 8px 20px rgba(163,230,53,0.2)' }}>
                   <DollarSign className="w-8 h-8" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Încasări Azi</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--faint)' }}>Încasări Azi</div>
                   <div className="text-3xl font-black tracking-tighter">
-                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-500 italic">RON</span>
+                    {stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold italic" style={{ color: 'var(--muted)' }}>RON</span>
                   </div>
-                  <div className="text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1" style={{ background: 'rgba(163,230,53,0.1)', color: '#a3e635' }}>
+                  <div className="text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1" style={{ background: 'rgba(163,230,53,0.14)', color: 'var(--lime-link)' }}>
                     <TrendingUp className="w-2 h-2" />
                     + {stats.collectedRevenue.toFixed(0)} colectat
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
+              <div className="flex-1 rounded-[22px] p-6 border shadow-xl flex items-center gap-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="p-4 rounded-3xl shadow-lg -rotate-3" style={{ background: '#38bdf8', color: '#020617', boxShadow: '0 8px 20px rgba(56,189,248,0.2)' }}>
                   <Percent className="w-8 h-8" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grad Ocupare</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--faint)' }}>Grad Ocupare</div>
                   <div className="text-3xl font-black tracking-tighter">
                     {stats.occupancyRate}%
                   </div>
-                  <div className="h-1.5 w-full rounded-full mt-2 overflow-hidden" style={{ background: '#0b1120' }}>
+                  <div className="h-1.5 w-full rounded-full mt-2 overflow-hidden" style={{ background: 'var(--surface2)' }}>
                     <div className="h-full transition-all duration-1000" style={{ width: `${stats.occupancyRate}%`, background: '#38bdf8' }}></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border p-6 shadow-xl" style={{ background: '#0f172a', borderColor: '#1e293b' }}>
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1 w-full relative">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sport</div>
-                <select
-                  className="w-full h-11 rounded-2xl px-4 py-2 text-sm font-bold transition-all appearance-none sa-form-input"
-                  style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
-                  value={sport}
-                  onChange={e => setSport(e.target.value as SportType | '')}
-                >
-                  <option value="">Toate Sporturile</option>
-                  <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
-                  <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
-                  <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
-                  <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Tenis de picior</option>
-                  <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
-                  <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
-                </select>
-                <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                </div>
-              </div>
-              <div className="flex-1 w-full relative">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Teren</div>
-                <select
-                  className="w-full h-11 rounded-2xl px-4 py-2 text-sm font-bold transition-all appearance-none sa-form-input"
-                  style={{ background: '#0b1120', border: '1.5px solid #1e293b', color: '#e2e8f0' }}
-                  value={courtId as any}
-                  onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
-                >
-                  <option value="">Toate Terenurile</option>
-                  {availabilityCourts.map(c => {
-                    const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
-                    return <option key={c.id} value={c.id}>{label}</option>
-                  })}
-                </select>
-                <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                </div>
-              </div>
-              <div className="flex-1 w-full">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data</div>
-                <div className="relative flex items-stretch rounded-2xl overflow-hidden h-11 transition-all" style={{ background: '#0b1120', border: '1.5px solid #1e293b' }}>
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:text-lime-400 border-r focus:outline-none transition-all"
-                    style={{ borderColor: '#1e293b' }}
-                    onClick={() => shiftDate(-1)}
-                  >
-                    {'\u2039'}
-                  </button>
-                  <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
-                    <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4">
-                      <div className="text-sm font-black text-center select-none truncate group-hover:text-lime-400 transition-colors uppercase tracking-tight" style={{ color: '#e2e8f0' }}>
-                        {formatDateDisplay(date)}
-                      </div>
+            <FilterBar
+              sportValue={sport}
+              onSportChange={v => setSport(v)}
+              includeAllSport
+              disabledSports={disabledSports}
+              courtValue={courtId}
+              onCourtChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
+              courtOptions={<>
+                <option value="">Toate Terenurile</option>
+                {availabilityCourts.map(c => {
+                  const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
+                  return <option key={c.id} value={c.id}>{label}</option>
+                })}
+              </>}
+              dateDisplay={formatDateDisplay(date)}
+              onDatePrev={() => shiftDate(-1)}
+              onDateNext={() => shiftDate(1)}
+              dateTrigger={
+                <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
+                  <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-2 w-full">
+                    <div className="text-[13px] font-extrabold text-center select-none truncate transition-colors" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
+                      {formatDateDisplay(date)}
                     </div>
-                  </CalendarDemo>
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:text-lime-400 border-l focus:outline-none transition-all"
-                    style={{ borderColor: '#1e293b' }}
-                    onClick={() => shiftDate(1)}
-                  >
-                    {'\u203A'}
-                  </button>
-                </div>
-              </div>
-              <div className="w-full md:w-auto flex gap-2">
-                <button
-                  className="px-8 flex-1 md:flex-none md:w-auto h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
-                  style={{ background: '#a3e635', color: '#020617' }}
-                  onClick={reload}
-                  disabled={loading}
-                >
-                  {loading ? '...' : 'ÎNCARCĂ'}
-                </button>
-                <button
-                  className="px-5 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
-                  style={{ background: '#f59e0b', color: '#020617' }}
-                  onClick={approveAll}
-                  disabled={approvingAll || loading}
-                  title={`Aprobă toate rezervările pending${sport ? ` pentru ${sportLabel(sport as SportType)}` : ''} din urmăoarele 13 luni`}
-                >
-                  {approvingAll ? '...' : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      APROBĂ TOT
-                    </>
-                  )}
-                </button>
-              </div>
+                  </div>
+                </CalendarDemo>
+              }
+            >
+              <SegmentedControl
+                options={[
+                  { value: 'ALL', label: 'Toate' },
+                  { value: 'CONFIRMED', label: 'Confirmate' },
+                  { value: 'PENDING_APPROVAL', label: 'Aprobare' },
+                  { value: 'CANCELLED', label: 'Anulate' },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+              />
+            </FilterBar>
+
+            <div className="flex gap-2">
+              <button
+                className="px-6 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                style={{ background: 'var(--lime)', color: 'var(--lime-on)' }}
+                onClick={reload}
+                disabled={loading}
+              >
+                {loading ? '...' : 'Încarcă'}
+              </button>
+              <button
+                className="px-5 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
+                style={{ background: '#f59e0b', color: '#020617' }}
+                onClick={approveAll}
+                disabled={approvingAll || loading}
+                title={`Aprobă toate rezervările pending${sport ? ` pentru ${sportLabel(sport as SportType)}` : ''} din următoarele 13 luni`}
+              >
+                {approvingAll ? '...' : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Aprobă tot
+                  </>
+                )}
+              </button>
             </div>
             {approveAllResult && (
-              <div className="flex items-center gap-2 mt-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 text-xs font-black uppercase tracking-wider animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider animate-in slide-in-from-top-2" style={{ background: 'rgba(16,185,129,0.14)', color: '#34d399' }}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                 {approveAllResult}
-                <button onClick={() => setApproveAllResult(null)} className="ml-auto text-emerald-400 hover:text-emerald-600">
+                <button onClick={() => setApproveAllResult(null)} className="ml-auto hover:opacity-70">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
             {/* Sub-bar for Search & View Toggle */}
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-4 border-t border-slate-100 mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pt-4 border-t mt-4" style={{ borderColor: 'var(--border)' }}>
               <div className="relative w-full sm:max-w-xs group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Cauta nume sau telefon..." 
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-2xl bg-white text-sm focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-sm"
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors" style={{ color: 'var(--faint)' }} />
+                <input
+                  type="text"
+                  placeholder="Caută nume sau telefon..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl text-sm transition-all shadow-sm border"
+                  style={{ background: 'var(--surface2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
                 {searchTerm && (
-                  <button 
-                    onClick={() => setSearchTerm('')} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all"
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-all hover:opacity-70"
+                    style={{ color: 'var(--faint)' }}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-              
-              <div className="flex bg-slate-100/50 p-1.5 rounded-2xl shadow-inner w-full sm:w-auto border border-slate-100 items-center justify-between sm:justify-start gap-4 mr-2">
-                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-500 pl-2">
-                    <input 
-                      type="checkbox" 
-                      className="rounded text-sky-500 focus:ring-sky-500" 
-                      checked={showCancelled} 
-                      onChange={e => setShowCancelled(e.target.checked)} 
-                    />
-                    Arată Anulate
-                 </label>
-              </div>
 
-              <div className="flex bg-slate-100/50 p-1.5 rounded-2xl shadow-inner w-full sm:w-auto border border-slate-100">
-                <button 
+              <div className="flex p-1.5 rounded-2xl shadow-inner w-full sm:w-auto border" style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}>
+                <button
                   onClick={() => setViewMode('list')}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white text-sky-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  style={viewMode === 'list' ? { background: 'var(--lime)', color: 'var(--lime-on)' } : { color: 'var(--muted)' }}
                 >
                   <List className="w-4 h-4" />
-                  Lista
+                  Listă
                 </button>
-                <button 
+                <button
                   onClick={() => setViewMode('calendar')}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'calendar' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  style={viewMode === 'calendar' ? { background: 'var(--lime)', color: 'var(--lime-on)' } : { color: 'var(--muted)' }}
                 >
                   <CalendarIcon className="w-4 h-4" />
                   Calendar
                 </button>
               </div>
             </div>
-          </div>
 
-          {error && <div className="p-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2">
-            <X className="w-4 h-4 text-rose-500" />
+          {error && <div className="p-3 rounded-2xl text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>
+            <X className="w-4 h-4" />
             {error}
           </div>}
 
           {viewMode === 'list' ? (
             <>
-              <div className="space-y-3 md:hidden">
+              <div className="md:hidden rounded-[24px] border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)', boxShadow: 'var(--card-shadow)' }}>
                 {filteredBookings.map(b => {
                   const nowStr = new Date().toTimeString().slice(0, 5)
                   const todayStr = new Date().toISOString().slice(0, 10)
@@ -772,74 +729,65 @@ export default function AdminPage() {
                   const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
                   const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
                   const isOld = hoursSinceEnd >= 2
-                  
+                  const chip = statusChipStyle(b.status)
+
                   return (
-                    <div key={b.id} className={`rounded-3xl border border-sky-100 bg-white/80 backdrop-blur-sm p-4 shadow-lg relative overflow-hidden group ${isPassed ? 'grayscale-[0.8] opacity-70 bg-slate-50/50' : ''}`}>
-                    {b.status === 'CANCELLED' && <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] px-3 py-1 rounded-bl-xl font-black uppercase tracking-widest shadow-md">ANULAT</div>}
-                    <div className="flex justify-between items-center pr-12">
-                      <div>
-                        <div className="font-black text-slate-800 uppercase tracking-tight">{b.customerName}</div>
-                        <div className="text-[11px] font-bold text-slate-400 tracking-wider flex items-center gap-1">
-                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                           {b.customerPhone}
+                    <div
+                      key={b.id}
+                      className="flex items-center gap-3 px-4 py-3.5 border-b last:border-b-0"
+                      style={{ borderColor: 'var(--border)', opacity: b.status === 'CANCELLED' ? 0.55 : b.status === 'NO_SHOW' ? 0.7 : 1 }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[15px] font-extrabold truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>{b.customerName}</span>
+                          <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0" style={{ background: chip.bg, color: chip.color, fontFamily: "'Outfit', sans-serif" }}>{statusLabel(b.status)}</span>
                         </div>
+                        <div className="text-xs font-semibold mt-1" style={{ color: 'var(--faint)' }}>Teren {b.court.name} · {sportLabel(b.court?.sportType)}</div>
+                        <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--faint)' }}>{formatTime(b.startTime)} – {formatTime(b.endTime)} · {(b.price as unknown as number)?.toFixed?.(0)} RON</div>
+                        {b.status === 'PENDING_APPROVAL' && ((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
+                          <div className="flex gap-1.5 flex-wrap mt-1.5">
+                            {(b.playerCancellationsCount ?? 0) > 0 && (
+                              <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>{b.playerCancellationsCount} ANULĂRI</div>
+                            )}
+                            {(b.playerNoShowCount ?? 0) > 0 && (
+                              <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(148,163,184,0.16)', color: 'var(--text2)' }}>{b.playerNoShowCount} NEPREZENTĂRI</div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs font-bold text-slate-500">
-                      <span className="bg-slate-100 px-2 py-1 rounded-lg">{sportLabel(b.court?.sportType)}</span>
-                      <span className="bg-sky-50 text-sky-600 px-2 py-1 rounded-lg">Teren {b.court.name}</span>
-                    </div>
-                    <div className="mt-2 text-[13px] font-black text-slate-700 flex items-center gap-2">
-                       <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                       {formatTime(b.startTime)} — {formatTime(b.endTime)}
-                    </div>
-                    <div className="mt-3 border-t border-slate-50 pt-3 space-y-2">
-                      <div className="text-sm font-black text-emerald-700 italic">{(b.price as unknown as number)?.toFixed?.(0)} RON</div>
-                      <div className="flex flex-wrap gap-2 items-center">
+                      <div className="flex flex-col gap-1.5 shrink-0 items-stretch">
                         {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
                           <button
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${restoringIds.has(b.id) ? 'opacity-50' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-95'}`}
+                            className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center transition-opacity disabled:opacity-50"
+                            style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}
                             onClick={() => { setConfirmId(b.id); setConfirmAction('restore') }}
                             disabled={restoringIds.has(b.id)}
                           >
-                            Restabileste
+                            Restabilește
                           </button>
                         ) : b.status === 'PENDING_APPROVAL' ? (
-                          <div className="w-full space-y-2">
-                            <div className="flex gap-2">
-                              <button onClick={() => approve(b.id)} className="flex-1 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest gap-1">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
-                                Aprobă
-                              </button>
-                              <button onClick={() => reject(b.id)} className="flex-1 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest gap-1">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
-                                Respinge
-                              </button>
-                            </div>
-                            {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
-                              <div className="flex gap-2 flex-wrap">
-                                {(b.playerCancellationsCount ?? 0) > 0 && (
-                                  <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                    {b.playerCancellationsCount} ANULĂRI
-                                  </div>
-                                )}
-                                {(b.playerNoShowCount ?? 0) > 0 && (
-                                  <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                    {b.playerNoShowCount} NEPREZENTĂRI
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <>
+                            <button
+                              className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center"
+                              style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}
+                              onClick={() => approve(b.id)}
+                            >
+                              Aprobă
+                            </button>
+                            <button
+                              className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center"
+                              style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}
+                              onClick={() => reject(b.id)}
+                            >
+                              Respinge
+                            </button>
+                          </>
                         ) : (
                           <>
-                            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm select-none">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
-                              Aprobat
-                            </div>
                             {!isOld && (
                               <button
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20 active:scale-95'}`}
+                                className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center transition-opacity disabled:opacity-50"
+                                style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}
                                 onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
                                 disabled={cancellingIds.has(b.id)}
                               >
@@ -848,7 +796,8 @@ export default function AdminPage() {
                             )}
                             {(b.status === 'CONFIRMED' || isPassed) && (
                               <button
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cancellingIds.has(b.id) ? 'opacity-50' : 'bg-slate-800 text-white shadow-lg shadow-slate-800/20 active:scale-95'}`}
+                                className="rounded-[9px] text-[9px] font-black uppercase tracking-wide text-center transition-opacity disabled:opacity-50"
+                                style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#334155', color: '#f8fafc' }}
                                 onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
                                 disabled={cancellingIds.has(b.id)}
                               >
@@ -859,28 +808,28 @@ export default function AdminPage() {
                         )}
                       </div>
                     </div>
-                    </div>
                   )
-                }) }
+                })}
                 {filteredBookings.length === 0 && (
-                  <div className="text-center py-16 bg-white/40 rounded-3xl border-2 border-dashed border-slate-200">
-                    <div className="text-slate-300 font-black uppercase tracking-[0.2em] text-sm">Nicio rezervare filtrata</div>
+                  <div className="text-center py-16">
+                    <div className="font-black uppercase tracking-[0.2em] text-sm" style={{ color: 'var(--faint)' }}>Nicio rezervare filtrată</div>
                   </div>
                 )}
               </div>
 
-              <div className="hidden md:block overflow-hidden rounded-3xl border border-sky-100 bg-white/90 backdrop-blur-md shadow-2xl">
+
+              <div className="hidden md:block overflow-hidden rounded-3xl border shadow-2xl" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-900 text-white">
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10 rounded-tl-2xl">Sport</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Teren</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Data</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Interval</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Suma</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Client</th>
-                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10">Stare</th>
-                      <th className="text-center px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b border-white/10 rounded-tr-2xl">Actiuni</th>
+                    <tr style={{ background: 'var(--surface2)' }}>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b rounded-tl-2xl" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Sport</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Teren</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Data</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Interval</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Sumă</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Client</th>
+                      <th className="text-left px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Stare</th>
+                      <th className="text-center px-5 py-4 font-black uppercase tracking-widest text-[9px] border-b rounded-tr-2xl" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>Acțiuni</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -891,58 +840,65 @@ export default function AdminPage() {
                       const endDate = new Date(`${b.bookingDate}T${b.endTime === '24:00' ? '23:59' : b.endTime}`)
                       const hoursSinceEnd = (new Date().getTime() - endDate.getTime()) / (1000 * 60 * 60)
                       const isOld = hoursSinceEnd >= 2
-                      
+                      const chip = statusChipStyle(b.status)
+
                       return (
-                        <tr key={b.id} className={`hover:bg-sky-50/50 transition-colors group ${isPassed ? 'grayscale-[0.8] opacity-70 bg-slate-50/30' : ''}`}>
-                        <td className="px-5 py-4 border-b border-slate-50 font-bold text-slate-700">{sportLabel(b.court?.sportType)}</td>
-                        <td className="px-5 py-4 border-b border-slate-50">
+                        <tr key={b.id} className="transition-colors group" style={{ opacity: b.status === 'CANCELLED' ? 0.55 : b.status === 'NO_SHOW' ? 0.7 : 1 }}>
+                        <td className="px-5 py-4 border-b font-bold" style={{ borderColor: 'var(--border)', color: 'var(--text2)' }}>{sportLabel(b.court?.sportType)}</td>
+                        <td className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
                           <div className="flex items-center gap-2">
-                             <span className="font-extrabold text-slate-800">{b.court.name}</span>
+                             <span className="font-extrabold" style={{ color: 'var(--text)' }}>{b.court.name}</span>
                              {b.court?.sportType === 'PADEL' && (
-                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest ${b.court.indoor ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600'}`}>
+                                <span
+                                  className="text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest"
+                                  style={b.court.indoor
+                                    ? { background: 'rgba(245,158,11,0.14)', color: '#fbbf24' }
+                                    : { background: 'rgba(56,189,248,0.14)', color: '#38bdf8' }}
+                                >
                                    {b.court.indoor ? 'IN' : 'EXT'}
                                 </span>
                              )}
                           </div>
                         </td>
-                        <td className="px-5 py-4 border-b border-slate-50 text-slate-400 font-bold">{formatDateShortRo(b.bookingDate)}</td>
-                        <td className="px-5 py-4 border-b border-slate-50 font-black text-slate-800 tracking-tight">{formatTime(b.startTime)} - {formatTime(b.endTime)}</td>
-                        <td className="px-5 py-4 border-b border-slate-50 font-black text-emerald-700 italic">{(b.price as unknown as number)?.toFixed?.(0)} RON</td>
-                        <td className="px-5 py-4 border-b border-slate-50 pr-8">
+                        <td className="px-5 py-4 border-b font-bold" style={{ borderColor: 'var(--border)', color: 'var(--faint)' }}>{formatDateShortRo(b.bookingDate)}</td>
+                        <td className="px-5 py-4 border-b font-black tracking-tight" style={{ borderColor: 'var(--border)', color: 'var(--text)' }}>{formatTime(b.startTime)} - {formatTime(b.endTime)}</td>
+                        <td className="px-5 py-4 border-b font-black italic" style={{ borderColor: 'var(--border)', color: 'var(--lime-link)' }}>{(b.price as unknown as number)?.toFixed?.(0)} RON</td>
+                        <td className="px-5 py-4 border-b pr-8" style={{ borderColor: 'var(--border)' }}>
                           <div className="flex items-center gap-2">
-                             <div className="font-black text-slate-800 uppercase tracking-tight text-[13px]">{b.customerName}</div>
+                             <div className="font-black uppercase tracking-tight text-[13px]" style={{ color: 'var(--text)' }}>{b.customerName}</div>
                              {getRankBadge(b.playerMatchesCount)}
                           </div>
-                          <div className="text-[10px] font-bold text-slate-400 tracking-wider lowercase">tel: {b.customerPhone}{b.customerEmail ? ` • ${b.customerEmail}` : ''}</div>
+                          <div className="text-[10px] font-bold tracking-wider lowercase" style={{ color: 'var(--faint)' }}>tel: {b.customerPhone}{b.customerEmail ? ` • ${b.customerEmail}` : ''}</div>
                         </td>
-                        <td className="px-5 py-4 border-b border-slate-50">
-                          <span className={statusChipClass(b.status)}>{statusLabel(b.status)}</span>
+                        <td className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                          <span className="text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-full inline-flex items-center" style={{ background: chip.bg, color: chip.color, fontFamily: "'Outfit', sans-serif" }}>{statusLabel(b.status)}</span>
                         </td>
-                        <td className="px-5 py-4 border-b border-slate-50">
+                        <td className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
                          <div className="flex justify-center flex-wrap gap-2">
                              {b.status === 'CANCELLED' || b.status === 'NO_SHOW' ? (
                                <button
-                                 className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+                                 className="text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity disabled:opacity-50"
+                                 style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}
                                  onClick={() => { setConfirmId(b.id); setConfirmAction('restore') }}
                                  disabled={restoringIds.has(b.id)}
                                >
-                                 Restabileste
+                                 Restabilește
                                </button>
                              ) : b.status === 'PENDING_APPROVAL' ? (
-                               <div className="flex flex-col gap-2 items-center">
-                                 <div className="flex gap-2">
-                                   <button onClick={() => approve(b.id)} className="h-9 px-4 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Aprobă</button>
-                                   <button onClick={() => reject(b.id)} className="h-9 px-4 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest">Respinge</button>
+                               <div className="flex flex-col gap-1.5 items-center">
+                                 <div className="flex gap-1.5">
+                                   <button onClick={() => approve(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}>Aprobă</button>
+                                   <button onClick={() => reject(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}>Respinge</button>
                                  </div>
                                  {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
-                                   <div className="flex gap-2">
+                                   <div className="flex gap-1.5">
                                      {(b.playerCancellationsCount ?? 0) > 0 && (
-                                       <div className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                       <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>
                                          {b.playerCancellationsCount} ANULĂRI
                                        </div>
                                      )}
                                      {(b.playerNoShowCount ?? 0) > 0 && (
-                                       <div className="text-[10px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                       <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(148,163,184,0.16)', color: 'var(--text2)' }}>
                                          {b.playerNoShowCount} NEPREZENTĂRI
                                        </div>
                                      )}
@@ -951,26 +907,24 @@ export default function AdminPage() {
                                </div>
                              ) : (
                                <>
-                                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-[10px] uppercase tracking-widest border border-emerald-100/50 shadow-sm mr-2 select-none">
-                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
-                                   Aprobat
-                                 </div>
                                  {!isOld && (
                                    <button
-                                     className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all"
+                                     className="text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity disabled:opacity-50"
+                                     style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}
                                      onClick={() => { setConfirmId(b.id); setConfirmAction('cancel') }}
                                      disabled={cancellingIds.has(b.id)}
                                    >
-                                     Anuleaza
+                                     Anulează
                                    </button>
                                  )}
                                  {(b.status === 'CONFIRMED' || isPassed) && (
                                    <button
-                                     className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-800/20 hover:scale-105 active:scale-95 transition-all"
+                                     className="text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity disabled:opacity-50"
+                                     style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#334155', color: '#f8fafc' }}
                                      onClick={() => { setConfirmId(b.id); setConfirmAction('noshow') }}
                                      disabled={cancellingIds.has(b.id)}
                                    >
-                                     Neprezentare
+                                     Neprezentat
                                    </button>
                                  )}
                                </>
@@ -984,19 +938,19 @@ export default function AdminPage() {
                 </table>
                 {filteredBookings.length === 0 && (
                   <div className="text-center py-24">
-                     <div className="text-slate-200 font-black uppercase tracking-[0.4em] text-2xl">Nicio rezervare</div>
+                     <div className="font-black uppercase tracking-[0.4em] text-2xl" style={{ color: 'var(--border)' }}>Nicio rezervare</div>
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <div className="bg-white/90 backdrop-blur-md rounded-[2.5rem] border border-sky-100 shadow-2xl overflow-hidden min-h-[700px] animate-in zoom-in-95 duration-300">
-               <div className="p-5 bg-sky-50/50 border-b border-sky-100 flex items-center justify-between">
-                  <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] flex items-center gap-3">
-                    <CalendarIcon className="w-5 h-5 text-emerald-500" />
+            <div className="rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[700px] animate-in zoom-in-95 duration-300" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+               <div className="p-5 border-b flex items-center justify-between" style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}>
+                  <h3 className="font-black uppercase tracking-widest text-[11px] flex items-center gap-3" style={{ color: 'var(--text)' }}>
+                    <CalendarIcon className="w-5 h-5" style={{ color: 'var(--lime-link)' }} />
                     Orar Terenuri — {formatDateDisplay(date)}
                   </h3>
-                  <div className="text-[9px] text-slate-400 font-black bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest">
+                  <div className="text-[9px] font-black px-3 py-1.5 rounded-full border shadow-sm uppercase tracking-widest" style={{ color: 'var(--faint)', background: 'var(--surface)', borderColor: 'var(--border)' }}>
                     Apasă pe o rezervare pentru Control
                   </div>
                </div>
@@ -1022,63 +976,63 @@ export default function AdminPage() {
 
           <div className="mt-8 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-3 mb-6 font-semibold">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-sky-200 to-transparent" />
+              <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-sky-500" />
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] whitespace-nowrap">Analiză Performanță {sport ? sportLabel(sport) : 'Global'}</h3>
+                <BarChart3 className="w-4 h-4" style={{ color: 'var(--lime-link)' }} />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap" style={{ color: 'var(--faint)' }}>Analiză Performanță {sport ? sportLabel(sport) : 'Global'}</h3>
               </div>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-sky-200 to-transparent" />
+              <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
             </div>
 
             <div className="mb-8">
                <RevenueChart data={chartData} title={`Evoluție Venituri ${sport ? sportLabel(sport) : 'Total'}`} total={stats.totalRevenue} />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-20">
               {/* Total Revenue Card */}
-              <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2.5rem] shadow-xl shadow-sky-900/5 flex flex-col group hover:scale-[1.02] transition-all duration-300">
+              <div className="p-6 rounded-[2.5rem] border shadow-xl flex flex-col group hover:scale-[1.02] transition-all duration-300" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="bg-emerald-500/10 p-3 rounded-2xl text-emerald-600 transition-colors group-hover:bg-emerald-500 group-hover:text-white">
+                  <div className="p-3 rounded-2xl transition-colors" style={{ background: 'rgba(16,185,129,0.14)', color: '#34d399' }}>
                     <TrendingUp className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Confirmat</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--faint)' }}>Total Confirmat</span>
                 </div>
-                <div className="text-3xl font-black text-slate-800 tracking-tight">{stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-300 italic">RON</span></div>
-                <div className="mt-2 text-[11px] text-slate-400 font-bold italic line-clamp-1 opacity-70">Suma totală a rezervărilor active</div>
+                <div className="text-3xl font-black tracking-tight" style={{ color: 'var(--text)' }}>{stats.totalRevenue.toFixed(0)} <span className="text-sm font-bold italic" style={{ color: 'var(--muted)' }}>RON</span></div>
+                <div className="mt-2 text-[11px] font-bold italic line-clamp-1 opacity-70" style={{ color: 'var(--faint)' }}>Suma totală a rezervărilor active</div>
               </div>
 
               {/* Collected Revenue Card */}
-              <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2.5rem] shadow-xl shadow-sky-900/5 flex flex-col group hover:scale-[1.02] transition-all duration-300">
+              <div className="p-6 rounded-[2.5rem] border shadow-xl flex flex-col group hover:scale-[1.02] transition-all duration-300" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="bg-sky-500/10 p-3 rounded-2xl text-sky-600 transition-colors group-hover:bg-sky-500 group-hover:text-white">
+                  <div className="p-3 rounded-2xl transition-colors" style={{ background: 'rgba(56,189,248,0.14)', color: '#38bdf8' }}>
                     <DollarSign className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    {stats.isToday ? 'Incasat (Până acum)' : 'Total Incasat'}
+                  <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--faint)' }}>
+                    {stats.isToday ? 'Încasat (Până acum)' : 'Total Încasat'}
                   </span>
                 </div>
-                <div className="text-3xl font-black text-slate-800 tracking-tight">{stats.collectedRevenue.toFixed(0)} <span className="text-sm font-bold text-slate-300 italic">RON</span></div>
-                <div className="mt-2 text-[11px] text-slate-400 font-bold italic line-clamp-1 opacity-70">Venit din intervale orare consumate</div>
+                <div className="text-3xl font-black tracking-tight" style={{ color: 'var(--text)' }}>{stats.collectedRevenue.toFixed(0)} <span className="text-sm font-bold italic" style={{ color: 'var(--muted)' }}>RON</span></div>
+                <div className="mt-2 text-[11px] font-bold italic line-clamp-1 opacity-70" style={{ color: 'var(--faint)' }}>Venit din intervale orare consumate</div>
               </div>
 
               {/* Occupancy Card */}
-              <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2.5rem] shadow-xl shadow-sky-900/5 flex flex-col group hover:scale-[1.02] transition-all duration-300">
+              <div className="p-6 rounded-[2.5rem] border shadow-xl flex flex-col group hover:scale-[1.02] transition-all duration-300" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="bg-amber-500/10 p-3 rounded-2xl text-amber-600 transition-colors group-hover:bg-amber-500 group-hover:text-white">
+                  <div className="p-3 rounded-2xl transition-colors" style={{ background: 'rgba(245,158,11,0.14)', color: '#f59e0b' }}>
                     <Percent className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grad Ocupare</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--faint)' }}>Grad Ocupare</span>
                 </div>
                 <div className="flex items-end gap-3 h-9">
-                  <div className="text-4xl font-black text-slate-800 tracking-tighter shrink-0">{stats.occupancyRate}%</div>
-                  <div className="flex-1 h-3 bg-slate-100 rounded-full mb-1 overflow-hidden border border-slate-50">
-                    <div 
-                      className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]"
-                      style={{ width: `${stats.occupancyRate}%` }}
+                  <div className="text-4xl font-black tracking-tighter shrink-0" style={{ color: 'var(--text)' }}>{stats.occupancyRate}%</div>
+                  <div className="flex-1 h-3 rounded-full mb-1 overflow-hidden border" style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                      style={{ width: `${stats.occupancyRate}%`, background: '#f59e0b' }}
                     />
                   </div>
                 </div>
-                <div className="mt-2 text-[11px] text-slate-400 font-bold italic line-clamp-1 opacity-70">Utilizare terenuri pe parcursul zilei</div>
+                <div className="mt-2 text-[11px] font-bold italic line-clamp-1 opacity-70" style={{ color: 'var(--faint)' }}>Utilizare terenuri pe parcursul zilei</div>
               </div>
             </div>
           </div>
@@ -1087,13 +1041,16 @@ export default function AdminPage() {
 
       {confirmId !== null && confirmAction !== null && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm overflow-hidden bg-white rounded-[2rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
-            <div className={`p-8 flex flex-col items-center text-center ${confirmAction === 'restore' ? 'bg-emerald-50' : confirmAction === 'noshow' ? 'bg-slate-100' : 'bg-rose-50'}`}>
+          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] shadow-2xl border animate-in zoom-in-95 duration-200" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div
+              className="p-8 flex flex-col items-center text-center"
+              style={{ background: confirmAction === 'restore' ? 'rgba(16,185,129,0.1)' : confirmAction === 'noshow' ? 'var(--surface2)' : 'rgba(244,63,94,0.1)' }}
+            >
               <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-5 rotate-3 shadow-xl ${confirmAction === 'restore' ? 'bg-emerald-500 text-white shadow-emerald-500/30' : confirmAction === 'noshow' ? 'bg-slate-800 text-white shadow-slate-800/30' : 'bg-rose-500 text-white shadow-rose-500/30'}`}>
                 {confirmAction === 'restore' ? <CalendarIcon className="w-10 h-10" /> : <X className="w-10 h-10" />}
               </div>
-              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-widest tracking-tighter">{confirmAction === 'restore' ? 'Restabilire' : confirmAction === 'noshow' ? 'Neprezentare' : 'Anulare'}</h3>
-              <p className="text-sm text-slate-500 mt-3 leading-relaxed font-semibold">
+              <h3 className="text-2xl font-black uppercase tracking-widest tracking-tighter" style={{ color: 'var(--text)' }}>{confirmAction === 'restore' ? 'Restabilire' : confirmAction === 'noshow' ? 'Neprezentare' : 'Anulare'}</h3>
+              <p className="text-sm mt-3 leading-relaxed font-semibold" style={{ color: 'var(--text2)' }}>
                 {confirmAction === 'restore'
                   ? 'Ești sigur că vrei să restabilești această rezervare? Va apărea imediat ca activă.'
                   : confirmAction === 'noshow'
@@ -1101,10 +1058,11 @@ export default function AdminPage() {
                   : 'Ești sigur că vrei să anulezi acest interval? Locul va deveni disponibil publicului.'}
               </p>
             </div>
-            
-            <div className="p-6 grid grid-cols-2 gap-4 bg-white">
+
+            <div className="p-6 grid grid-cols-2 gap-4" style={{ background: 'var(--surface)' }}>
               <button
-                className="w-full py-4 rounded-2xl border border-slate-100 text-slate-400 font-black hover:bg-slate-50 active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+                className="w-full py-4 rounded-2xl border font-black active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+                style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
                 onClick={() => { setConfirmId(null); setConfirmAction(null) }}
               >
                 Nu, înapoi
@@ -1128,18 +1086,18 @@ export default function AdminPage() {
 
       {unavailableVisible && (
         <div className="fixed inset-0 w-screen h-screen z-[10010] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-[2rem] border border-amber-100 bg-white shadow-2xl animate-in zoom-in-95">
-            <div className="p-6 bg-amber-50 rounded-t-[2rem] border-b border-amber-100 flex items-center gap-4">
-               <div className="bg-amber-100 p-3 rounded-2xl">
+          <div className="w-full max-w-sm rounded-[2rem] border shadow-2xl animate-in zoom-in-95" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="p-6 rounded-t-[2rem] border-b flex items-center gap-4" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'var(--border)' }}>
+               <div className="p-3 rounded-2xl" style={{ background: 'rgba(245,158,11,0.18)' }}>
                   <img src={fastCat} alt="Pisica" className="w-10 h-10" />
                </div>
                <div>
-                  <div className="text-amber-900 font-black uppercase tracking-widest text-xs">Eroare Intervenție</div>
-                  <div className="text-[11px] text-amber-700 font-bold">Conflict detectat în calendar</div>
+                  <div className="font-black uppercase tracking-widest text-xs" style={{ color: '#f59e0b' }}>Eroare Intervenție</div>
+                  <div className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>Conflict detectat în calendar</div>
                </div>
             </div>
             <div className="p-6">
-              <div className="text-sm text-slate-600 font-semibold leading-relaxed">{unavailableMessage}</div>
+              <div className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text2)' }}>{unavailableMessage}</div>
               <button
                 className="w-full mt-6 py-4 rounded-2xl bg-amber-500 text-white font-black uppercase tracking-widest text-[11px] shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95"
                 onClick={() => setUnavailableVisible(false)}

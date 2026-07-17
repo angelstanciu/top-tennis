@@ -4,6 +4,7 @@ import { CourtDto, SportType } from '../types'
 import { fetchActiveCourts, adminBlockSlot } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
+import { SportChips, SelectField, DateStepperField, TextField } from '../components/admin/FilterBar'
 
 function generateTimeOptions(isEnd = false) {
   const opts = []
@@ -117,126 +118,74 @@ export default function AdminBlockDayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
+    <div className="min-h-screen font-sans pb-20" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       {auth && (
         <>
-          <AdminHeader active="landing" />
-          
-          <div className="max-w-2xl mx-auto px-4 mt-8">
-            <button onClick={() => navigate('/admin')} className="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-2 mb-6">
-              <span>&larr;</span> Înapoi la Panou
-            </button>
-            
-            <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
-              <h2 className="text-2xl font-black text-rose-600 mb-2">Blocare Terenuri</h2>
-              <p className="text-slate-500 mb-8 text-sm">Folosiți acest formular în situații excepționale pentru a marca un teren ca Indisponibil/Ocupat (Zile libere naționale, turnee externe, lucrări de mentenanță).</p>
+          <AdminHeader active="block-day" />
+          <div className="max-w-2xl mx-auto px-4 pt-6">
+            <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+              <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#fb7185', fontFamily: "'Outfit', sans-serif" }}>Situații excepționale</span>
+              <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Blocare terenuri</h2>
+              <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Marchează un teren indisponibil (sărbători, turnee, mentenanță).</p>
 
-              {success && <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">{success}</div>}
-              {error && <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">{error}</div>}
+              {success && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(16,185,129,0.14)', color: '#34d399' }}>{success}</div>}
+              {error && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>{error}</div>}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Alege Sportul</label>
-                    <select className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" value={sport} onChange={e => {setSport(e.target.value as SportType | ''); setCourtId('')}}>
-                      <option value="">Toate Sporturile</option>
-                      <option value="TENNIS">Tenis</option>
-                      <option value="PADEL">Padel</option>
-                      <option value="BASKETBALL">Baschet</option>
-                      <option value="FOOTVOLLEY">Tenis de picior</option>
-                      <option value="BEACH_VOLLEY">Volei pe Plajă</option>
-                      <option value="TABLE_TENNIS">Tenis de Masă</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Alege Terenul *</label>
-                    <select required className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" value={courtId} onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}>
-                      <option value="">-- Selectează un teren --</option>
-                      {filteredCourts.map(c => (
-                        <option key={c.id} value={c.id}>{c.sportType === 'TENNIS' ? 'Teren' : c.sportType === 'BEACH_VOLLEY' ? 'Volei Plajă' : c.sportType === 'TABLE_TENNIS' ? 'Tenis Masă' : c.sportType === 'FOOTVOLLEY' ? 'Fotbal Tenis' : c.sportType === 'BASKETBALL' ? 'Baschet' : c.sportType === 'PADEL' ? 'Padel' : c.sportType} {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <SportChips
+                  value={sport}
+                  onChange={v => { setSport(v); setCourtId('') }}
+                  includeAll
+                />
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Data *</label>
-                  <div className="relative flex items-stretch border-slate-200 bg-slate-50 rounded-xl overflow-hidden shadow-sm h-12">
-                    <button
-                      type="button"
-                      className="px-4 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-r border-slate-200 focus:outline-none transition-colors"
-                      onClick={() => shiftDate(-1)}
-                    >
-                      {'\u2039'}
-                    </button>
-                    <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
-                      <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group px-4">
-                        <div className="font-semibold text-slate-800 text-center select-none truncate group-hover:text-emerald-700 transition-colors">
-                          {formatDateDisplay(date)}
-                        </div>
-                        <button
-                          type="button"
-                          className="absolute right-3 p-1 text-slate-400 pointer-events-none z-10 group-hover:text-emerald-500 transition-colors"
-                          aria-label="Deschide calendarul"
-                          title="Deschide calendarul"
-                        >
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                          </svg>
-                        </button>
-                      </div>
-                    </CalendarDemo>
-                    <button
-                      type="button"
-                      className="px-4 text-2xl text-slate-600 hover:bg-slate-200 hover:text-slate-800 border-l border-slate-200 focus:outline-none transition-colors"
-                      onClick={() => shiftDate(1)}
-                    >
-                      {'\u203A'}
-                    </button>
-                  </div>
-                </div>
+                <SelectField label="Teren" required value={courtId as any} onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}>
+                  <option value="">Selectează un teren</option>
+                  {filteredCourts.map(c => (
+                    <option key={c.id} value={c.id}>{c.sportType === 'TENNIS' ? 'Teren' : c.sportType === 'BEACH_VOLLEY' ? 'Volei Plajă' : c.sportType === 'TABLE_TENNIS' ? 'Tenis Masă' : c.sportType === 'FOOTVOLLEY' ? 'Fotbal Tenis' : c.sportType === 'BASKETBALL' ? 'Baschet' : c.sportType === 'PADEL' ? 'Padel' : c.sportType} {c.name}</option>
+                  ))}
+                </SelectField>
 
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Ora Start *</label>
-                    <div className="relative w-full">
-                      <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" value={startTime} onChange={e => setStartTime(e.target.value)}>
-                        {generateTimeOptions(false).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <DateStepperField
+                  label="Dată"
+                  display={formatDateDisplay(date)}
+                  onPrev={() => shiftDate(-1)}
+                  onNext={() => shiftDate(1)}
+                  arrowWidth={44}
+                >
+                  <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
+                    <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group w-full">
+                      <div className="text-[13px] font-extrabold text-center select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
+                        {formatDateDisplay(date)}
                       </div>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Ora Sfârșit *</label>
-                    <div className="relative w-full">
-                      <select required className="w-full appearance-none rounded-xl border-slate-200 bg-slate-50 p-3 pr-10 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" value={endTime} onChange={e => setEndTime(e.target.value)}>
-                        {generateTimeOptions(true).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-slate-400 pl-1 mt-1">Lăsați 00:00 - 23:59 ptr întreaga zi</p>
-                  </div>
-                </div>
+                  </CalendarDemo>
+                </DateStepperField>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Motiv (vizibil pentru toți jucătorii)</label>
-                  <input type="text" className="w-full rounded-xl border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:ring-rose-500 focus:border-rose-500" placeholder="ex: Ocupat de Admin, Turneu, Reabilitare..." value={note} onChange={e => setNote(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectField label="Ora start" required value={startTime} onChange={e => setStartTime(e.target.value)}>
+                    {generateTimeOptions(false).map(t => <option key={t} value={t}>{t}</option>)}
+                  </SelectField>
+                  <SelectField label="Ora sfârșit" required value={endTime} onChange={e => setEndTime(e.target.value)}>
+                    {generateTimeOptions(true).map(t => <option key={t} value={t}>{t}</option>)}
+                  </SelectField>
                 </div>
+                <p className="text-[10px] -mt-2" style={{ color: 'var(--faint)' }}>Lăsați 00:00 - 23:59 ptr întreaga zi</p>
+
+                <TextField
+                  label="Motiv (vizibil clienților)"
+                  type="text"
+                  placeholder="ex: Ocupat de Admin, Turneu, Reabilitare..."
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                />
 
                 <button
                   type="submit"
                   disabled={loading || courtId === ''}
-                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-all disabled:opacity-50 mt-6 disabled:cursor-not-allowed"
+                  className="w-full font-black uppercase tracking-widest text-[11px] py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50 mt-2 disabled:cursor-not-allowed active:scale-95"
+                  style={{ background: '#f43f5e', color: '#fff', boxShadow: '0 8px 20px rgba(244,63,94,0.25)' }}
                 >
-                  {loading ? 'Se procesează...' : 'Blochează Terenul'}
+                  {loading ? 'Se procesează...' : 'Blochează terenul'}
                 </button>
               </form>
             </div>

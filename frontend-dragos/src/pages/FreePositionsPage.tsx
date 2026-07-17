@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { AvailabilityDto, CourtDto, SportType } from '../types'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import AdminHeader from '../components/AdminHeader'
-import SportPicker from '../components/SportPicker'
 import TimelineGrid from '../components/TimelineGrid'
+import { FilterBarCard, SportChips, SelectField, FieldLabel } from '../components/admin/FilterBar'
 
 function todayISOinTZ(tz: string) {
   try {
@@ -492,67 +492,37 @@ export default function FreePositionsPage() {
   }
 
   return (
-    <div className="min-h-screen relative font-sans text-slate-900 bg-slate-50 selection:bg-sky-100 selection:text-sky-900 overflow-x-hidden">
-      {/* Premium Dark Background Image */}
-      <div 
-        className="fixed inset-0 z-0 pointer-events-none transition-all duration-1000 bg-slate-900"
-        style={{ 
-          backgroundImage: "url('/img-padel-premium.png')", 
-          backgroundSize: 'cover', 
-          backgroundPosition: 'center', 
-          backgroundRepeat: 'no-repeat',
-          backgroundAttachment: 'fixed'
-        }}
-      >
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[3px]" />
-      </div>
-
-      <div className="max-w-3xl mx-auto p-4 space-y-6 relative z-10">
+    <div className="min-h-screen relative font-sans selection:bg-lime-400 selection:text-slate-950 overflow-x-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <AdminHeader active="free" />
-
-      <div className="bg-white/80 backdrop-blur-xl border border-sky-100 rounded-[2rem] p-6 shadow-xl shadow-sky-900/5 transition-all">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="relative">
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sport</div>
-            <select className="w-full h-11 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm cursor-pointer" value={sport} onChange={e => { setSport(e.target.value as SportType); setCourtId(''); }}>
-              <option value="TENNIS" disabled={disabledSports.includes('TENNIS')}>Tenis</option>
-              <option value="PADEL" disabled={disabledSports.includes('PADEL')}>Padel</option>
-              <option value="BASKETBALL" disabled={disabledSports.includes('BASKETBALL')}>Baschet</option>
-              <option value="FOOTVOLLEY" disabled={disabledSports.includes('FOOTVOLLEY')}>Tenis de picior</option>
-              <option value="BEACH_VOLLEY" disabled={disabledSports.includes('BEACH_VOLLEY')}>Volei pe Plajă</option>
-              <option value="TABLE_TENNIS" disabled={disabledSports.includes('TABLE_TENNIS')}>Tenis de Masă</option>
-            </select>
-            <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Teren</div>
-            <select className={`w-full h-11 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all appearance-none shadow-sm cursor-pointer ${highlightCourt ? "animate-pulse ring-2 ring-rose-300" : ""}`} value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)}>
-              <option value="">Selecteaza terenul</option>
-              {courts.map(c => {
-                const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
-                return <option key={c.id} value={c.id}>{label}</option>
-              })}
-            </select>
-            <div className="absolute right-4 bottom-3.5 pointer-events-none text-slate-400">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data</div>
-            <div className="relative flex items-stretch border border-slate-100 bg-slate-50 rounded-2xl overflow-hidden h-11 shadow-sm focus-within:ring-4 focus-within:ring-sky-500/10 focus-within:border-sky-500 transition-all">
+      <div className="max-w-3xl mx-auto p-4 space-y-6 relative z-10">
+      <FilterBarCard>
+        <SportChips value={sport} onChange={v => { if (v) { setSport(v); setCourtId('') } }} disabledSports={disabledSports} />
+        <div className="flex gap-2.5">
+          <SelectField label="Teren" value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)} className="flex-1">
+            <option value="">Selectează terenul</option>
+            {courts.map(c => {
+              const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
+              return <option key={c.id} value={c.id}>{label}</option>
+            })}
+          </SelectField>
+          <div className="flex-1">
+            <FieldLabel>Dată</FieldLabel>
+            <div
+              className={`relative flex items-stretch h-11 rounded-[14px] overflow-hidden border transition-all ${highlightCourt ? 'ring-2 ring-rose-400' : ''}`}
+              style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}
+            >
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-r border-slate-100 focus:outline-none transition-all"
-                aria-label="Ziua anterioara"
-                title="Ziua anterioara"
+                className="flex items-center justify-center px-3 text-lg leading-none transition-colors border-r"
+                style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}
+                aria-label="Ziua anterioară"
+                title="Ziua anterioară"
                 onClick={() => shiftDate(-1)}
               >
-                {'\u2039'}
+                {'‹'}
               </button>
               <div className="relative flex-1 min-w-0">
-                <div className="flex items-center justify-center h-full text-sm font-bold text-slate-700 select-none truncate">
+                <div className="flex items-center justify-center h-full text-[13px] font-extrabold select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
                   {formatDateDisplay(date)}
                 </div>
                 <input
@@ -567,22 +537,28 @@ export default function FreePositionsPage() {
               </div>
               <button
                 type="button"
-                className="inline-flex items-center justify-center px-4 text-xl leading-none text-slate-400 hover:bg-white hover:text-sky-600 border-l border-slate-100 focus:outline-none transition-all"
-                aria-label="Ziua urmatoare"
+                className="flex items-center justify-center px-3 text-lg leading-none transition-colors border-l"
+                style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}
+                aria-label="Ziua următoare"
                 onClick={() => shiftDate(1)}
-                title="Ziua urmatoare"
+                title="Ziua următoare"
               >
-                {'\u203A'}
+                {'›'}
               </button>
             </div>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-1 gap-2">
-          <button className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl transition-all disabled:opacity-50 active:scale-95 ${copiedImage ? 'bg-sky-500 text-white shadow-sky-500/20 ring-2 ring-sky-300' : 'bg-slate-800 text-white shadow-slate-800/20 hover:bg-slate-700'}`} onClick={copyAsImage} disabled={!data.length || imageCopying}>
-            {imageCopying ? 'Se genereaza imaginea...' : (copiedImage ? 'Imagine Copiată!' : 'Copiaza Poster (Imagine)')}
-          </button>
-        </div>
-      </div>
+        <button
+          className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl transition-all disabled:opacity-50 active:scale-95"
+          style={copiedImage
+            ? { background: '#38bdf8', color: '#020617', boxShadow: '0 8px 20px rgba(56,189,248,0.25)' }
+            : { background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
+          onClick={copyAsImage}
+          disabled={!data.length || imageCopying}
+        >
+          {imageCopying ? 'Se generează imaginea...' : (copiedImage ? 'Imagine copiată!' : 'Copiază poster (imagine)')}
+        </button>
+      </FilterBarCard>
 
       {/* Visual Poster Preview */}
       {data.length > 0 && (
@@ -678,20 +654,25 @@ export default function FreePositionsPage() {
       )}
 
       {/* Text Template Section */}
-      <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-sky-100 shadow-xl overflow-hidden mt-6 flex flex-col items-stretch relative z-10 transition-all">
-        <div className="p-5 bg-sky-50/50 border-b border-sky-100 flex items-center justify-between">
-           <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] flex items-center gap-3">
-              PREVIZUALIZARE TEXT (SOCIAL MEDIA)
+      <div className="rounded-[2rem] border shadow-xl overflow-hidden mt-6 flex flex-col items-stretch relative z-10 transition-all" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="p-5 border-b flex items-center justify-between" style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}>
+           <h3 className="font-black uppercase tracking-widest text-[11px] flex items-center gap-3" style={{ color: 'var(--text)' }}>
+              Previzualizare text (social media)
            </h3>
-           <button className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${highlightCopy ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white text-slate-700 border border-slate-200 hover:border-sky-300 hover:text-sky-600"}`} onClick={copy} disabled={!text}>
-             {copiedText ? 'Copiat' : 'Copiaza Text'}
+           <button
+             className="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+             style={highlightCopy ? { background: 'var(--lime)', color: 'var(--lime-on)' } : { background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
+             onClick={copy}
+             disabled={!text}
+           >
+             {copiedText ? 'Copiat' : 'Copiază text'}
            </button>
         </div>
-        <div className="p-6 bg-slate-100/50 flex justify-center">
+        <div className="p-6 flex justify-center" style={{ background: 'var(--surface2)' }}>
            <div className="w-full max-w-sm">
              <div className="bg-gradient-to-br from-[#E8F5E9] to-[#E0F2F1] rounded-3xl rounded-tl-sm shadow-sm border border-teal-100/50 p-5 relative">
                 <div className="text-[14.5px] font-sans font-medium text-[#1A2F33] leading-relaxed whitespace-pre-wrap break-words pb-4">
-                  {tableLoading ? 'Se incarca…' : (text || 'Nicio poziție liberă identificată.')}
+                  {tableLoading ? 'Se încarcă…' : (text || 'Nicio poziție liberă identificată.')}
                 </div>
                 <div className="absolute right-4 bottom-2 text-[10px] font-bold text-teal-700 opacity-50 select-none tracking-widest uppercase">Acum</div>
              </div>
@@ -699,29 +680,28 @@ export default function FreePositionsPage() {
         </div>
       </div>
 
-
-
       {missingToastVisible && (
         <div className="fixed inset-x-0 bottom-0 z-[20000] pointer-events-none">
           <div className="max-w-3xl mx-auto px-4">
             <div
-              className={`relative rounded border border-rose-300 bg-rose-50 text-rose-800 shadow pointer-events-auto ${missingToastFading ? 'opacity-0' : 'opacity-100'} transition-opacity w-full mb-4`}
-              style={{ transitionDuration: '2000ms', height: '16.5vh' }}
+              className={`relative rounded-2xl border shadow pointer-events-auto ${missingToastFading ? 'opacity-0' : 'opacity-100'} transition-opacity w-full mb-4`}
+              style={{ transitionDuration: '2000ms', height: '16.5vh', background: 'rgba(244,63,94,0.14)', borderColor: 'rgba(244,63,94,0.3)', color: '#fb7185' }}
               role="alert"
             >
               <button
-                aria-label="Inchide"
-                className="absolute top-2 right-2 text-rose-800/70 hover:text-rose-900"
+                aria-label="Închide"
+                className="absolute top-2 right-2 hover:opacity-70"
+                style={{ color: '#fb7185' }}
                 onClick={() => {
                   try { if (toastShowTimer.current) clearTimeout(toastShowTimer.current) } catch { }
                   try { if (toastHideTimer.current) clearTimeout(toastHideTimer.current) } catch { }
                   setMissingToastFading(false)
                   setMissingToastVisible(false)
                 }}
-              >{'\u00D7'}</button>
+              >{'×'}</button>
               <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-3">
-                <span className="text-lg" aria-hidden>{'\u26A0'}</span>
-                <div className="text-sm text-rose-900">Selecteaza un teren inainte</div>
+                <span className="text-lg" aria-hidden>{'⚠'}</span>
+                <div className="text-sm">Selectează un teren înainte</div>
               </div>
             </div>
           </div>
