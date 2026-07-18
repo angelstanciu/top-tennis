@@ -52,6 +52,9 @@ public class Court {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal morningPrice;
 
+    @Column(nullable = false)
+    private LocalTime nightRateEndTime;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -82,5 +85,7 @@ public class Court {
     public void setNightRateStartTime(LocalTime nightRateStartTime) { this.nightRateStartTime = nightRateStartTime; }
     public BigDecimal getMorningPrice() { return morningPrice; }
     public void setMorningPrice(BigDecimal morningPrice) { this.morningPrice = morningPrice; }
+    public LocalTime getNightRateEndTime() { return nightRateEndTime; }
+    public void setNightRateEndTime(LocalTime nightRateEndTime) { this.nightRateEndTime = nightRateEndTime; }
 }
 

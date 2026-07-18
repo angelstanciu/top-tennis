@@ -21,6 +21,7 @@ export interface CourtDto {
   nightPrice: number
   nightRateStartTime: string
   morningPrice: number
+  nightRateEndTime: string
 }
 
 export interface AvailabilityTimeRange {
@@ -113,18 +114,28 @@ export function calculateGranularPrice(court: CourtDto, start: string, end: stri
   }
 
   function splitThreeTier(rate1: number, rate2: number, rate3: number, b1: number, b2: number): number {
-    const DAY = 24 * 60
-    const seg1 =
-      Math.max(0, Math.min(endMin, b1)       - Math.max(startMin, 0)) +
-      Math.max(0, Math.min(endMin, b1 + DAY) - Math.max(startMin, DAY))
-    const seg2 =
-      Math.max(0, Math.min(endMin, b2)       - Math.max(startMin, b1)) +
-      Math.max(0, Math.min(endMin, b2 + DAY) - Math.max(startMin, b1 + DAY))
-    const seg3 =
-      Math.max(0, Math.min(endMin, DAY)       - Math.max(startMin, b2)) +
-      Math.max(0, Math.min(endMin, DAY + DAY) - Math.max(startMin, b2 + DAY))
-    return (seg1 * rate1 + seg2 * rate2 + seg3 * rate3) / 60
+    return splitTiered([rate1, rate2, rate3], [b1, b2])
   }
+
+  // N-tier split: boundaries are ascending minute-of-day edges, rates.length == boundaries.length + 1.
+  // Mirrors BookingService.splitTieredPrice on the backend (same doubled +DAY terms so a tier that
+  // wraps past midnight, e.g. nocturnă's early-morning carry-over, is counted correctly).
+  function splitTiered(rates: number[], boundaries: number[]): number {
+    const DAY = 24 * 60
+    const b = [0, ...boundaries, DAY]
+    let total = 0
+    for (let i = 0; i < rates.length; i++) {
+      const seg =
+        Math.max(0, Math.min(endMin, b[i + 1])       - Math.max(startMin, b[i])) +
+        Math.max(0, Math.min(endMin, b[i + 1] + DAY) - Math.max(startMin, b[i] + DAY))
+      total += seg * rates[i]
+    }
+    return total / 60
+  }
+
+  // '00:00' is the disabled sentinel (no morning carry-over) — same convention as openTime/closeTime.
+  const nightEndMin = timeToMin(court.nightRateEndTime)
+  const nightCarry = court.lighting && !court.indoor && nightEndMin > 0
 
   // Padel outdoor: weekday morning discount (fixed 14:00) + regular + nocturnă,
   // all three prices admin-editable (pricePerHour / morningPrice / nightPrice).
@@ -134,8 +145,17 @@ export function calculateGranularPrice(court: CourtDto, start: string, end: stri
       if (isWeekday) return splitDayNight(court.morningPrice, court.pricePerHour, PADEL_OUTDOOR_MORNING_END)
       return ((endMin - startMin) * court.pricePerHour) / 60
     }
-    if (!isWeekday) return splitDayNight(court.pricePerHour, court.nightPrice, nightStart)
-    if (PADEL_OUTDOOR_MORNING_END >= nightStart) return splitDayNight(court.morningPrice, court.nightPrice, nightStart)
+    if (!isWeekday) {
+      if (nightCarry) return splitTiered([court.nightPrice, court.pricePerHour, court.nightPrice], [nightEndMin, nightStart])
+      return splitDayNight(court.pricePerHour, court.nightPrice, nightStart)
+    }
+    if (PADEL_OUTDOOR_MORNING_END >= nightStart) {
+      if (nightCarry) return splitTiered([court.nightPrice, court.morningPrice, court.nightPrice], [nightEndMin, nightStart])
+      return splitDayNight(court.morningPrice, court.nightPrice, nightStart)
+    }
+    if (nightCarry) {
+      return splitTiered([court.nightPrice, court.morningPrice, court.pricePerHour, court.nightPrice], [nightEndMin, PADEL_OUTDOOR_MORNING_END, nightStart])
+    }
     return splitThreeTier(court.morningPrice, court.pricePerHour, court.nightPrice, PADEL_OUTDOOR_MORNING_END, nightStart)
   }
 
@@ -143,7 +163,9 @@ export function calculateGranularPrice(court: CourtDto, start: string, end: stri
   // Beach Volley, and any other outdoor court with Nocturnă checked (not a fixed sport list).
   const tennisSeasonal = court.sportType !== 'TENNIS' || isBeforeNovember
   if (!court.indoor && court.lighting && tennisSeasonal) {
-    return splitDayNight(court.pricePerHour, court.nightPrice, timeToMin(court.nightRateStartTime))
+    const nightStart = timeToMin(court.nightRateStartTime)
+    if (nightCarry) return splitTiered([court.nightPrice, court.pricePerHour, court.nightPrice], [nightEndMin, nightStart])
+    return splitDayNight(court.pricePerHour, court.nightPrice, nightStart)
   }
 
   // Default: flat rate from the actual court (indoor courts incl. Padel indoor, Basketball,

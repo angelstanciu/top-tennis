@@ -21,6 +21,7 @@ public class CourtMapper {
         dto.nightPrice = c.getNightPrice();
         dto.nightRateStartTime = c.getNightRateStartTime();
         dto.morningPrice = c.getMorningPrice();
+        dto.nightRateEndTime = c.getNightRateEndTime();
         return dto;
     }
 }

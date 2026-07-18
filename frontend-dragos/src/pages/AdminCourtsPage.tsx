@@ -36,6 +36,7 @@ type EditState = {
   nightPrice: number
   nightRateStartTime: string
   morningPrice: number
+  nightRateEndTime: string
 }
 
 function toEditState(c: CourtDto): EditState {
@@ -47,6 +48,7 @@ function toEditState(c: CourtDto): EditState {
     nightPrice: c.nightPrice,
     nightRateStartTime: c.nightRateStartTime.slice(0, 5),
     morningPrice: c.morningPrice,
+    nightRateEndTime: c.nightRateEndTime.slice(0, 5),
   }
 }
 
@@ -180,6 +182,7 @@ export default function AdminCourtsPage() {
                   || edit.nightPrice !== original.nightPrice
                   || edit.nightRateStartTime !== original.nightRateStartTime
                   || edit.morningPrice !== original.morningPrice
+                  || edit.nightRateEndTime !== original.nightRateEndTime
                 const showNocturnaPricing = !court.indoor && edit.lighting
                 const showMorningPricing = court.sportType === 'PADEL' && !court.indoor
                 return (
@@ -228,9 +231,15 @@ export default function AdminCourtsPage() {
                       )}
                       {showNocturnaPricing && (
                         <>
-                          <div>
-                            <FieldLabel>Ora nocturnă</FieldLabel>
-                            <TimeWheelPicker value={edit.nightRateStartTime} onChange={t => updateEdit(court.id, { nightRateStartTime: t })} />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <FieldLabel>Nocturna De la</FieldLabel>
+                              <TimeWheelPicker value={edit.nightRateStartTime} onChange={t => updateEdit(court.id, { nightRateStartTime: t })} />
+                            </div>
+                            <div>
+                              <FieldLabel>Nocturna pana la</FieldLabel>
+                              <TimeWheelPicker value={edit.nightRateEndTime} onChange={t => updateEdit(court.id, { nightRateEndTime: t })} />
+                            </div>
                           </div>
                           <TextField
                             label="Preț nocturnă (lei/h)"

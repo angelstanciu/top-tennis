@@ -769,6 +769,16 @@ public class BookingService {
         // or Tenis 5 actually applies a night rate rather than staying cosmetic.
         boolean tennisSeasonal = sport != SportType.TENNIS || date.getMonthValue() < 11;
         if (!isIndoor && court.isLighting() && tennisSeasonal) {
+            if (hasNightCarry(court)) {
+                // Nocturnă also covers the early-morning tail of the previous night
+                // (e.g. 21:00 -> 06:00): reuse the day/night/day-shaped tiered split with
+                // night on both the first and last tier so 00:00-nightRateEndTime stays
+                // night-priced instead of falling back to the day rate.
+                BigDecimal nightRate = court.getNightPrice();
+                return splitTieredPrice(start, end,
+                        new LocalTime[]{court.getNightRateEndTime(), court.getNightRateStartTime()},
+                        new BigDecimal[]{nightRate, court.getPricePerHour(), nightRate});
+            }
             return splitDayNightPrice(start, end, court.getNightRateStartTime(), court.getPricePerHour(), court.getNightPrice());
         }
 
@@ -795,19 +805,40 @@ public class BookingService {
 
         LocalTime nightStart = court.getNightRateStartTime();
         BigDecimal nightRate = court.getNightPrice();
+        boolean nightCarry = hasNightCarry(court);
+        LocalTime nightEnd = court.getNightRateEndTime();
 
         if (!isWeekday) {
             // Weekend: regular rate until nocturnă, then night rate — no morning discount.
+            if (nightCarry) {
+                return splitTieredPrice(start, end, new LocalTime[]{nightEnd, nightStart},
+                        new BigDecimal[]{nightRate, regularRate, nightRate});
+            }
             return splitDayNightPrice(start, end, nightStart, regularRate, nightRate);
         }
 
         if (!PADEL_OUTDOOR_MORNING_END.isBefore(nightStart)) {
             // Nocturnă hour configured at/before 14:00 — collapse to a 2-tier morning/night split.
+            if (nightCarry) {
+                return splitTieredPrice(start, end, new LocalTime[]{nightEnd, nightStart},
+                        new BigDecimal[]{nightRate, court.getMorningPrice(), nightRate});
+            }
             return splitDayNightPrice(start, end, nightStart, court.getMorningPrice(), nightRate);
         }
 
+        if (nightCarry) {
+            return splitTieredPrice(start, end, new LocalTime[]{nightEnd, PADEL_OUTDOOR_MORNING_END, nightStart},
+                    new BigDecimal[]{nightRate, court.getMorningPrice(), regularRate, nightRate});
+        }
         return splitThreeTierPrice(start, end, PADEL_OUTDOOR_MORNING_END, nightStart,
                 court.getMorningPrice(), regularRate, nightRate);
+    }
+
+    // '00:00' is the disabled sentinel (same convention as court.getOpenTime()); nocturnă
+    // only carries into the early morning when an admin has explicitly set a later end time.
+    private boolean hasNightCarry(Court court) {
+        LocalTime nightEnd = court.getNightRateEndTime();
+        return nightEnd != null && nightEnd.isAfter(LocalTime.MIDNIGHT);
     }
 
     private BigDecimal splitThreeTierPrice(LocalTime start, LocalTime end, LocalTime firstBoundary, LocalTime secondBoundary,
@@ -829,6 +860,30 @@ public class BookingService {
                 .add(rate2.multiply(BigDecimal.valueOf(seg2)))
                 .add(rate3.multiply(BigDecimal.valueOf(seg3)));
         return totalMinutes.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    // N-tier generalization of splitThreeTierPrice: boundaries.length ascending tier edges within
+    // one calendar day, rates.length == boundaries.length + 1. Reused for the nocturnă-carries-past-midnight
+    // case by putting the night rate in both the first and last tier (boundaries = [nightRateEndTime, nightRateStartTime]),
+    // so the 00:00-nightRateEndTime tail of a cross-midnight booking (see the b1/b2 split in createPublicAdmin)
+    // prices at night rate instead of falling back to the day rate for the new calendar day.
+    private BigDecimal splitTieredPrice(LocalTime start, LocalTime end, LocalTime[] boundaries, BigDecimal[] rates) {
+        int s = minutesSinceMidnight(start);
+        int e = minutesSinceMidnight(end);
+        int dayLen = 24 * 60;
+
+        int[] b = new int[boundaries.length + 2];
+        b[0] = 0;
+        for (int i = 0; i < boundaries.length; i++) b[i + 1] = minutesSinceMidnight(boundaries[i]);
+        b[b.length - 1] = dayLen;
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = 0; i < rates.length; i++) {
+            int seg = Math.max(0, Math.min(e, b[i + 1]) - Math.max(s, b[i]))
+                    + Math.max(0, Math.min(e, b[i + 1] + dayLen) - Math.max(s, b[i] + dayLen));
+            total = total.add(rates[i].multiply(BigDecimal.valueOf(seg)));
+        }
+        return total.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal splitDayNightPrice(LocalTime start, LocalTime end, LocalTime splitTime,

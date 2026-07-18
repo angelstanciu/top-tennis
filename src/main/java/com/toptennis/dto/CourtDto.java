@@ -20,5 +20,6 @@ public class CourtDto {
     public BigDecimal nightPrice;
     public LocalTime nightRateStartTime;
     public BigDecimal morningPrice;
+    public LocalTime nightRateEndTime;
 }
 

@@ -127,6 +127,7 @@ export async function adminUpdateCourtHours(courtId: number, payload: {
   nightPrice: number
   nightRateStartTime: string
   morningPrice: number
+  nightRateEndTime: string
 }, auth: string): Promise<CourtDto> {
   const res = await fetch(`${BASE_URL}/admin/courts/${courtId}`, {
     method: 'PATCH',
