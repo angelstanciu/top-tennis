@@ -1,4 +1,4 @@
-import { AvailabilityDto, BookingDto, CourtDto, PlayerUser } from './types'
+import { AvailabilityDto, BookingDto, CourtDto, PlayerUser, SubscriptionSummaryDto } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -360,4 +360,23 @@ export async function rejectBooking(id: number, auth: string): Promise<void> {
     headers: { Authorization: `Basic ${auth}` }
   })
   if (!res.ok) throw new Error(await parseError(res))
+}
+
+export async function fetchActiveSubscriptions(auth: string): Promise<SubscriptionSummaryDto[]> {
+  const res = await fetch(`${BASE_URL}/admin/subscriptions`, {
+    headers: { Authorization: `Basic ${auth}` }
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json()
+}
+
+export async function cancelSubscription(bookingIds: number[], auth: string): Promise<number> {
+  const res = await fetch(`${BASE_URL}/admin/subscriptions/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
+    body: JSON.stringify({ bookingIds }),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  const data = await res.json()
+  return data.cancelled as number
 }

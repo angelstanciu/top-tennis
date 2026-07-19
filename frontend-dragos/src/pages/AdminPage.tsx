@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SportType, BookingDto, CourtDto } from '../types'
+import { SportType, BookingDto, CourtDto, sortCourtsByName, courtLocationBadge } from '../types'
 import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import TimelineGrid from '../components/TimelineGrid'
-import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award, Phone, Check, Hourglass } from 'lucide-react'
+import { CalendarIcon, TrendingUp, DollarSign, Percent, Search, X, BarChart3, List, Award, Phone, Check, Hourglass, RefreshCw } from 'lucide-react'
 import { RevenueChart } from '../components/RevenueChart'
-import FilterBar from '../components/admin/FilterBar'
-import SegmentedControl from '../components/admin/SegmentedControl'
+import FilterBar, { FieldLabel } from '../components/admin/FilterBar'
+import { WheelPicker } from '../components/ui/wheel-picker'
 
 type BookingStatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING_APPROVAL' | 'CANCELLED'
 
@@ -107,13 +107,14 @@ export default function AdminPage() {
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'restore' | 'noshow' | null>(null)
   const [restoringIds, setRestoringIds] = useState<Set<number>>(new Set())
   const [availabilityCourts, setAvailabilityCourts] = useState<CourtDto[]>([])
+  const didAutoPickCourt = useRef(false)
   const [availabilityData, setAvailabilityData] = useState<any[]>([]) // For Grid view
   const [activeCourts, setActiveCourts] = useState<CourtDto[]>([])
   const [unavailableVisible, setUnavailableVisible] = useState(false)
   const [unavailableMessage, setUnavailableMessage] = useState('')
   const unavailableHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<BookingStatusFilter>('ALL')
+  const [statusFilter, setStatusFilter] = useState<BookingStatusFilter>('CONFIRMED')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [approvingAll, setApprovingAll] = useState(false)
   const [approveAllResult, setApproveAllResult] = useState<string | null>(null)
@@ -242,6 +243,14 @@ export default function AdminPage() {
       })
   }, [date, sport])
 
+  // Default to Teren "1" on first load only — afterwards "Toate Terenurile" stays a
+  // deliberate choice and shouldn't get overridden by later date/sport refetches.
+  useEffect(() => {
+    if (didAutoPickCourt.current || availabilityCourts.length === 0) return
+    didAutoPickCourt.current = true
+    setCourtId((availabilityCourts.find(c => c.name === '1') || availabilityCourts[0]).id)
+  }, [availabilityCourts])
+
   useEffect(() => {
     fetchActiveCourts()
       .then(setActiveCourts)
@@ -252,7 +261,7 @@ export default function AdminPage() {
     if (logged) {
       reload()
     }
-  }, [date, sport])
+  }, [date, sport, logged])
 
   const filteredBookings = useMemo(() => {
     let list = courtId ? bookings.filter(b => b.court?.id === courtId) : bookings
@@ -594,20 +603,26 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="space-y-3">
+            <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+              <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: 'var(--lime-link)', fontFamily: "'Outfit', sans-serif" }}>Zi cu zi</span>
+              <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Administrare rezervări</h2>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Calendarul rezervărilor pe zi, cu aprobare, anulare și statistici de venit.</p>
+            </div>
             <FilterBar
               sportValue={sport}
-              onSportChange={v => setSport(v)}
+              onSportChange={v => { setSport(v); if (!v) setCourtId('') }}
               includeAllSport
               disabledSports={disabledSports}
               courtValue={courtId}
-              onCourtChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
-              courtOptions={<>
-                <option value="">Toate Terenurile</option>
-                {availabilityCourts.map(c => {
-                  const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
-                  return <option key={c.id} value={c.id}>{label}</option>
-                })}
-              </>}
+              onCourtChange={v => setCourtId(v ? Number(v) : '')}
+              courtOptions={[
+                { value: '', label: 'Toate' },
+                ...sortCourtsByName(availabilityCourts).map(c => ({
+                  value: String(c.id),
+                  label: /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`,
+                  badge: courtLocationBadge(c),
+                })),
+              ]}
               dateDisplay={formatDateDisplay(date)}
               onDatePrev={() => shiftDate(-1)}
               onDateNext={() => shiftDate(1)}
@@ -621,26 +636,32 @@ export default function AdminPage() {
                 </CalendarDemo>
               }
             >
-              <SegmentedControl
-                options={[
-                  { value: 'ALL', label: 'Toate' },
-                  { value: 'CONFIRMED', label: 'Confirmate' },
-                  { value: 'PENDING_APPROVAL', label: 'Aprobare' },
-                  { value: 'CANCELLED', label: 'Anulate' },
-                ]}
-                value={statusFilter}
-                onChange={setStatusFilter}
-              />
+              <div>
+                <FieldLabel>Stare</FieldLabel>
+                <WheelPicker
+                  title="Selectează starea"
+                  value={statusFilter}
+                  options={[
+                    { value: 'ALL', label: 'Toate' },
+                    { value: 'CONFIRMED', label: 'Confirmate' },
+                    { value: 'PENDING_APPROVAL', label: 'Aprobare' },
+                    { value: 'CANCELLED', label: 'Anulate' },
+                  ]}
+                  onChange={setStatusFilter}
+                />
+              </div>
             </FilterBar>
 
             <div className="flex gap-2">
               <button
-                className="px-6 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
-                style={{ background: 'var(--lime)', color: 'var(--lime-on)' }}
+                className="w-11 h-11 shrink-0 rounded-2xl border flex items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--muted)' }}
                 onClick={reload}
                 disabled={loading}
+                aria-label="Reîncarcă"
+                title="Reîncarcă rezervările (se actualizează automat și la schimbarea datei/sportului)"
               >
-                {loading ? '...' : 'Încarcă'}
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
               <button
                 className="px-5 flex-1 md:flex-none h-11 rounded-2xl shadow-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
@@ -986,7 +1007,7 @@ export default function AdminPage() {
                     }
                   }}
                   onReserve={(cid, s, e) => {
-                    navigate(`/admin/weekly?courtId=${cid}&date=${date}&start=${s}&end=${e}&sport=${sport || ''}&once=true`)
+                    navigate(`/admin/administrare-rezervari/add?courtId=${cid}&date=${date}&start=${s}&end=${e}&sport=${sport || ''}`)
                   }}
                />
             </div>

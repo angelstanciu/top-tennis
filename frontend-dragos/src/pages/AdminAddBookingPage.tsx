@@ -1,44 +1,45 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CourtDto, SportType, sortCourtsByName, courtLocationBadge } from '../types'
-import { fetchActiveCourts, adminBlockSlot } from '../api'
+import { fetchActiveCourts } from '../api'
 import AdminHeader from '../components/AdminHeader'
-import CalendarDemo from '../components/ui/calendar-1'
-import { DateStepperField, TextField, FieldLabel, SPORT_OPTIONS } from '../components/admin/FilterBar'
+import { TextField, FieldLabel, DateStepperField, SPORT_OPTIONS } from '../components/admin/FilterBar'
 import { WheelPicker } from '../components/ui/wheel-picker'
 import { TimeWheelPicker } from '../components/ui/time-wheel-picker'
+import CalendarDemo from '../components/ui/calendar-1'
 
-export default function AdminBlockDayPage() {
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatDateDisplay(iso?: string) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  const months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
+  const monthIdx = Math.max(0, Math.min(11, Number(m) - 1))
+  const dd = String(Number(d))
+  return `${dd} ${months[monthIdx]} ${y}`
+}
+
+export default function AdminAddBookingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [auth, setAuth] = useState<string | null>(null)
-  
+
   const [courts, setCourts] = useState<CourtDto[]>([])
-  const [sport, setSport] = useState<SportType>('TENNIS')
-  const [courtId, setCourtId] = useState<number | ''>('')
-  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10))
-  const dateInputRef = React.useRef<HTMLInputElement | null>(null)
+  const [sport, setSport] = useState<SportType>((searchParams.get('sport') as SportType) || 'TENNIS')
 
-  function shiftDate(delta: number) {
-    try {
-      const d = new Date(date)
-      d.setDate(d.getDate() + delta)
-      setDate(d.toISOString().slice(0, 10))
-    } catch { }
-  }
+  const initialCourtId = searchParams.get('courtId')
+  const [courtId, setCourtId] = useState<number | ''>(initialCourtId ? Number(initialCourtId) : '')
 
-  function formatDateDisplay(iso?: string) {
-    if (!iso) return ''
-    const [y, m, d] = iso.split('-')
-    if (!y || !m || !d) return iso
-    const months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
-    const monthIdx = Math.max(0, Math.min(11, Number(m) - 1))
-    const dd = String(Number(d))
-    return `${dd} ${months[monthIdx]} ${y}`
-  }
-  const [startTime, setStartTime] = useState<string>('00:00')
-  const [endTime, setEndTime] = useState<string>('23:59')
-  const [note, setNote] = useState<string>('Blocat de Administrator')
-  
+  const [date, setDate] = useState<string>(searchParams.get('date') || toDateStr(new Date()))
+  const [startTime, setStartTime] = useState<string>(searchParams.get('start') || '18:00')
+  const [endTime, setEndTime] = useState<string>(searchParams.get('end') || '19:00')
+
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -73,6 +74,14 @@ export default function AdminBlockDayPage() {
     })
   }, [filteredCourts])
 
+  function shiftDate(delta: number) {
+    try {
+      const d = new Date(date)
+      d.setDate(d.getDate() + delta)
+      setDate(toDateStr(d))
+    } catch { }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!auth || courtId === '') return
@@ -80,38 +89,38 @@ export default function AdminBlockDayPage() {
     setError(null)
     setSuccess(null)
     try {
-      const result = await adminBlockSlot({
+      const base = import.meta.env.VITE_API_BASE_URL || '/api'
+      const payload = {
         courtId: Number(courtId),
         date,
         startTime,
         endTime,
-        note
-      }, auth)
-      const cancelMsg = result.cancelledCount > 0
-        ? ` ${result.cancelledCount} rezervare(i) anulate automat${result.notifiedCount > 0 ? `, ${result.notifiedCount} client(i) notificat(i) prin SMS` : ''}.`
-        : ''
-      setSuccess(`Terenul a fost blocat cu succes!${cancelMsg}`)
-      setNote('Blocat de Administrator')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      // Reset after 3s
-      setTimeout(() => setSuccess(null), 3500)
+        customerName,
+        customerPhone: customerPhone || '0000000000',
+      }
+      const res = await fetch(`${base}/admin/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const txt = await res.text()
+        let msg = txt
+        try {
+          const j = JSON.parse(txt)
+          if (j.message) msg = j.message
+        } catch { }
+        throw new Error(msg)
+      }
+      setSuccess('Rezervarea a fost creată cu succes!')
+      setTimeout(() => setSuccess(null), 6000)
+      setCustomerName('')
+      setCustomerPhone('')
     } catch (err: any) {
-      let errorMsg = 'A apărut o eroare la blocarea terenului.'
-      
-      try {
-        // Try to parse if it's a JSON string from the server
-        const parsed = JSON.parse(err.message)
-        errorMsg = parsed.message || errorMsg
-      } catch {
-        errorMsg = err.message || errorMsg
-      }
-
-      if (errorMsg.includes('multiplu de 30')) {
-        errorMsg = 'Eroare: Orele trebuie să fie din 30 în 30 de minute (ex: 12:00, 12:30).'
-      } else if (errorMsg.toLowerCase().includes('overlap') || errorMsg.toLowerCase().includes('conflict') || errorMsg.toLowerCase().includes('suprapune')) {
-        errorMsg = 'Conflict: Acest interval se suprapune cu o rezervare existentă. Verificați calendarul și eliberați intervalul dorit înainte de a-l bloca.'
-      }
-      setError(errorMsg)
+      const msg = err.message || 'Eroare la crearea rezervării.'
+      setError(msg.includes('multiplu de 30')
+        ? 'Eroare: Orele trebuie să fie din 30 în 30 de minute (ex: 12:00, 12:30).'
+        : msg)
     } finally {
       setLoading(false)
     }
@@ -121,12 +130,12 @@ export default function AdminBlockDayPage() {
     <div className="min-h-screen font-sans pb-20" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       {auth && (
         <>
-          <AdminHeader active="block-day" />
+          <AdminHeader active="bookings-add" backTo="/admin/administrare-rezervari" />
           <div className="max-w-2xl mx-auto px-4 pt-6">
             <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
-              <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#fb7185', fontFamily: "'Outfit', sans-serif" }}>Situații excepționale</span>
-              <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Blocare terenuri</h2>
-              <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Marchează un teren indisponibil (sărbători, turnee, mentenanță).</p>
+              <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#38bdf8', fontFamily: "'Outfit', sans-serif" }}>Clienți de casă</span>
+              <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Adăugare Rezervare</h2>
+              <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Adaugă manual o rezervare pentru un client care a sunat.</p>
 
               {success && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(16,185,129,0.14)', color: '#34d399' }}>{success}</div>}
               {error && <div className="mb-6 p-4 rounded-xl text-sm font-medium" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>{error}</div>}
@@ -135,12 +144,7 @@ export default function AdminBlockDayPage() {
                 <div className="flex gap-2.5">
                   <div className="flex-1">
                     <FieldLabel>Sport</FieldLabel>
-                    <WheelPicker
-                      title="Selectează sportul"
-                      value={sport}
-                      options={SPORT_OPTIONS}
-                      onChange={setSport}
-                    />
+                    <WheelPicker title="Selectează sportul" value={sport} options={SPORT_OPTIONS} onChange={setSport} />
                   </div>
                   <div className="flex-1">
                     <FieldLabel>Teren</FieldLabel>
@@ -157,14 +161,8 @@ export default function AdminBlockDayPage() {
                   </div>
                 </div>
 
-                <DateStepperField
-                  label="Dată"
-                  display={formatDateDisplay(date)}
-                  onPrev={() => shiftDate(-1)}
-                  onNext={() => shiftDate(1)}
-                  arrowWidth={44}
-                >
-                  <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
+                <DateStepperField label="Dată" display={formatDateDisplay(date)} onPrev={() => shiftDate(-1)} onNext={() => shiftDate(1)}>
+                  <CalendarDemo value={date} onChange={setDate}>
                     <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group w-full">
                       <div className="text-[13px] font-extrabold text-center select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
                         {formatDateDisplay(date)}
@@ -175,31 +173,40 @@ export default function AdminBlockDayPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <FieldLabel>Ora start</FieldLabel>
+                    <FieldLabel>De la ora</FieldLabel>
                     <TimeWheelPicker value={startTime} onChange={setStartTime} />
                   </div>
                   <div>
-                    <FieldLabel>Ora sfârșit</FieldLabel>
+                    <FieldLabel>Până la ora</FieldLabel>
                     <TimeWheelPicker value={endTime} onChange={setEndTime} />
                   </div>
                 </div>
-                <p className="text-[10px] -mt-2" style={{ color: 'var(--faint)' }}>Lăsați 00:00 - 23:59 ptr întreaga zi</p>
 
-                <TextField
-                  label="Motiv (vizibil clienților)"
-                  type="text"
-                  placeholder="ex: Ocupat de Admin, Turneu, Reabilitare..."
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField
+                    label="Nume jucător"
+                    required
+                    type="text"
+                    placeholder="Marian Padel"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                  />
+                  <TextField
+                    label="Telefon"
+                    type="tel"
+                    placeholder="07XX XXX XXX"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                  />
+                </div>
 
                 <button
                   type="submit"
                   disabled={loading || courtId === ''}
                   className="w-full font-black uppercase tracking-widest text-[11px] py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50 mt-2 disabled:cursor-not-allowed active:scale-95"
-                  style={{ background: '#f43f5e', color: '#fff', boxShadow: '0 8px 20px rgba(244,63,94,0.25)' }}
+                  style={{ background: '#38bdf8', color: '#020617', boxShadow: '0 8px 20px rgba(56,189,248,0.25)' }}
                 >
-                  {loading ? 'Se procesează...' : 'Blochează terenul'}
+                  {loading ? 'Se procesează...' : 'Creează rezervarea'}
                 </button>
               </form>
             </div>

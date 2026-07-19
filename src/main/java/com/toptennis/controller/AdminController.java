@@ -101,7 +101,8 @@ public class AdminController {
             @NotNull String startTime,
             @NotNull String endTime,
             @NotNull @Size(max=100) String customerName,
-            @Size(max=20) String customerPhone) {}
+            @Size(max=20) String customerPhone,
+            @Size(max=36) String subscriptionKey) {}
 
     @PostMapping("/bookings")
     public BookingDto createBooking(@RequestBody @Valid AdminCreateBookingRequest req) {
@@ -112,10 +113,23 @@ public class AdminController {
             return BookingMapper.toDto(bookingService.createPublicAdmin(
                     req.courtId, date, start, end, req.customerName,
                     req.customerPhone != null ? req.customerPhone : "0000000000",
-                    null, null, null, true));
+                    null, null, null, true, req.subscriptionKey));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
+    }
+
+    @GetMapping("/subscriptions")
+    public java.util.List<com.toptennis.dto.SubscriptionSummaryDto> listSubscriptions() {
+        return bookingService.listActiveSubscriptions();
+    }
+
+    public record CancelSubscriptionRequest(@NotNull java.util.List<Long> bookingIds) {}
+
+    @PostMapping("/subscriptions/cancel")
+    public java.util.Map<String, Integer> cancelSubscription(@RequestBody @Valid CancelSubscriptionRequest req) {
+        int count = bookingService.cancelSubscription(req.bookingIds());
+        return java.util.Map.of("cancelled", count);
     }
 
     @DeleteMapping("/bookings/cancel-future-by-phone")

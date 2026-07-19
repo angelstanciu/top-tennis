@@ -72,4 +72,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, java.time.LocalDateTime createdAt);
     List<Booking> findByStatus(BookingStatus status);
+
+    // Candidates for the admin "abonamente" grouping: either explicitly tagged via subscriptionKey (bookings
+    // created after V51) or matching the legacy "(Abonament)" name suffix used by the recurring admin flow before.
+    @Query("select b from Booking b join fetch b.court c where b.status = :status and b.bookingDate >= :today and (b.subscriptionKey is not null or lower(b.customerName) like '%(abonament)%') order by b.bookingDate asc, b.startTime asc")
+    List<Booking> findActiveSubscriptionCandidates(@Param("status") BookingStatus status, @Param("today") LocalDate today);
 }

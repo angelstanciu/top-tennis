@@ -4,10 +4,11 @@ import { LogOut } from 'lucide-react'
 import Navbar from './Navbar'
 
 type AdminHeaderProps = {
-  active?: 'landing' | 'bookings' | 'free' | 'block-day' | 'weekly' | 'subscriptions' | 'courts'
+  active?: 'landing' | 'bookings' | 'bookings-add' | 'free' | 'block-day' | 'subscriptions' | 'subscriptions-manage' | 'subscriptions-add' | 'courts'
+  backTo?: string
 }
 
-export default function AdminHeader({ active }: AdminHeaderProps) {
+export default function AdminHeader({ active, backTo = '/admin' }: AdminHeaderProps) {
   const navigate = useNavigate()
   const isRoot = active === 'landing'
 
@@ -40,7 +41,7 @@ export default function AdminHeader({ active }: AdminHeaderProps) {
       variant="static"
       showReserveButton={false}
       showAccountButton={false}
-      backTo="/admin"
+      backTo={backTo}
       badge="Admin"
     />
   )

@@ -60,6 +60,20 @@ export interface BookingDto {
   playerNoShowCount?: number
 }
 
+export interface SubscriptionSummaryDto {
+  key: string
+  court: CourtDto
+  startTime: string
+  endTime: string
+  customerName: string
+  customerPhone: string
+  pricePerSession: number
+  occurrences: number
+  nextDate: string
+  lastDate: string
+  bookingIds: number[]
+}
+
 export interface PlayerUser {
   id: number
   phoneNumber: string
@@ -70,6 +84,24 @@ export interface PlayerUser {
   avatarUrl?: string
   matchesPlayed?: number
   phoneVerified?: boolean
+}
+
+// Court names are usually numeric ("1", "2", ...) but not guaranteed (e.g. a court
+// renamed to a person's name) — sort numerically when possible, else alphabetically,
+// so pickers list courts in natural order (1,2,3,4,5) instead of insertion/id order.
+export function sortCourtsByName(list: CourtDto[]): CourtDto[] {
+  return [...list].sort((a, b) => {
+    const na = Number(a.name)
+    const nb = Number(b.name)
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb
+    return a.name.localeCompare(b.name)
+  })
+}
+
+// Same "second physical location" signal used by the reservation grid header (TimelineGrid) —
+// indoor Padel courts (in practice courts "4"/"5") are at Star Arena 2, not the main location.
+export function courtLocationBadge(court: CourtDto): string | undefined {
+  return court.sportType === 'PADEL' && court.indoor ? 'Arena 2' : undefined
 }
 
 export function sportLabel(s: string) {

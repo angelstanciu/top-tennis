@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AvailabilityDto, CourtDto, SportType } from '../types'
+import { AvailabilityDto, CourtDto, SportType, sortCourtsByName, courtLocationBadge } from '../types'
 import { fetchAvailability, fetchActiveCourts } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import TimelineGrid from '../components/TimelineGrid'
-import { FilterBarCard, SportChips, SelectField, FieldLabel } from '../components/admin/FilterBar'
+import { FilterBarCard, FieldLabel, DateStepperField, SPORT_OPTIONS } from '../components/admin/FilterBar'
+import { WheelPicker } from '../components/ui/wheel-picker'
+import CalendarDemo from '../components/ui/calendar-1'
 
 function todayISOinTZ(tz: string) {
   try {
@@ -89,7 +91,6 @@ export default function FreePositionsPage() {
   const copyTimer = useRef<number | null>(null)
   const highlightTimer = useRef<number | null>(null)
   const highlightCourtTimer = useRef<number | null>(null)
-  const dateInputRef = useRef<HTMLInputElement | null>(null)
 
   const getSportImage = (s: SportType | '') => {
     switch (s) {
@@ -251,7 +252,7 @@ export default function FreePositionsPage() {
     })
   }, [data])
 
-  const courts = useMemo(() => filteredData.map(d => d.court), [filteredData])
+  const courts = useMemo(() => sortCourtsByName(filteredData.map(d => d.court)), [filteredData])
   const selectedCourt: CourtDto | null = useMemo(() => {
     if (!courtId) return null
     return courts.find(c => c.id === courtId) || null
@@ -495,58 +496,49 @@ export default function FreePositionsPage() {
     <div className="min-h-screen relative font-sans selection:bg-lime-400 selection:text-slate-950 overflow-x-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <AdminHeader active="free" />
       <div className="max-w-3xl mx-auto p-4 space-y-6 relative z-10">
+      <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+        <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#a3e635', fontFamily: "'Outfit', sans-serif" }}>Promovare</span>
+        <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Poziții libere</h2>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Generează un poster și un text gata de trimis pe WhatsApp cu orele libere din ziua selectată.</p>
+      </div>
       <FilterBarCard>
-        <SportChips value={sport} onChange={v => { if (v) { setSport(v); setCourtId('') } }} disabledSports={disabledSports} />
         <div className="flex gap-2.5">
-          <SelectField label="Teren" value={courtId as any} onChange={e => setCourtId(Number(e.target.value) as any)} className="flex-1">
-            <option value="">Selectează terenul</option>
-            {courts.map(c => {
-              const label = /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`
-              return <option key={c.id} value={c.id}>{label}</option>
-            })}
-          </SelectField>
           <div className="flex-1">
-            <FieldLabel>Dată</FieldLabel>
-            <div
-              className={`relative flex items-stretch h-11 rounded-[14px] overflow-hidden border transition-all ${highlightCourt ? 'ring-2 ring-rose-400' : ''}`}
-              style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}
-            >
-              <button
-                type="button"
-                className="flex items-center justify-center px-3 text-lg leading-none transition-colors border-r"
-                style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}
-                aria-label="Ziua anterioară"
-                title="Ziua anterioară"
-                onClick={() => shiftDate(-1)}
-              >
-                {'‹'}
-              </button>
-              <div className="relative flex-1 min-w-0">
-                <div className="flex items-center justify-center h-full text-[13px] font-extrabold select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
+            <FieldLabel>Sport</FieldLabel>
+            <WheelPicker
+              title="Selectează sportul"
+              value={sport}
+              options={SPORT_OPTIONS}
+              onChange={v => { setSport(v); setCourtId('') }}
+            />
+          </div>
+          <div className={`flex-1 rounded-[14px] transition-all ${highlightCourt ? 'ring-2 ring-rose-400' : ''}`}>
+            <FieldLabel>Teren</FieldLabel>
+            {courts.length > 0 ? (
+              <WheelPicker
+                title="Selectează terenul"
+                value={String(courtId)}
+                options={[
+                  { value: '', label: 'Toate' },
+                  ...courts.map(c => ({ value: String(c.id), label: /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`, badge: courtLocationBadge(c) })),
+                ]}
+                onChange={v => setCourtId(v ? Number(v) : '')}
+              />
+            ) : (
+              <div className="h-11 rounded-[14px] border flex items-center px-3.5 text-[13px] font-bold" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--faint)' }}>Se încarcă...</div>
+            )}
+          </div>
+        </div>
+        <div>
+          <DateStepperField label="Dată" display={formatDateDisplay(date)} onPrev={() => shiftDate(-1)} onNext={() => shiftDate(1)}>
+            <CalendarDemo value={date} onChange={newDate => setDate(newDate)}>
+              <div className="relative flex-1 min-w-0 flex items-center justify-center cursor-pointer group w-full">
+                <div className="text-[13px] font-extrabold text-center select-none truncate" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>
                   {formatDateDisplay(date)}
                 </div>
-                <input
-                  ref={dateInputRef}
-                  className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
-                  type="date"
-                  lang="ro-RO"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  aria-label="Data"
-                />
               </div>
-              <button
-                type="button"
-                className="flex items-center justify-center px-3 text-lg leading-none transition-colors border-l"
-                style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}
-                aria-label="Ziua următoare"
-                onClick={() => shiftDate(1)}
-                title="Ziua următoare"
-              >
-                {'›'}
-              </button>
-            </div>
-          </div>
+            </CalendarDemo>
+          </DateStepperField>
         </div>
         <button
           className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl transition-all disabled:opacity-50 active:scale-95"

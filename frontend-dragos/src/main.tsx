@@ -33,10 +33,12 @@ const OpenMatchesPage          = React.lazy(() => import('./pages/OpenMatchesPag
 const LoginPage                      = React.lazy(() => import('./pages/LoginPage'))
 const AdminLanding                   = React.lazy(() => import('./pages/AdminLanding'))
 const AdminPage                      = React.lazy(() => import('./pages/AdminPage'))
+const AdminAddBookingPage            = React.lazy(() => import('./pages/AdminAddBookingPage'))
 const FreePositionsPage              = React.lazy(() => import('./pages/FreePositionsPage'))
 const AdminBlockDayPage              = React.lazy(() => import('./pages/AdminBlockDayPage'))
 const AdminWeeklyBookingPage         = React.lazy(() => import('./pages/AdminWeeklyBookingPage'))
 const AdminSubscriptionRequestsPage  = React.lazy(() => import('./pages/AdminSubscriptionRequestsPage'))
+const AdminSubscriptionsPage         = React.lazy(() => import('./pages/AdminSubscriptionsPage'))
 const AdminCourtsPage                = React.lazy(() => import('./pages/AdminCourtsPage'))
 
 // ─── Fallback vizibil cât se încarcă un chunk lazy ───────────────────────
@@ -106,10 +108,12 @@ const router = createBrowserRouter([
   { path: '/login',                         element: <Lazy><LoginPage /></Lazy> },
   { path: '/admin',                         element: <Lazy><AdminLanding /></Lazy> },
   { path: '/admin/administrare-rezervari',  element: <Lazy><AdminPage /></Lazy> },
+  { path: '/admin/administrare-rezervari/add', element: <Lazy><AdminAddBookingPage /></Lazy> },
   { path: '/admin/pozitii-libere',          element: <Lazy><FreePositionsPage /></Lazy> },
   { path: '/admin/block-day',               element: <Lazy><AdminBlockDayPage /></Lazy> },
-  { path: '/admin/weekly',                  element: <Lazy><AdminWeeklyBookingPage /></Lazy> },
   { path: '/admin/abonamente',              element: <Lazy><AdminSubscriptionRequestsPage /></Lazy> },
+  { path: '/admin/subscriptions',           element: <Lazy><AdminSubscriptionsPage /></Lazy> },
+  { path: '/admin/subscriptions/add',       element: <Lazy><AdminWeeklyBookingPage /></Lazy> },
   { path: '/admin/terenuri',                element: <Lazy><AdminCourtsPage /></Lazy> },
 ])
 

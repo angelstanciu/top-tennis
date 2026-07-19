@@ -59,7 +59,13 @@ public class Booking {
 
     @Column(nullable = false)
     private boolean penaltyExempt = false;
-    
+
+    @Column(name = "subscription_key")
+    private String subscriptionKey;
+
+    public String getSubscriptionKey() { return subscriptionKey; }
+    public void setSubscriptionKey(String subscriptionKey) { this.subscriptionKey = subscriptionKey; }
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_user_id")

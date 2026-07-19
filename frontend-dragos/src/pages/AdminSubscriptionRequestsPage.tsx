@@ -79,7 +79,7 @@ export default function AdminSubscriptionRequestsPage() {
       })
       if (res.ok) {
         setRequests(prev => prev.map(r => r.id === approveId ? { ...r, status: 'APPROVED' } : r))
-        if (navAway) navigate('/admin/weekly');
+        if (navAway) navigate('/admin/subscriptions/add');
       }
     } catch (err) {
       console.error(err)
@@ -128,7 +128,7 @@ export default function AdminSubscriptionRequestsPage() {
       <AdminHeader active="subscriptions" />
 
       <main className="max-w-6xl mx-auto px-4 mt-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="rounded-[24px] p-6 border flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
           <div>
             <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: 'var(--lime-link)', fontFamily: "'Outfit', sans-serif" }}>Solicitări clienți</span>
             <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Cereri abonamente</h1>

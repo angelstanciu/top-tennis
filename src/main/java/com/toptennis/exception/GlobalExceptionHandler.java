@@ -6,8 +6,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +51,31 @@ public class GlobalExceptionHandler {
         err.status = HttpStatus.BAD_REQUEST.value();
         err.error = HttpStatus.BAD_REQUEST.getReasonPhrase();
         err.message = ex.getMessage();
+        err.path = req.getRequestURI();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    // A required @RequestParam was missing or blank (e.g. ?date= with no value) — Spring
+    // converts an empty string to null before the null-check, surfacing as this exception
+    // rather than a validation error. Map it to a clean 400 instead of the generic 500.
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest req) {
+        ApiError err = new ApiError();
+        err.status = HttpStatus.BAD_REQUEST.value();
+        err.error = HttpStatus.BAD_REQUEST.getReasonPhrase();
+        err.message = "Parametrul '" + ex.getParameterName() + "' este obligatoriu.";
+        err.path = req.getRequestURI();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    // A @RequestParam was present but couldn't be converted to the target type (e.g. a
+    // malformed date string). Same rationale as above — 400, not 500.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        ApiError err = new ApiError();
+        err.status = HttpStatus.BAD_REQUEST.value();
+        err.error = HttpStatus.BAD_REQUEST.getReasonPhrase();
+        err.message = "Parametrul '" + ex.getName() + "' are un format invalid.";
         err.path = req.getRequestURI();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
     }

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import AdminHeader from '../components/AdminHeader'
-import { CalendarDays, Megaphone, ShieldBan, RepeatIcon, TrendingUp, Clock } from 'lucide-react'
+import { CalendarDays, Megaphone, ShieldBan, TrendingUp, Clock, ListChecks } from 'lucide-react'
 
 export default function AdminLanding() {
   const navigate = useNavigate()
@@ -81,14 +81,14 @@ export default function AdminLanding() {
                 </div>
               </Link>
 
-              {/* Card 4: Abonamente / Saptamanal */}
-              <Link to="/admin/weekly" className="group rounded-2xl p-4 border shadow-sm hover:shadow-xl transition-all flex items-center gap-4 cursor-pointer" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
-                <div className="shrink-0 p-2.5 rounded-xl group-hover:scale-110 transition-transform" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>
-                  <RepeatIcon className="w-6 h-6" />
+              {/* Card 4: Abonamente */}
+              <Link to="/admin/subscriptions" className="group rounded-2xl p-4 border shadow-sm hover:shadow-xl transition-all flex items-center gap-4 cursor-pointer" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+                <div className="shrink-0 p-2.5 rounded-xl group-hover:scale-110 transition-transform" style={{ background: 'rgba(236,72,153,0.1)', color: '#ec4899' }}>
+                  <ListChecks className="w-6 h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-[15px] font-extrabold mb-0.5 truncate transition-colors" style={{ color: 'var(--text)' }}>Abonamente Săpt.</h3>
-                  <p className="text-[12.5px] truncate" style={{ color: 'var(--muted)' }}>Rezervări recurente pentru clienți fideli.</p>
+                  <h3 className="text-[15px] font-extrabold mb-0.5 truncate transition-colors" style={{ color: 'var(--text)' }}>Abonamente</h3>
+                  <p className="text-[12.5px] truncate" style={{ color: 'var(--muted)' }}>Listă abonamente active, adăugare și anulare.</p>
                 </div>
               </Link>
 

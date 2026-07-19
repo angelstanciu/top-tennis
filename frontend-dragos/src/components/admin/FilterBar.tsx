@@ -1,5 +1,6 @@
 import React from 'react'
 import { SportType } from '../../types'
+import { WheelPicker } from '../ui/wheel-picker'
 
 export const SPORT_OPTIONS: { value: SportType; label: string }[] = [
   { value: 'TENNIS', label: 'Tenis' },
@@ -192,7 +193,7 @@ export function DateStepperField({
 }
 
 /**
- * The unified filter bar: sport pills + Teren|Dată grid, used as-is on
+ * The unified filter bar: sport picker + Teren|Dată grid, used as-is on
  * AdminPage and FreePositionsPage. Pages with extra fields (BlockDay,
  * WeeklyBooking) compose FilterBarCard + the primitives above instead.
  */
@@ -200,7 +201,6 @@ export default function FilterBar({
   sportValue,
   onSportChange,
   includeAllSport = false,
-  disabledSports = [],
   courtLabel = 'Teren',
   courtValue,
   onCourtChange,
@@ -218,8 +218,8 @@ export default function FilterBar({
   disabledSports?: SportType[]
   courtLabel?: string
   courtValue: number | ''
-  onCourtChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
-  courtOptions: React.ReactNode
+  onCourtChange: (value: string) => void
+  courtOptions: { value: string; label: string; badge?: string }[]
   dateLabel?: string
   dateDisplay: string
   onDatePrev: () => void
@@ -227,18 +227,34 @@ export default function FilterBar({
   dateTrigger?: React.ReactNode
   children?: React.ReactNode
 }) {
+  const sportOptionsWithAll = includeAllSport ? [{ value: '' as SportType | '', label: 'Toate' }, ...SPORT_OPTIONS] : SPORT_OPTIONS
   return (
     <FilterBarCard>
-      <SportChips value={sportValue} onChange={onSportChange} includeAll={includeAllSport} disabledSports={disabledSports} />
       <div className="flex gap-2.5">
-        <SelectField label={courtLabel} value={courtValue as any} onChange={onCourtChange} className="flex-1">
-          {courtOptions}
-        </SelectField>
+        <div className="flex-1">
+          <FieldLabel>Sport</FieldLabel>
+          <WheelPicker title="Selectează sportul" value={sportValue} options={sportOptionsWithAll} onChange={onSportChange} />
+        </div>
+        <div className="flex-1">
+          <FieldLabel>{courtLabel}</FieldLabel>
+          {sportValue === '' ? (
+            <div
+              className="h-11 rounded-[14px] border flex items-center px-3.5 text-[13px] font-extrabold opacity-50"
+              style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--faint)' }}
+            >
+              Toate
+            </div>
+          ) : (
+            <WheelPicker title={`Selectează ${courtLabel.toLowerCase()}`} value={String(courtValue)} options={courtOptions} onChange={onCourtChange} />
+          )}
+        </div>
+      </div>
+      <div className="flex gap-2.5">
+        {children && <div className="flex-1">{children}</div>}
         <DateStepperField label={dateLabel} display={dateDisplay} onPrev={onDatePrev} onNext={onDateNext} className="flex-1">
           {dateTrigger}
         </DateStepperField>
       </div>
-      {children}
     </FilterBarCard>
   )
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Calendar } from '../../components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import { format } from "date-fns"
 import { ro } from "date-fns/locale"
 
@@ -32,7 +32,7 @@ export default function CalendarDemo({
   const handleSelect = (newDate: Date | undefined) => {
     if (!newDate) return
     setDate(newDate)
-    
+
     // adjust to local YYYY-MM-DD
     const local = new Date(newDate.getTime() - newDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     onChange(local)
@@ -40,8 +40,8 @@ export default function CalendarDemo({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <>
+      <div className="contents" onClick={() => setOpen(true)}>
         {children ? (
           children
         ) : (
@@ -57,17 +57,41 @@ export default function CalendarDemo({
             </svg>
           </button>
         )}
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 rounded-xl border-slate-200 shadow-2xl z-[100]" align="start">
-        <Calendar
-          mode='single'
-          defaultMonth={date}
-          selected={date}
-          onSelect={handleSelect}
-          className='rounded-xl border-0 bg-white'
-          toDate={maxDate}
-        />
-      </PopoverContent>
-    </Popover>
+      </div>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[70000] flex items-center justify-center px-4"
+          style={{ background: 'rgba(2,6,23,0.6)', backdropFilter: 'blur(2px)' }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-xs rounded-[28px] p-6 border shadow-2xl"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center text-[11px] font-black uppercase tracking-[0.12em] mb-4" style={{ color: 'var(--faint)', fontFamily: "'Outfit', sans-serif" }}>
+              Selectează data
+            </div>
+            <Calendar
+              mode='single'
+              defaultMonth={date}
+              selected={date}
+              onSelect={handleSelect}
+              className='rounded-xl border-0 bg-transparent'
+              toDate={maxDate}
+            />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-5 w-full font-black uppercase tracking-widest text-[11px] py-3 rounded-xl transition-all active:scale-95"
+              style={{ background: 'var(--lime)', color: 'var(--lime-on)' }}
+            >
+              Închide
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }

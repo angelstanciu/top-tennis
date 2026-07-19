@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CourtDto, SportType } from '../types'
+import { CourtDto, SportType, sortCourtsByName, courtLocationBadge } from '../types'
 import { fetchActiveCourts, adminUpdateCourtHours } from '../api'
 import AdminHeader from '../components/AdminHeader'
-import { FieldLabel, TextField, SelectField } from '../components/admin/FilterBar'
+import { FieldLabel, TextField } from '../components/admin/FilterBar'
 import { TimeWheelPicker } from '../components/ui/time-wheel-picker'
+import { WheelPicker } from '../components/ui/wheel-picker'
 
 const SPORT_LABELS: Record<SportType, string> = {
   TENNIS: 'Tenis',
@@ -15,18 +16,6 @@ const SPORT_LABELS: Record<SportType, string> = {
   TABLE_TENNIS: 'Tenis Masă',
 }
 const SPORT_OPTIONS: SportType[] = ['TENNIS', 'PADEL', 'BASKETBALL', 'BEACH_VOLLEY', 'FOOTVOLLEY', 'TABLE_TENNIS']
-
-// Court names are usually numeric ("1", "2", ...) but not guaranteed (e.g. a court
-// renamed to a person's name) — sort numerically when possible, else alphabetically,
-// so the picker lists courts in natural order (1,2,3,4,5) instead of insertion/id order.
-function sortCourtsByName(list: CourtDto[]): CourtDto[] {
-  return [...list].sort((a, b) => {
-    const na = Number(a.name)
-    const nb = Number(b.name)
-    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb
-    return a.name.localeCompare(b.name)
-  })
-}
 
 type EditState = {
   openTime: string
@@ -147,27 +136,32 @@ export default function AdminCourtsPage() {
           <div className="max-w-2xl mx-auto px-4 pt-6">
           <div className="rounded-[24px] p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
             <span className="block text-[11px] font-black uppercase tracking-[0.12em] mb-1.5" style={{ color: '#14b8a6', fontFamily: "'Outfit', sans-serif" }}>Configurare program</span>
-            <h2 className="text-2xl font-black tracking-tight mb-4" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Administrare terenuri</h2>
+            <h2 className="text-2xl font-black tracking-tight mb-2" style={{ color: 'var(--text)', fontFamily: "'Outfit', sans-serif" }}>Administrare terenuri</h2>
+            <p className="mb-4 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>Program, preț și nocturnă pentru fiecare teren.</p>
 
             <div className="grid grid-cols-2 gap-3">
-              <SelectField
-                label="Sport"
-                value={sport}
-                onChange={e => setSport(e.target.value as SportType)}
-              >
-                {SPORT_OPTIONS.map(s => (
-                  <option key={s} value={s}>{SPORT_LABELS[s]}</option>
-                ))}
-              </SelectField>
-              <SelectField
-                label="Teren"
-                value={courtId as any}
-                onChange={e => setCourtId(e.target.value ? Number(e.target.value) : '')}
-              >
-                {filteredCourts.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </SelectField>
+              <div>
+                <FieldLabel>Sport</FieldLabel>
+                <WheelPicker
+                  title="Selectează sportul"
+                  value={sport}
+                  options={SPORT_OPTIONS.map(s => ({ value: s, label: SPORT_LABELS[s] }))}
+                  onChange={setSport}
+                />
+              </div>
+              <div>
+                <FieldLabel>Teren</FieldLabel>
+                {filteredCourts.length > 0 ? (
+                  <WheelPicker
+                    title="Selectează terenul"
+                    value={String(courtId)}
+                    options={filteredCourts.map(c => ({ value: String(c.id), label: c.name, badge: courtLocationBadge(c) }))}
+                    onChange={v => setCourtId(Number(v))}
+                  />
+                ) : (
+                  <div className="h-11 rounded-[14px] border flex items-center px-3.5 text-[13px] font-bold" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--faint)' }}>Se încarcă...</div>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col gap-3 mt-3">

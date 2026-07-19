@@ -59,6 +59,11 @@ public class BookingService {
 
     @Transactional
     public Booking createPublicAdmin(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, boolean adminOverride) {
+        return createPublicAdmin(courtId, date, start, end, name, phone, email, token, bypassDoubleBooking, adminOverride, null);
+    }
+
+    @Transactional
+    public Booking createPublicAdmin(Long courtId, LocalDate date, LocalTime start, LocalTime end, String name, String phone, String email, String token, Boolean bypassDoubleBooking, boolean adminOverride, String subscriptionKey) {
         // Detect if caller is admin — either via explicit flag or via SecurityContext (Basic Auth)
         boolean effectiveAdmin = adminOverride;
         if (!effectiveAdmin) {
@@ -182,7 +187,8 @@ public class BookingService {
                 b.setMidnightBooking(touchesMidnight);
                 b.setWeeklyUser(effectiveAdmin);
                 b.setCancelToken(java.util.UUID.randomUUID().toString());
-                
+                b.setSubscriptionKey(subscriptionKey);
+
                 // PlayerUser is explicitly resolved at the top of the method
                 if (playerFromToken != null) {
                     b.setPlayerUser(playerFromToken);
@@ -262,6 +268,8 @@ public class BookingService {
                 String sharedToken = java.util.UUID.randomUUID().toString();
                 b1.setCancelToken(sharedToken + "-1");
                 b2.setCancelToken(sharedToken + "-2");
+                b1.setSubscriptionKey(subscriptionKey);
+                b2.setSubscriptionKey(subscriptionKey);
 
                 // PlayerUser is explicitly resolved at the top of the method
                 if (playerFromToken != null) {
@@ -470,6 +478,103 @@ public class BookingService {
             sibling.setUpdatedAt(LocalDateTime.now());
         });
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.toptennis.dto.SubscriptionSummaryDto> listActiveSubscriptions() {
+        List<Booking> candidates = bookingRepository.findActiveSubscriptionCandidates(BookingStatus.CONFIRMED, LocalDate.now());
+
+        java.util.Map<String, List<Booking>> groups = new java.util.LinkedHashMap<>();
+        java.util.Map<String, List<Booking>> legacyByGroupKey = new java.util.LinkedHashMap<>();
+
+        for (Booking b : candidates) {
+            if (b.getSubscriptionKey() != null) {
+                groups.computeIfAbsent(b.getSubscriptionKey(), k -> new java.util.ArrayList<>()).add(b);
+            } else {
+                legacyByGroupKey.computeIfAbsent(legacySubscriptionGroupKey(b), k -> new java.util.ArrayList<>()).add(b);
+            }
+        }
+
+        // Legacy (pre-subscriptionKey) bookings only carry a weak signal — split each name/court/time
+        // group into separate series whenever there's a large gap between consecutive dates, so an old
+        // and a renewed subscription for the same slot don't get merged into one.
+        for (var entry : legacyByGroupKey.entrySet()) {
+            List<Booking> sorted = entry.getValue().stream()
+                    .sorted(java.util.Comparator.comparing(Booking::getBookingDate))
+                    .toList();
+            List<Booking> series = new java.util.ArrayList<>();
+            LocalDate prevDate = null;
+            int seriesIndex = 0;
+            for (Booking b : sorted) {
+                if (prevDate != null && java.time.temporal.ChronoUnit.DAYS.between(prevDate, b.getBookingDate()) > 25) {
+                    groups.put("legacy:" + entry.getKey() + ":" + seriesIndex, new java.util.ArrayList<>(series));
+                    series.clear();
+                    seriesIndex++;
+                }
+                series.add(b);
+                prevDate = b.getBookingDate();
+            }
+            if (!series.isEmpty()) {
+                groups.put("legacy:" + entry.getKey() + ":" + seriesIndex, series);
+            }
+        }
+
+        List<com.toptennis.dto.SubscriptionSummaryDto> result = new java.util.ArrayList<>();
+        groups.forEach((key, bookings) -> result.add(toSubscriptionSummary(key, bookings)));
+        result.sort(java.util.Comparator.comparing(d -> d.nextDate));
+        return result;
+    }
+
+    private String legacySubscriptionGroupKey(Booking b) {
+        return b.getCourt().getId() + "|" + b.getStartTime() + "|" + b.getEndTime() + "|"
+                + stripAbonamentSuffix(b.getCustomerName()).toLowerCase() + "|" + b.getCustomerPhone();
+    }
+
+    private static String stripAbonamentSuffix(String name) {
+        if (name == null) return "";
+        return name.replaceAll("(?i)\\s*\\(abonament\\)\\s*$", "").trim();
+    }
+
+    private com.toptennis.dto.SubscriptionSummaryDto toSubscriptionSummary(String key, List<Booking> bookings) {
+        List<Booking> sorted = bookings.stream().sorted(java.util.Comparator.comparing(Booking::getBookingDate)).toList();
+        Booking first = sorted.get(0);
+        Booking last = sorted.get(sorted.size() - 1);
+        com.toptennis.dto.SubscriptionSummaryDto dto = new com.toptennis.dto.SubscriptionSummaryDto();
+        dto.key = key;
+        dto.court = com.toptennis.mapper.CourtMapper.toDto(first.getCourt());
+        dto.startTime = first.getStartTime();
+        dto.endTime = first.getEndTime();
+        dto.customerName = stripAbonamentSuffix(first.getCustomerName());
+        dto.customerPhone = first.getCustomerPhone();
+        dto.pricePerSession = first.getPrice();
+        dto.occurrences = sorted.size();
+        dto.nextDate = first.getBookingDate();
+        dto.lastDate = last.getBookingDate();
+        dto.bookingIds = sorted.stream().map(Booking::getId).toList();
+        return dto;
+    }
+
+    @Transactional
+    public int cancelSubscription(List<Long> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) return 0;
+        LocalDate today = LocalDate.now();
+        List<Booking> toCancel = bookingRepository.findAllById(bookingIds).stream()
+                .filter(b -> !b.getBookingDate().isBefore(today))
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING_APPROVAL)
+                .toList();
+        toCancel.forEach(b -> {
+            b.setStatus(BookingStatus.CANCELLED);
+            b.setUpdatedAt(LocalDateTime.now());
+        });
+        bookingRepository.saveAll(toCancel);
+        toCancel.forEach(b -> {
+            eventPublisher.publishEvent(BookingChangedEvent.of(BookingChangedEvent.Type.CANCELLED, b));
+            applyToSiblingIfExists(b, sibling -> {
+                sibling.setStatus(BookingStatus.CANCELLED);
+                sibling.setUpdatedAt(LocalDateTime.now());
+            });
+        });
+        return toCancel.size();
     }
 
     @Transactional

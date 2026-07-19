@@ -779,7 +779,7 @@ export default function App() {
                 min={todayISO()}
                 max={maxDateISO()}
                 value={date}
-                onChange={e => setDate(e.target.value)}
+                onChange={e => { if (e.target.value) setDate(e.target.value) }}
               />
             </button>
             <button

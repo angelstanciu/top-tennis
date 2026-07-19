@@ -2,9 +2,9 @@ import React, { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTheme } from '../../ThemeContext'
 
-const ITEM_HEIGHT = 44
-const VISIBLE_COUNT = 5
-const PAD = Math.floor(VISIBLE_COUNT / 2) * ITEM_HEIGHT
+export const ITEM_HEIGHT = 44
+export const VISIBLE_COUNT = 5
+export const PAD = Math.floor(VISIBLE_COUNT / 2) * ITEM_HEIGHT
 
 const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))
 
@@ -14,7 +14,7 @@ function minutesFor(hour: string): string[] {
   return hour === '23' ? ['00', '30', '59'] : ['00', '30']
 }
 
-function WheelColumn({ values, value, onSettle }: { values: string[]; value: string; onSettle: (v: string) => void }) {
+export function WheelColumn({ values, value, onSettle, width = 84, badges }: { values: string[]; value: string; onSettle: (v: string) => void; width?: number; badges?: (string | undefined)[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const settleTimer = useRef<any>(null)
   const [centerIndex, setCenterIndex] = useState(() => Math.max(0, values.indexOf(value)))
@@ -44,7 +44,7 @@ function WheelColumn({ values, value, onSettle }: { values: string[]; value: str
   }
 
   return (
-    <div className="relative" style={{ height: ITEM_HEIGHT * VISIBLE_COUNT, width: 84 }}>
+    <div className="relative" style={{ height: ITEM_HEIGHT * VISIBLE_COUNT, width }}>
       <div
         ref={ref}
         onScroll={handleScroll}
@@ -55,11 +55,12 @@ function WheelColumn({ values, value, onSettle }: { values: string[]; value: str
         {values.map((v, i) => {
           const dist = Math.abs(i - centerIndex)
           const isCenter = dist === 0
+          const badge = badges?.[i]
           return (
             <div
               key={v}
               onClick={() => clickItem(i)}
-              className="flex items-center justify-center cursor-pointer select-none transition-all"
+              className="flex items-center justify-center cursor-pointer select-none transition-all whitespace-nowrap overflow-hidden text-ellipsis px-2 w-full gap-1.5"
               style={{
                 height: ITEM_HEIGHT,
                 scrollSnapAlign: 'center',
@@ -70,7 +71,15 @@ function WheelColumn({ values, value, onSettle }: { values: string[]; value: str
                 color: isCenter ? 'var(--text)' : 'var(--muted)',
               }}
             >
-              {v}
+              <span className="truncate">{v}</span>
+              {badge && (
+                <span
+                  className="shrink-0 text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none uppercase bg-rose-500 text-white shadow-sm"
+                  style={{ fontFamily: "'Outfit', sans-serif" }}
+                >
+                  {badge}
+                </span>
+              )}
             </div>
           )
         })}
