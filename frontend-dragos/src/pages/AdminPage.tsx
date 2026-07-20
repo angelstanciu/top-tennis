@@ -251,6 +251,14 @@ export default function AdminPage() {
     setCourtId((availabilityCourts.find(c => c.name === '1') || availabilityCourts[0]).id)
   }, [availabilityCourts])
 
+  // Dacă terenul selectat nu mai aparține sportului/zilei curente (ex. după
+  // schimbarea sportului), revenim la „Toate" ca să nu rămână afișat un id orfan.
+  useEffect(() => {
+    if (courtId !== '' && availabilityCourts.length > 0 && !availabilityCourts.some(c => c.id === courtId)) {
+      setCourtId('')
+    }
+  }, [availabilityCourts, courtId])
+
   useEffect(() => {
     fetchActiveCourts()
       .then(setActiveCourts)

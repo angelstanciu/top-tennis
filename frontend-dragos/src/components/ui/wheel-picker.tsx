@@ -22,7 +22,10 @@ export function WheelPicker<T extends string>({
   const [pending, setPending] = useState<T>(value)
 
   const optionFor = (v: T) => options.find(o => o.value === v)
-  const labelFor = (v: T) => optionFor(v)?.label ?? v
+  // Dacă valoarea curentă nu corespunde niciunei opțiuni (ex. un teren rămas
+  // selectat după schimbarea sportului), NU afișăm valoarea brută (id-ul) —
+  // cădem pe prima opțiune, adică starea „neselectat" / „Toate".
+  const labelFor = (v: T) => optionFor(v)?.label ?? options[0]?.label ?? ''
   const badgeFor = (v: T) => optionFor(v)?.badge
   const labels = options.map(o => o.label)
   const badges = options.map(o => o.badge)
