@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CourtDto, SportType, sortCourtsByName, courtLocationBadge } from '../types'
+import { CourtDto, SportType, sortCourtsByName, courtLocationBadge, courtLabel } from '../types'
 import { fetchActiveCourts, adminBlockSlot } from '../api'
 import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
@@ -148,7 +148,7 @@ export default function AdminBlockDayPage() {
                       <WheelPicker
                         title="Selectează terenul"
                         value={String(courtId)}
-                        options={filteredCourts.map(c => ({ value: String(c.id), label: c.name, badge: courtLocationBadge(c) }))}
+                        options={filteredCourts.map(c => ({ value: String(c.id), label: courtLabel(c), badge: courtLocationBadge(c) }))}
                         onChange={v => setCourtId(Number(v))}
                       />
                     ) : (

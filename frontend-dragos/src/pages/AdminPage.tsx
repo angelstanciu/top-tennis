@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SportType, BookingDto, CourtDto, sortCourtsByName, courtLocationBadge } from '../types'
+import { SportType, BookingDto, CourtDto, sortCourtsByName, courtLocationBadge, courtLabel } from '../types'
 import AdminHeader from '../components/AdminHeader'
 import CalendarDemo from '../components/ui/calendar-1'
 import { fetchAvailability, fetchActiveCourts } from '../api'
@@ -619,7 +619,7 @@ export default function AdminPage() {
                 { value: '', label: 'Toate' },
                 ...sortCourtsByName(availabilityCourts).map(c => ({
                   value: String(c.id),
-                  label: /^teren/i.test(c.name) ? c.name : `Teren ${c.name}`,
+                  label: courtLabel(c),
                   badge: courtLocationBadge(c),
                 })),
               ]}

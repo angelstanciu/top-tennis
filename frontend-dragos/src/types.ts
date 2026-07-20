@@ -104,6 +104,13 @@ export function courtLocationBadge(court: CourtDto): string | undefined {
   return court.sportType === 'PADEL' && court.indoor ? 'Arena 2' : undefined
 }
 
+// Friendly label for court pickers in the admin panel: "Teren 1", "Teren 2"...
+// Court names are usually bare numbers ("1", "2"); prefix them with "Teren".
+// A court already named like "Teren X" or after a person is kept as-is.
+export function courtLabel(court: CourtDto): string {
+  return /^teren/i.test(court.name) ? court.name : `Teren ${court.name}`
+}
+
 export function sportLabel(s: string) {
   switch (s) {
     case 'TENNIS': return 'Tenis'
