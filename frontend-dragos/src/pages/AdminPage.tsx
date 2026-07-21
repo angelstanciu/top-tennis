@@ -105,6 +105,8 @@ export default function AdminPage() {
   const [cancellingIds, setCancellingIds] = useState<Set<number>>(new Set())
   const [confirmId, setConfirmId] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'restore' | 'noshow' | null>(null)
+  // Rezervarea al cărei pop-up de statistici jucător e deschis
+  const [statsBooking, setStatsBooking] = useState<BookingDto | null>(null)
   const [restoringIds, setRestoringIds] = useState<Set<number>>(new Set())
   const [availabilityCourts, setAvailabilityCourts] = useState<CourtDto[]>([])
   const didAutoPickCourt = useRef(false)
@@ -780,15 +782,14 @@ export default function AdminPage() {
                             <Phone className="w-3 h-3 shrink-0" /> {b.customerPhone}
                           </a>
                         )}
-                        {b.status === 'PENDING_APPROVAL' && ((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
-                          <div className="flex gap-1.5 flex-wrap mt-1.5">
-                            {(b.playerCancellationsCount ?? 0) > 0 && (
-                              <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>{b.playerCancellationsCount} ANULĂRI</div>
-                            )}
-                            {(b.playerNoShowCount ?? 0) > 0 && (
-                              <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(148,163,184,0.16)', color: 'var(--text2)' }}>{b.playerNoShowCount} NEPREZENTĂRI</div>
-                            )}
-                          </div>
+                        {b.status !== 'BLOCKED' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setStatsBooking(b) }}
+                            className="mt-1.5 inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity hover:opacity-80"
+                            style={{ padding: '5px 10px', fontFamily: "'Outfit', sans-serif", background: 'var(--surface2)', color: 'var(--lime-link)', border: '1px solid var(--border)' }}
+                          >
+                            <BarChart3 className="w-3 h-3" /> Statistici
+                          </button>
                         )}
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0 items-stretch">
@@ -932,26 +933,10 @@ export default function AdminPage() {
                                </button>
                                )
                              ) : b.status === 'NO_SHOW' ? null : b.status === 'PENDING_APPROVAL' ? (
-                               <div className="flex flex-col gap-1.5 items-center">
-                                 <div className="flex gap-1.5">
-                                   <button onClick={() => approve(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}>Aprobă</button>
-                                   <button onClick={() => reject(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}>Respinge</button>
-                                 </div>
-                                 {((b.playerCancellationsCount ?? 0) > 0 || (b.playerNoShowCount ?? 0) > 0) && (
-                                   <div className="flex gap-1.5">
-                                     {(b.playerCancellationsCount ?? 0) > 0 && (
-                                       <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(244,63,94,0.14)', color: '#fb7185' }}>
-                                         {b.playerCancellationsCount} ANULĂRI
-                                       </div>
-                                     )}
-                                     {(b.playerNoShowCount ?? 0) > 0 && (
-                                       <div className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: 'rgba(148,163,184,0.16)', color: 'var(--text2)' }}>
-                                         {b.playerNoShowCount} NEPREZENTĂRI
-                                       </div>
-                                     )}
-                                   </div>
-                                 )}
-                               </div>
+                               <>
+                                 <button onClick={() => approve(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#10b981', color: '#052e16' }}>Aprobă</button>
+                                 <button onClick={() => reject(b.id)} className="text-[9px] font-black uppercase tracking-wide rounded-[9px]" style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: '#f43f5e', color: '#fff' }}>Respinge</button>
+                               </>
                              ) : (
                                <>
                                  {!isOld && (
@@ -975,6 +960,15 @@ export default function AdminPage() {
                                    </button>
                                  )}
                                </>
+                             )}
+                             {b.status !== 'BLOCKED' && (
+                               <button
+                                 onClick={() => setStatsBooking(b)}
+                                 className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide rounded-[9px] transition-opacity hover:opacity-80"
+                                 style={{ padding: '6px 11px', fontFamily: "'Outfit', sans-serif", background: 'var(--surface2)', color: 'var(--lime-link)', border: '1px solid var(--border)' }}
+                               >
+                                 <BarChart3 className="w-3 h-3" /> Statistici
+                               </button>
                              )}
                           </div>
                         </td>
@@ -1081,6 +1075,51 @@ export default function AdminPage() {
                 </div>
                 <div className="mt-2 text-[11px] font-bold italic line-clamp-1 opacity-70" style={{ color: 'var(--faint)' }}>Utilizare terenuri pe parcursul zilei</div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {statsBooking && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300"
+          onClick={() => setStatsBooking(null)}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-[2rem] shadow-2xl border animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-8 flex flex-col items-center text-center" style={{ background: 'var(--surface2)' }}>
+              <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 rotate-3 shadow-xl bg-lime-400 text-slate-950 shadow-lime-500/30">
+                <BarChart3 className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>Statistici</h3>
+              <p className="text-sm mt-2 font-bold" style={{ color: 'var(--text2)' }}>{statsBooking.customerName}</p>
+            </div>
+
+            <div className="p-6 flex flex-col gap-2.5" style={{ background: 'var(--surface)' }}>
+              {([
+                { label: 'Meciuri jucate', value: statsBooking.playerMatchesCount ?? 0, color: 'var(--lime-link)' },
+                { label: 'Anulări', value: statsBooking.playerCancellationsCount ?? 0, color: '#fb7185' },
+                { label: 'Neprezentări', value: statsBooking.playerNoShowCount ?? 0, color: 'var(--text2)' },
+              ] as { label: string; value: number; color: string }[]).map(row => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between px-4 py-3.5 rounded-2xl border"
+                  style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}
+                >
+                  <span className="text-[13px] font-black uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{row.label}</span>
+                  <span className="text-2xl font-black tabular-nums" style={{ color: row.color, fontFamily: "'Outfit', sans-serif" }}>{row.value}</span>
+                </div>
+              ))}
+              <button
+                className="mt-3 w-full py-4 rounded-2xl border font-black active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+                style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                onClick={() => setStatsBooking(null)}
+              >
+                Închide
+              </button>
             </div>
           </div>
         </div>

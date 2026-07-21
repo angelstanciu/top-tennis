@@ -361,10 +361,11 @@ public class BookingService {
         return list;
     }
 
-    // Computes matches played dynamically: past, non-cancelled bookings linked to this user
+    // Computes matches played dynamically: past bookings that are still CONFIRMED
+    // (a no-show does not count as a played match).
     @Transactional(readOnly = true)
     public long countMatchesPlayed(Long userId) {
-        return bookingRepository.countPastNonCancelledByUserId(userId, LocalDate.now(), LocalTime.now());
+        return bookingRepository.countPastConfirmedByUserId(userId, LocalDate.now(), LocalTime.now());
     }
 
     private void applyToSiblingIfExists(Booking b, java.util.function.Consumer<Booking> action) {

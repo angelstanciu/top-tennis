@@ -56,11 +56,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByCustomerEmailOrderByBookingDateDesc(String customerEmail);
 
-    // Counts completed (past, not cancelled) bookings linked to a user – used for matchesPlayed
-    @Query("select count(b) from Booking b where b.playerUser.id = :userId and b.status <> com.toptennis.model.BookingStatus.CANCELLED and (b.bookingDate < :today or (b.bookingDate = :today and b.endTime <= :now))")
-    long countPastNonCancelledByUserId(@Param("userId") Long userId,
-                                       @Param("today") LocalDate today,
-                                       @Param("now") LocalTime now);
+    // Counts actually-played bookings for a user: past AND still CONFIRMED. A booking
+    // marked NO_SHOW (or cancelled) is NOT a played match, so those are excluded.
+    @Query("select count(b) from Booking b where b.playerUser.id = :userId and b.status = com.toptennis.model.BookingStatus.CONFIRMED and (b.bookingDate < :today or (b.bookingDate = :today and b.endTime <= :now))")
+    long countPastConfirmedByUserId(@Param("userId") Long userId,
+                                    @Param("today") LocalDate today,
+                                    @Param("now") LocalTime now);
     long countByPlayerUserIdAndStatus(Long playerUserId, BookingStatus status);
 
     long countByCustomerPhoneAndStatus(String customerPhone, BookingStatus status);
