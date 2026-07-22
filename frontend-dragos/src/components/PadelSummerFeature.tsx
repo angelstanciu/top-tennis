@@ -2,8 +2,17 @@ import { useState, useEffect, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../ThemeContext'
 
-const POSTER_SRC = '/padel-vara.jpg'
-const BOOK_HREF = '/rezerva?sport=PADEL'
+// Până pe 2 august 2026 promovăm turneul; după, revenim automat la posterul de
+// vară cu padel indoor, ca secțiunea să nu rămână nici goală, nici expirată.
+const TOURNAMENT_END = new Date('2026-08-02T23:59:59+03:00')
+
+const TOURNAMENT_POSTER = '/turneu-padel-2-august.jpg'
+const SUMMER_POSTER = '/padel-vara.jpg'
+
+const RESERVE_HREF = '/rezerva?sport=PADEL'
+const TOURNAMENT_WHATSAPP =
+  'https://wa.me/40742197487?text=' +
+  encodeURIComponent('Salut! As vrea sa ma inscriu la turneul de padel din 2 august de la Star Arena Bascov.')
 
 const ARROW_ICON = (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -149,6 +158,12 @@ export default function PadelSummerFeature() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
+  const isTournament = Date.now() <= TOURNAMENT_END.getTime()
+  const posterSrc = isTournament ? TOURNAMENT_POSTER : SUMMER_POSTER
+  const posterAlt = isTournament
+    ? 'Turneu de Padel 2 August 2026 la Star Arena Bascov'
+    : 'Padel Indoor climatizat la Star Arena Bascov — 120 lei/oră'
+
   useEffect(() => {
     if (!lb) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLb(false) }
@@ -168,7 +183,7 @@ export default function PadelSummerFeature() {
   return (
     <section className="pf-wrap" style={themeVars as CSSProperties}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div className="pf-ambient" style={{ ['--pf-poster' as any]: `url(${POSTER_SRC})` }} />
+      <div className="pf-ambient" style={{ ['--pf-poster' as any]: `url(${posterSrc})` }} />
       <div className="pf-glow" />
 
       <div className="pf-inner">
@@ -180,7 +195,7 @@ export default function PadelSummerFeature() {
           aria-label="Vezi posterul mărit"
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLb(true) }}
         >
-          <img src={POSTER_SRC} alt="Padel Indoor climatizat la Star Arena Bascov — 120 lei/oră" loading="lazy" />
+          <img src={posterSrc} alt={posterAlt} loading="lazy" />
         </div>
 
         <span className="pf-zoom-hint">
@@ -190,10 +205,23 @@ export default function PadelSummerFeature() {
           Apasă pentru a mări
         </span>
 
-        <Link to={BOOK_HREF} className="pf-cta" aria-label="Rezervă un teren de padel indoor">
-          <span>Rezervă Padel Indoor</span>
-          <span className="pf-cta-arrow">{ARROW_ICON}</span>
-        </Link>
+        {isTournament ? (
+          <a
+            href={TOURNAMENT_WHATSAPP}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="pf-cta"
+            aria-label="Înscrie-te la turneul de padel din 2 august"
+          >
+            <span>Înscrie-te la turneu</span>
+            <span className="pf-cta-arrow">{ARROW_ICON}</span>
+          </a>
+        ) : (
+          <Link to={RESERVE_HREF} className="pf-cta" aria-label="Rezervă un teren de padel indoor">
+            <span>Rezervă Padel Indoor</span>
+            <span className="pf-cta-arrow">{ARROW_ICON}</span>
+          </Link>
+        )}
       </div>
 
       {lb && (
@@ -202,8 +230,8 @@ export default function PadelSummerFeature() {
             ✕
           </button>
           <img
-            src={POSTER_SRC}
-            alt="Padel Indoor climatizat la Star Arena Bascov"
+            src={posterSrc}
+            alt={posterAlt}
             onClick={(e) => e.stopPropagation()}
           />
         </div>

@@ -111,9 +111,11 @@ const PARTNERS_PROMO_MAX_SHOWS = 3
 
 // Poster turneu Padel — afișat o dată pe zi la selectarea sportului Padel,
 // doar până în 31 iulie 2026 inclusiv (ziua dinaintea turneului).
-const PADEL_TOURNAMENT_POSTER_KEY = 'padelTournamentPosterLastShown'
-const PADEL_TOURNAMENT_POSTER_CUTOFF = '2026-07-31'
-const PADEL_TOURNAMENT_POSTER_SRC = '/turneu-padel-1-august.jpeg'
+// Cheia include versiunea posterului: la schimbarea posterului (1 aug -> 2 aug)
+// se resetează, așa că userii care au văzut deja varianta veche azi văd corectura.
+const PADEL_TOURNAMENT_POSTER_KEY = 'padelTournamentPoster2AugLastShown'
+const PADEL_TOURNAMENT_POSTER_CUTOFF = '2026-08-01'
+const PADEL_TOURNAMENT_POSTER_SRC = '/turneu-padel-2-august.jpg'
 
 function readPartnersPromoState(): { count: number; dismissedPermanently: boolean } {
   try {
